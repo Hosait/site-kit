@@ -86,3 +86,46 @@ test('a sitemap index that lists itself does not hang the crawl', async () => {
 test('without allowPrivate a local site is refused', async () => {
   await assert.rejects(crawl('http://localhost/', { out: tmp(), delayMs: 0 }), (e) => e.code === 'EPRIVATE')
 })
+
+// --- Review fixes ---------------------------------------------------------
+test('robots.txt and sitemaps that redirect on the same site are followed; /sitemap-index.xml is read', async () => {
+  const s = await serve({
+    '/robots.txt': { status: 301, headers: { location: '/robots-real.txt' } },
+    '/robots-real.txt': { headers: { 'content-type': 'text/plain' }, body: 'User-agent: *\nDisallow: /private\n' },
+    '/sitemap.xml': { status: 301, headers: { location: '/maps/sitemap.xml' } },
+    '/maps/sitemap.xml': (req) => ({ headers: { 'content-type': 'application/xml' }, body: `<urlset><url><loc>http://${req.headers.host}/deep</loc></url></urlset>` }),
+    '/sitemap-index.xml': (req) => ({ headers: { 'content-type': 'application/xml' }, body: `<urlset><url><loc>http://${req.headers.host}/from-index</loc></url></urlset>` }),
+    '/': page('Home', '<a href="/private/x">x</a>'),
+    '/deep': page('Deep', '<p>d</p>'),
+    '/from-index': page('From index', '<p>i</p>'),
+  })
+  try {
+    const inv = await crawl(s.url + '/', { out: tmp(), allowPrivate: true, delayMs: 0 })
+    const paths = inv.pages.map((p) => new URL(p.url).pathname)
+    assert.ok(!s.requests.some((r) => r.startsWith('/private')), 'redirected robots.txt obeyed')
+    assert.ok(paths.includes('/deep'), 'redirected sitemap read')
+    assert.ok(paths.includes('/from-index'), '/sitemap-index.xml read')
+  } finally { await s.close() }
+})
+
+test('a huge sitemap does not grow the queue without bound', async () => {
+  const s = await serve({
+    '/sitemap.xml': (req) => ({ headers: { 'content-type': 'application/xml' }, body: '<urlset>' + Array.from({ length: 2000 }, (_, i) => `<url><loc>http://${req.headers.host}/p${i}</loc></url>`).join('') + '</urlset>' }),
+    '/': page('Home', '<p>h</p>'),
+  })
+  try {
+    const inv = await crawl(s.url + '/', { out: tmp(), allowPrivate: true, delayMs: 0, maxPages: 5 })
+    assert.equal(inv.pages.length, 5)
+    assert.ok(inv.notQueued > 1900, `notQueued ${inv.notQueued}`)
+  } finally { await s.close() }
+})
+
+test('a malformed Location header is recorded, and the crawl goes on', async () => {
+  const s = await serve({ '/': page('Home', '<a href="/bad">bad</a><a href="/ok">ok</a>'), '/bad': { status: 301, headers: { location: 'http://[bad' } }, '/ok': page('OK', '<p>ok</p>') })
+  try {
+    const inv = await crawl(s.url + '/', { out: tmp(), allowPrivate: true, delayMs: 0 })
+    const bad = inv.pages.find((p) => p.url.endsWith('/bad'))
+    assert.ok(bad && bad.error, 'bad redirect recorded with an error')
+    assert.ok(inv.pages.some((p) => p.url.endsWith('/ok')))
+  } finally { await s.close() }
+})

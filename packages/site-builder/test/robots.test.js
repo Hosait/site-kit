@@ -23,3 +23,11 @@ test('an empty or missing robots.txt allows everything; comments are ignored', (
   assert.equal(parseRobots('').allowed('/anything'), true)
   assert.equal(parseRobots('# nothing\nUser-agent: *\nDisallow:\n').allowed('/x'), true)
 })
+
+test('a pathological wildcard rule is matched in linear time', () => {
+  const r = parseRobots('User-agent: *\nDisallow: /*a*a*a*a*a*a*a*a*b\n')
+  const t = Date.now()
+  assert.equal(r.allowed('/' + 'a'.repeat(5000)), true)
+  assert.equal(r.allowed('/aaaaaaaab'), false)
+  assert.ok(Date.now() - t < 100, `took ${Date.now() - t} ms`)
+})

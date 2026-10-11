@@ -23,14 +23,17 @@ export function parseRobots(text, agent = 'HosaitSiteBuilder') {
   }
   const me = agent.toLowerCase()
   const mine = groups.filter((g) => g.agents.some((a) => a !== '*' && me.includes(a)))
-  const rules = (mine.length ? mine : groups.filter((g) => g.agents.includes('*'))).flatMap((g) => g.rules).filter((r) => r.path)
+  const rules = (mine.length ? mine : groups.filter((g) => g.agents.includes('*')))
+    .flatMap((g) => g.rules)
+    .filter((r) => r.path)
+    .map((r) => ({ ...r, match: compile(r.path) }))
   return {
     sitemaps,
     /** @param {string} pathname */
     allowed(pathname) {
       let best = null
       for (const r of rules) {
-        if (!matches(r.path, pathname)) continue
+        if (!r.match(pathname)) continue
         if (!best || r.path.length > best.path.length || (r.path.length === best.path.length && r.allow)) best = r
       }
       return !best || best.allow
@@ -38,8 +41,23 @@ export function parseRobots(text, agent = 'HosaitSiteBuilder') {
   }
 }
 
-function matches(pattern, pathname) {
+/**
+ * A robots.txt path pattern as a matcher: a prefix, * for any run of characters, $ for the end.
+ * Each piece is found with indexOf in order, so matching is linear (a regex with several .*
+ * backtracks badly on a hostile rule).
+ */
+function compile(pattern) {
   const anchored = pattern.endsWith('$')
-  const body = (anchored ? pattern.slice(0, -1) : pattern).split('*').map((s) => s.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*')
-  return new RegExp('^' + body + (anchored ? '$' : '')).test(pathname)
+  const parts = (anchored ? pattern.slice(0, -1) : pattern).split('*')
+  return (path) => {
+    if (!path.startsWith(parts[0])) return false
+    let pos = parts[0].length
+    for (let i = 1; i < parts.length; i++) {
+      if (anchored && i === parts.length - 1) return path.length - parts[i].length >= pos && path.endsWith(parts[i])
+      const at = path.indexOf(parts[i], pos)
+      if (at === -1) return false
+      pos = at + parts[i].length
+    }
+    return !anchored || pos === path.length
+  }
 }

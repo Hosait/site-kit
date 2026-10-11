@@ -63,3 +63,20 @@ test('extract(dir) reads the crawl, groups templates and picks the most common n
   assert.deepEqual(model.nav.map((n) => n.href), ['https://acme.no/', 'https://acme.no/about'])
   assert.ok(fs.existsSync(path.join(dir, 'extract.json')))
 })
+
+// --- Review fixes ---------------------------------------------------------
+test('article headers and embedded videos inside main stay in the content', () => {
+  const p = extractPage(shell('<main><article><header><h1>Story</h1><p class="lead">The lead text.</p><time>1 Oct</time></header><p>Body.</p><iframe src="https://www.youtube.com/embed/abc"></iframe></article></main>'), 'https://acme.no/a')
+  assert.match(p.mainHtml, /The lead text\./)
+  assert.match(p.mainHtml, /youtube\.com\/embed\/abc/)
+})
+
+test('the template fingerprint looks past single wrapper elements, and ignores how many paragraphs a page has', () => {
+  const wrapped = (inner) => shell(`<main><div class="pb-16">${inner}</div></main>`)
+  const home = extractPage(wrapped('<section class="hero"></section><section class="cards"></section><section class="news"></section>'), 'https://acme.no/')
+  const video = extractPage(wrapped('<section class="bg-off-white"></section><section class="py-16"></section>'), 'https://acme.no/videos/a')
+  assert.notEqual(home.template, video.template)
+  const a = extractPage(wrapped('<h1>A</h1><p>1</p><p>2</p>'), 'https://acme.no/news/a')
+  const b = extractPage(wrapped('<h1>B</h1><p>1</p><p>2</p><p>3</p><p>4</p>'), 'https://acme.no/news/b')
+  assert.equal(a.template, b.template)
+})

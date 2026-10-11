@@ -43,18 +43,27 @@ export function publicOnlyLookup(hostname, options, callback) {
   })
 }
 
+const privateError = (url, what) => Object.assign(new Error(`${url}: ${what} is a private address`), { code: 'EPRIVATE' })
+
 /**
  * @param {string} url
- * @param {{ maxBytes?: number, timeoutMs?: number, allowPrivate?: boolean, accept?: string }} [opts]
+ * @param {{ maxBytes?: number, timeoutMs?: number, deadlineMs?: number, allowPrivate?: boolean, accept?: string }} [opts]
  * @returns {Promise<{ status: number, headers: import('node:http').IncomingHttpHeaders, body: Buffer, truncated: boolean }>}
  */
-export function get(url, { maxBytes = 2 * 1024 * 1024, timeoutMs = 15000, allowPrivate = false, accept = '*/*' } = {}) {
+export function get(url, { maxBytes = 2 * 1024 * 1024, timeoutMs = 15000, deadlineMs = 30000, allowPrivate = false, accept = '*/*' } = {}) {
   let u
   try { u = new URL(url) } catch { return Promise.reject(new Error(`${url}: not a URL`)) }
   if (u.protocol !== 'http:' && u.protocol !== 'https:') return Promise.reject(new Error(`${url}: only http and https`))
   if (!allowPrivate && u.port && u.port !== (u.protocol === 'https:' ? '443' : '80')) return Promise.reject(new Error(`${url}: only standard ports`))
+  // An IP address in the URL never reaches the lookup, so it is checked here (URL has
+  // already turned decimal and hex forms into dotted ones).
+  const host = u.hostname.replace(/^\[|\]$/g, '')
+  if (!allowPrivate && net.isIP(host) && !isPublicAddress(host)) return Promise.reject(privateError(url, host))
   const mod = u.protocol === 'https:' ? https : http
   return new Promise((resolve, reject) => {
+    let settled = false
+    let timer
+    const done = (fn, v) => { if (settled) return; settled = true; clearTimeout(timer); fn(v) }
     const options = { headers: { 'User-Agent': USER_AGENT, Accept: accept, 'Accept-Encoding': 'gzip, br' }, timeout: timeoutMs }
     if (!allowPrivate) options.lookup = publicOnlyLookup
     const req = mod.get(u, options, (res) => {
@@ -63,7 +72,8 @@ export function get(url, { maxBytes = 2 * 1024 * 1024, timeoutMs = 15000, allowP
       const chunks = []
       let size = 0
       let truncated = false
-      const finish = () => resolve({ status: res.statusCode || 0, headers: res.headers, body: Buffer.concat(chunks), truncated })
+      const finish = () => done(resolve, { status: res.statusCode || 0, headers: res.headers, body: Buffer.concat(chunks), truncated })
+      const fail = (e) => (truncated ? finish() : done(reject, e))
       stream.on('data', (c) => {
         if (truncated) return
         size += c.length
@@ -75,9 +85,20 @@ export function get(url, { maxBytes = 2 * 1024 * 1024, timeoutMs = 15000, allowP
         } else chunks.push(c)
       })
       stream.on('end', finish)
-      stream.on('error', (e) => (truncated ? finish() : reject(e)))
+      stream.on('error', fail)
+      // pipe() does not pass the response's own errors on to the decompressor.
+      res.on('aborted', () => fail(new Error(`${url}: connection closed early`)))
+      res.on('error', fail)
+      res.on('close', () => { if (!res.complete) fail(new Error(`${url}: connection closed early`)) })
     })
+    // Belt and braces: whatever was resolved, the address actually connected to must be public.
+    if (!allowPrivate) {
+      req.on('socket', (s) => s.once('connect', () => {
+        if (s.remoteAddress && !isPublicAddress(s.remoteAddress)) req.destroy(privateError(url, s.remoteAddress))
+      }))
+    }
+    timer = setTimeout(() => req.destroy(new Error(`${url}: took longer than ${deadlineMs / 1000} s`)), deadlineMs)
     req.on('timeout', () => req.destroy(new Error(`${url}: timed out`)))
-    req.on('error', reject)
+    req.on('error', (e) => done(reject, e))
   })
 }

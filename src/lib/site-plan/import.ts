@@ -63,7 +63,14 @@ export async function importPlan(payload: Payload, plan: SitePlan, opts: ImportO
   async function upload(collection: 'media' | 'documents', source: string, data: Record<string, unknown>) {
     // Anything that looks like a URL goes through fetchMedia, which refuses all but public https.
     if (/^[a-z][a-z0-9+.-]*:\/\//i.test(source)) {
-      const file = await fetchMedia(source)
+      let file: { data: Buffer; mimetype: string; name: string }
+      try {
+        file = await fetchMedia(source)
+      } catch (e) {
+        // Name the whole URL: the plan's author must be able to find the line to fix.
+        const message = e instanceof Error ? e.message : String(e)
+        throw new Error(message.includes(source) ? message : `${source}: ${message}`)
+      }
       return payload.create({ collection, data: data as never, file: { ...file, size: file.data.length }, locale: DEFAULT_LOCALE, context: ctx })
     }
     const abs = path.resolve(baseDir, source)

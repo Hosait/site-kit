@@ -64,3 +64,10 @@ test('missing refs are refused before anything is written', async () => {
   await assert.rejects(importPlan(payload, p, { baseDir: 'tests/fixtures', toLexical }), /Missing refs/)
   assert.equal(payload.calls.length, 0)
 })
+
+test('a refused download names the whole media URL, even when the error itself names only the host', async () => {
+  const p = plan()
+  p.media[0].source = 'https://evil.example/path/x.jpg'
+  const fetchMedia = async () => { throw Object.assign(new Error('evil.example resolves to a private address'), { code: 'EPRIVATE' }) }
+  await assert.rejects(importPlan(fakePayload(), p, { baseDir: 'tests/fixtures', toLexical, fetchMedia }), /https:\/\/evil\.example\/path\/x\.jpg/)
+})

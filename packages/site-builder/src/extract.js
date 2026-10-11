@@ -6,7 +6,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 import * as cheerio from 'cheerio'
 
+// Page chrome: never the main content. Inside the main content only code, forms, navigation and
+// icons are dropped; an article's own header (lead, date) and embedded videos are content.
 const CHROME = 'script, style, noscript, template, svg, iframe, form, nav, header, footer, aside, [role=navigation], [role=banner], [role=contentinfo], [aria-hidden=true]'
+const DROP_IN_MAIN = 'script, style, noscript, template, svg, form, nav, [role=navigation], [aria-hidden=true]'
 const MAX_MAIN = 50_000
 
 const abs = (href, base) => { try { return new URL(href, base).toString() } catch { return null } }
@@ -47,11 +50,22 @@ function signature($, el) {
   return el.tagName + (cls ? '.' + cls : '')
 }
 
-/** Structural fingerprint: the tags (and first class) two levels under body and under main. */
+/**
+ * Structural fingerprint: the tags (and first class) two levels under body, and the children of
+ * the main content's first level with more than one child (site builders wrap content in single
+ * divs). Runs of the same element count once, so a longer article is the same template.
+ */
 function template($, $main) {
   const parts = []
   $('body').children().each((_, a) => { parts.push(signature($, a)); $(a).children().each((__, b) => parts.push(' ' + signature($, b))) })
-  $main.children().each((_, c) => parts.push('m ' + signature($, c)))
+  let level = $main
+  for (let i = 0; i < 6 && level.children().length === 1; i++) level = level.children().first()
+  let last = null
+  level.children().each((_, c) => {
+    const sig = signature($, c)
+    if (sig !== last) parts.push('m ' + sig)
+    last = sig
+  })
   return crypto.createHash('sha1').update(parts.join('|')).digest('hex').slice(0, 10)
 }
 
@@ -67,7 +81,7 @@ export function extractPage(html, url) {
   const $main = mainElement($)
   const tpl = template($, $main)
   const main = $main.clone()
-  main.find(CHROME).remove()
+  main.find(DROP_IN_MAIN).remove()
   main.find('*').each((_, el) => { for (const name of Object.keys(el.attribs || {})) if (/^on/i.test(name)) $(el).removeAttr(name) })
   const mainHtml = ($.html(main) || '').slice(0, MAX_MAIN)
   return {

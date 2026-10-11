@@ -45,25 +45,51 @@ export function publicOnlyLookup(hostname: string, options: any, callback: any):
   })
 }
 
-export async function fetchMedia(url: string, redirects = 3): Promise<{ data: Buffer; mimetype: string; name: string }> {
+/** The file name in a URL, decoded when it is valid percent-encoding and kept as it is otherwise. */
+export function mediaName(u: URL): string {
+  const raw = u.pathname.split('/').pop() || 'file'
+  try {
+    return decodeURIComponent(raw)
+  } catch {
+    return raw
+  }
+}
+
+type FetchOptions = { redirects?: number; deadlineMs?: number; request?: typeof https.get }
+const privateError = (url: string, what: string) => Object.assign(new Error(`${url}: ${what} is a private address`), { code: 'EPRIVATE' })
+
+export async function fetchMedia(url: string, opts: FetchOptions = {}): Promise<{ data: Buffer; mimetype: string; name: string }> {
+  const { redirects = 3, deadlineMs = 120_000, request = https.get } = opts
   const u = new URL(url)
   if (u.protocol !== 'https:') throw new Error(`${url}: only https media can be imported`)
   if (u.port && u.port !== '443') throw new Error(`${url}: only the standard https port`)
+  // An IP address in the URL never reaches the lookup, so it is checked here (URL has already
+  // turned decimal and hex forms into dotted ones).
+  const host = u.hostname.replace(/^\[|\]$/g, '')
+  if (net.isIP(host) && !isPublicAddress(host)) throw privateError(url, host)
+  const name = mediaName(u)
   return new Promise((resolve, reject) => {
-    const req = https.get(u, { lookup: publicOnlyLookup as never, headers: { 'User-Agent': 'SiteKit-seed/1.0' }, timeout: 30_000 }, (res) => {
+    let settled = false
+    const done = <T,>(fn: (v: T) => void, v: T) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      fn(v)
+    }
+    const req = request(u, { lookup: publicOnlyLookup as never, headers: { 'User-Agent': 'SiteKit-seed/1.0' }, timeout: 30_000 }, (res) => {
       const status = res.statusCode ?? 0
       if (status >= 300 && status < 400 && res.headers.location) {
         res.resume()
-        if (redirects <= 0) return reject(new Error(`${url}: too many redirects`))
-        return resolve(fetchMedia(new URL(res.headers.location, u).toString(), redirects - 1))
+        if (redirects <= 0) return done(reject, new Error(`${url}: too many redirects`))
+        return done(resolve, fetchMedia(new URL(res.headers.location, u).toString(), { ...opts, redirects: redirects - 1 }) as never)
       }
       if (status !== 200) {
         res.resume()
-        return reject(new Error(`${url}: HTTP ${status}`))
+        return done(reject, new Error(`${url}: HTTP ${status}`))
       }
       if (Number(res.headers['content-length'] || 0) > MAX_MEDIA_BYTES) {
         res.destroy()
-        return reject(new Error(`${url}: larger than 25 MB`))
+        return done(reject, new Error(`${url}: larger than 25 MB`))
       }
       const chunks: Buffer[] = []
       let size = 0
@@ -71,19 +97,23 @@ export async function fetchMedia(url: string, redirects = 3): Promise<{ data: Bu
         size += c.length
         if (size > MAX_MEDIA_BYTES) {
           res.destroy()
-          reject(new Error(`${url}: larger than 25 MB`))
+          done(reject, new Error(`${url}: larger than 25 MB`))
         } else chunks.push(c)
       })
       res.on('end', () =>
-        resolve({
-          data: Buffer.concat(chunks),
-          mimetype: String(res.headers['content-type'] || 'application/octet-stream').split(';')[0].trim(),
-          name: decodeURIComponent(u.pathname.split('/').pop() || 'file'),
-        }),
+        done(resolve, { data: Buffer.concat(chunks), mimetype: String(res.headers['content-type'] || 'application/octet-stream').split(';')[0].trim(), name }),
       )
-      res.on('error', reject)
+      res.on('error', (e: Error) => done(reject, e))
     })
+    // Whatever was resolved, the address actually connected to must be public.
+    req.on('socket', (s: import('node:net').Socket) =>
+      s.once('connect', () => {
+        if (s.remoteAddress && !isPublicAddress(s.remoteAddress)) req.destroy(privateError(url, s.remoteAddress))
+      }),
+    )
+    // An overall limit: the socket timeout only notices silence, not a host that drips bytes.
+    const timer = setTimeout(() => req.destroy(new Error(`${url}: took longer than ${deadlineMs / 1000} s`)), deadlineMs)
     req.on('timeout', () => req.destroy(new Error(`${url}: timed out`)))
-    req.on('error', reject)
+    req.on('error', (e: Error) => done(reject, e))
   })
 }

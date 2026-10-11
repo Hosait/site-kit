@@ -149,13 +149,17 @@ async function seedMedia(only: string | null) {
   return { ok: true, started: true, total: jobs.length }
 }
 
-/** Imports seed/site-plan.json in the background: media come one by one, which can take minutes. */
-async function seedPlan(replace: boolean) {
+/**
+ * Imports seed/site-plan.json in the background: media come one by one, which can take minutes.
+ * `progress` is the slot the db step already claimed; `release` gives it back on failure.
+ */
+async function seedPlan(replace: boolean, progress: PlanSeedProgress, release: () => void) {
   const loaded = loadSeedPlan(SEED_DIR)
-  if (!loaded.ok) return { ok: false, error: loaded.error }
+  if (!loaded.ok) {
+    release()
+    return { ok: false, error: loaded.error }
+  }
   const payload = await getPayload({ config: configPromise })
-  const progress: PlanSeedProgress = { running: true, done: 0, total: 0, startedAt: new Date().toISOString() }
-  g.__seedPlan = progress
   void runPlanSeed(payload, loaded.plan, SEED_DIR, progress, {
     reset: replace,
     after: async () => {
@@ -171,23 +175,39 @@ async function handle(req: Request, step: string) {
   if (process.env.SITE_ORIGINS === 'production') {
     return Response.json({ ok: false, error: 'Seed er sperret i produksjon' }, { status: 409 })
   }
-  if (step === 'status') return Response.json({ media: g.__seedMedia ?? null, plan: g.__seedPlan ?? null })
+  if (step === 'status') {
+    return Response.json({ media: g.__seedMedia ?? null, plan: g.__seedPlan ?? null, sources: fs.existsSync(path.join(SEED_DIR, 'sources.json')) })
+  }
   if (req.method !== 'POST') return Response.json({ ok: false, error: 'Bruk POST' }, { status: 405 })
   if (step === 'db') {
     // A retry (Hosait's seed.run, or the panel clicked twice) must not start a second import.
     if (g.__seedPlan?.running) return Response.json({ ok: true, alreadyRunning: true, progress: g.__seedPlan })
-    const payload = await getPayload({ config: configPromise })
-    const replace = new URL(req.url).searchParams.get('replace') === '1'
-    const decision = seedDbDecision({
-      pages: (await payload.count({ collection: 'pages' })).totalDocs,
-      replace,
-      production: process.env.SITE_ORIGINS === 'production',
-    })
-    if (decision === 'refuse_existing') {
-      return Response.json({ ok: false, error: 'Nettstedet har allerede sider. Bruk ?replace=1 for å erstatte alt innhold.' }, { status: 409 })
+    // The slot is claimed before the first await, so two requests at once cannot both start one.
+    const previous = g.__seedPlan
+    const claim: PlanSeedProgress = { running: true, done: 0, total: 0, startedAt: new Date().toISOString() }
+    g.__seedPlan = claim
+    const release = () => {
+      if (g.__seedPlan === claim) g.__seedPlan = previous
     }
-    if (seedSource(SEED_DIR) === 'plan') return Response.json(await seedPlan(replace))
-    return Response.json(await seedDb())
+    try {
+      const payload = await getPayload({ config: configPromise })
+      const replace = new URL(req.url).searchParams.get('replace') === '1'
+      const decision = seedDbDecision({
+        pages: (await payload.count({ collection: 'pages' })).totalDocs,
+        replace,
+        production: process.env.SITE_ORIGINS === 'production',
+      })
+      if (decision === 'refuse_existing') {
+        release()
+        return Response.json({ ok: false, error: 'Nettstedet har allerede sider. Bruk ?replace=1 for å erstatte alt innhold.' }, { status: 409 })
+      }
+      if (seedSource(SEED_DIR) === 'plan') return Response.json(await seedPlan(replace, claim, release))
+      release()
+      return Response.json(await seedDb())
+    } catch (e) {
+      release()
+      throw e
+    }
   }
   if (step === 'media') return Response.json(await seedMedia(new URL(req.url).searchParams.get('only')))
   return Response.json({ ok: false, error: 'Ukjent steg (db, media, status)' }, { status: 404 })

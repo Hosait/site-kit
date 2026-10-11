@@ -40,3 +40,34 @@ test('redirects are returned, not followed; gzip is decoded; bodies are capped',
 test('only http and https', async () => {
   await assert.rejects(get('ftp://example.com/x'), /only http and https/)
 })
+
+// --- Review fixes ---------------------------------------------------------
+import http from 'node:http'
+
+test('IP-literal hosts are checked too: private literals are refused before connecting', async () => {
+  for (const u of ['http://127.0.0.1/', 'http://[::1]/', 'http://2130706433/', 'http://0x7f.1/', 'http://169.254.169.254/latest', 'https://10.255.255.1/'])
+    await assert.rejects(get(u), (e) => e.code === 'EPRIVATE', u)
+})
+
+function rawServer(handler) {
+  const server = http.createServer(handler)
+  return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve({ url: `http://127.0.0.1:${server.address().port}`, close: () => { server.closeAllConnections?.(); return new Promise((r) => server.close(r)) } })))
+}
+
+test('a gzip response whose connection drops mid-body rejects instead of hanging', async () => {
+  const s = await rawServer((req, res) => {
+    res.writeHead(200, { 'content-encoding': 'gzip', 'content-type': 'text/html' })
+    res.write(zlib.gzipSync('<p>' + 'x'.repeat(50000) + '</p>').subarray(0, 40))
+    setTimeout(() => res.socket.destroy(), 30)
+  })
+  try {
+    await assert.rejects(get(s.url + '/', { allowPrivate: true, deadlineMs: 5000 }), /closed early|aborted|unexpected end/i)
+  } finally { await s.close() }
+})
+
+test('a response that never ends is stopped by the overall deadline', async () => {
+  const s = await rawServer((req, res) => { res.writeHead(200, { 'content-type': 'text/html' }); res.write('<p>slow') })
+  try {
+    await assert.rejects(get(s.url + '/', { allowPrivate: true, deadlineMs: 200 }), /took longer/)
+  } finally { await s.close() }
+})

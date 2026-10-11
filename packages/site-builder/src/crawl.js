@@ -49,10 +49,24 @@ export async function crawl(start, opts) {
   const rawDir = path.join(out, 'raw')
   fs.mkdirSync(rawDir, { recursive: true })
 
+  // robots.txt and sitemaps often redirect (http→https, apex→www): follow up to 3 hops on the same site.
+  async function getFollowing(url, extra) {
+    let current = url
+    for (let hop = 0; hop <= 3; hop++) {
+      const r = await get(current, { allowPrivate, ...extra })
+      if (r.status < 300 || r.status >= 400 || !r.headers.location) return r
+      let next
+      try { next = new URL(r.headers.location, current) } catch { return r }
+      if (!sameSite(next.hostname, root.hostname)) return r
+      current = next.toString()
+    }
+    return { status: 0, headers: {}, body: Buffer.alloc(0), truncated: false }
+  }
+
   // robots.txt decides what we may read. A refused (private) host stops everything here.
   let robotsText = ''
   try {
-    const r = await get(new URL('/robots.txt', root).toString(), { allowPrivate, maxBytes: 512 * 1024 })
+    const r = await getFollowing(new URL('/robots.txt', root).toString(), { maxBytes: 512 * 1024 })
     if (r.status === 200) robotsText = r.body.toString('utf8')
   } catch (e) {
     if (e.code === 'EPRIVATE') throw e
@@ -71,6 +85,9 @@ export async function crawl(start, opts) {
   const languages = new Set()
   const note = (map, key, from) => map.set(key, (map.get(key) || new Set()).add(from))
   const count = (map, names) => names.forEach((n) => map.set(n, (map.get(n) || 0) + 1))
+  // Only so many addresses are worth remembering when only maxPages are read.
+  const maxSeen = maxPages * 3
+  let notQueued = 0
 
   function enqueue(href, from) {
     const n = normalize(href, from)
@@ -81,26 +98,33 @@ export async function crawl(start, opts) {
     if (IMAGE.test(u.pathname)) return note(media, n, from)
     if (DOCUMENT.test(u.pathname)) return note(documents, n, from)
     if (seen.has(n)) return
+    if (seen.size >= maxSeen) { notQueued++; return }
     seen.add(n)
     if (!robots.allowed(u.pathname)) return blocked.add(n)
     queue.push(n)
   }
 
-  // Sitemaps first: robots.txt's Sitemap lines, then the usual names. Each file is read once.
+  // Sitemaps first: robots.txt's Sitemap lines, then the usual names. Each file is read once,
+  // and its parsed document is let go before the next one is read.
   const sitemapSeen = new Set()
   async function readSitemap(url) {
     if (sitemapSeen.has(url) || sitemapSeen.size >= MAX_SITEMAPS) return
     sitemapSeen.add(url)
     let r
-    try { r = await get(url, { allowPrivate, maxBytes: 10 * 1024 * 1024 }) } catch { return }
+    try { r = await getFollowing(url, { maxBytes: 10 * 1024 * 1024 }) } catch { return }
     if (r.status !== 200) return
-    const $ = cheerio.load(r.body.toString('utf8'), { xmlMode: true })
-    const subs = $('sitemap > loc').map((_, e) => $(e).text().trim()).get()
+    let subs
+    let locs
+    {
+      const $ = cheerio.load(r.body.toString('utf8'), { xmlMode: true })
+      subs = $('sitemap > loc').map((_, e) => $(e).text().trim()).get()
+      locs = $('url > loc').map((_, e) => $(e).text().trim()).get()
+    }
+    for (const l of locs) enqueue(l, url)
     for (const s of subs) await readSitemap(s)
-    $('url > loc').each((_, e) => enqueue($(e).text().trim(), url))
   }
   enqueue(root.toString(), root.toString())
-  for (const s of [...robots.sitemaps, new URL('/sitemap.xml', root).toString(), new URL('/sitemap_index.xml', root).toString()]) await readSitemap(s)
+  for (const s of [...robots.sitemaps, ...['/sitemap.xml', '/sitemap_index.xml', '/sitemap-index.xml'].map((p) => new URL(p, root).toString())]) await readSitemap(s)
 
   // A slot is reserved before the request, so two workers can never pass the cap together.
   let reserved = 0
@@ -116,7 +140,12 @@ export async function crawl(start, opts) {
     pages.push(record)
     log(`${r.status} ${url}`)
     if (r.status >= 300 && r.status < 400 && r.headers.location) {
-      record.location = new URL(r.headers.location, url).toString()
+      try {
+        record.location = new URL(r.headers.location, url).toString()
+      } catch {
+        record.error = `bad Location header: ${String(r.headers.location).slice(0, 200)}`
+        return
+      }
       enqueue(record.location, url)
       return
     }
@@ -159,6 +188,7 @@ export async function crawl(start, opts) {
     crawledAt: new Date().toISOString(),
     robots: { sitemaps: robots.sitemaps, blocked: [...blocked] },
     pages,
+    notQueued,
     media: [...media].map(([url, on]) => ({ url, foundOn: [...on].slice(0, 5) })),
     documents: [...documents].map(([url, on]) => ({ url, foundOn: [...on].slice(0, 5) })),
     trackers: tally(trackers),

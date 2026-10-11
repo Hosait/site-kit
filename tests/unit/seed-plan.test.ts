@@ -72,3 +72,11 @@ test('the db step checks for a running import before the content check, and uses
   assert.match(src, /seedSource\(SEED_DIR\) === 'plan'/)
   assert.match(src, /plan: g\.__seedPlan \?\? null/)
 })
+
+test('the db step claims the running slot before its first await, so two requests at once cannot both import', () => {
+  const src = fs.readFileSync('src/app/(frontend)/next/seed/[step]/route.ts', 'utf8')
+  const db = src.slice(src.indexOf("if (step === 'db')"))
+  assert.ok(db.indexOf('g.__seedPlan = claim') > -1, 'claims the slot')
+  assert.ok(db.indexOf('g.__seedPlan = claim') < db.indexOf('await '), 'before any await')
+  assert.match(src, /release\(\)/)
+})
