@@ -15,8 +15,12 @@ Kit code lives in `src/`. A site is made its own in these places only, so kit up
 | `site/blocks/custom/` | Blocks only this site uses |
 | `public/brand/` | Logo file |
 
-Sites, languages, document types and article kinds become database enums. Changing them after
-the first deploy needs a migration: `pnpm payload migrate:create <name> && pnpm generate:types`.
+Sites, languages, document types and article kinds become database enums, and the search indexes
+are per language. The shipped migrations fit the demo config (one site, no/en). A new site whose
+config differs regenerates the initial migration before its first deploy: delete `src/migrations/*`,
+run `pnpm payload migrate:create initial`, and add the search-index lines for its languages (copy them
+from the demo's initial migration with that language's text-search config). After the first deploy,
+every such change needs a new migration (`pnpm payload migrate:create <name> && pnpm generate:types`);
 CI fails if the schema changed without one.
 
 ## Run it locally

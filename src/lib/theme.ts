@@ -66,6 +66,9 @@ const PAIRS: [fg: ColorKey | 'white', bg: ColorKey | 'white'][] = [
   ['brandText', 'background'], ['brandText', 'muted'],
   ['brandDark', 'tint'], // .bg-section-tint switches link text to brandDark
   ['white', 'ink'], ['white', 'brandDark'], ['white', 'brandText'],
+  ['white', 'brand'], // skip link (Shell.tsx)
+  ['highlight', 'background'], // form errors
+  ['tint', 'ink'], ['tint', 'brandDark'], // links in dark sections (globals.css .bg-section-dark/-brand)
 ]
 
 export function checkTheme(theme: Theme): string[] {

@@ -31,3 +31,15 @@ test('checkTheme names the failing pair', () => {
   const low = validateTheme({ ...theme, colors: { ...theme.colors, brandText: '#9ab8e8' } })
   assert.ok(checkTheme(low).some((p) => p.startsWith('brandText on background')))
 })
+
+test('checkTheme checks every pair the components use (form errors, skip link, dark-section links)', () => {
+  const t = validateTheme(theme)
+  for (const [key, value, pair] of [
+    ['highlight', '#ff6b6b', 'highlight on background'],
+    ['brand', '#8fb4ff', 'white on brand'],
+    ['tint', '#44506a', 'tint on ink'],
+  ] as const) {
+    const problems = checkTheme({ ...t, colors: { ...t.colors, [key]: value } })
+    assert.ok(problems.some((p) => p.startsWith(pair)), `${pair}: ${problems.join('; ')}`)
+  }
+})

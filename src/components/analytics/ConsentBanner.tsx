@@ -12,6 +12,7 @@ import {
   serializeConsent,
   VISITOR_COOKIE,
   VISITOR_MAX_AGE,
+  CONSENT_GIVEN_EVENT,
   type Consent,
 } from '@/lib/analytics/consent'
 import type { Strings } from '@/lib/i18n'
@@ -75,6 +76,8 @@ export function ConsentBanner({ site, locale, strings, policyHref }: { site: Sit
       setCookie(VISITOR_COOKIE, '', 0)
     }
     current.current = consent
+    // The tracker held back this page's pageview; it sends it now that statistics are allowed.
+    if (stats) window.dispatchEvent(new Event(CONSENT_GIVEN_EVENT))
     const logged = before?.statistics && !stats ? 'withdraw' : action
     void fetch('/next/consent', {
       method: 'POST',

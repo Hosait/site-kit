@@ -3,7 +3,7 @@
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 
-import { CONSENT_COOKIE, parseConsent, readCookie } from '@/lib/analytics/consent'
+import { CONSENT_COOKIE, CONSENT_GIVEN_EVENT, parseConsent, readCookie } from '@/lib/analytics/consent'
 import { SITE_KEYS, SITES, type Locale, type SiteKey } from '@/lib/sites'
 
 /** Hosts of this install's own sites: links between them are navigation, not outbound clicks. */
@@ -26,10 +26,23 @@ type Payload = Record<string, string | number | undefined>
 
 /** Set by <Tracker>: whether the site counts basic statistics without consent (analytics settings). */
 let sendWithoutConsent = false
+/** The pageview held back before consent; sent if the visitor accepts on this page. */
+let pendingPageview: Payload | null = null
+
+if (typeof window !== 'undefined') {
+  window.addEventListener(CONSENT_GIVEN_EVENT, () => {
+    const p = pendingPageview
+    pendingPageview = null
+    if (p) send(p)
+  })
+}
 
 function send(data: Payload) {
   // Without consent nothing leaves the browser, unless the site has turned on statistics without consent.
-  if (!sendWithoutConsent && parseConsent(readCookie(document.cookie, CONSENT_COOKIE))?.statistics !== true) return
+  if (!sendWithoutConsent && parseConsent(readCookie(document.cookie, CONSENT_COOKIE))?.statistics !== true) {
+    if (data.t === 'pageview') pendingPageview = data
+    return
+  }
   const body = JSON.stringify(data)
   try {
     if (navigator.sendBeacon?.('/next/a', new Blob([body], { type: 'text/plain' }))) return

@@ -1,6 +1,5 @@
 import { MigrateUpArgs, MigrateDownArgs, sql } from '@payloadcms/db-postgres'
 
-import { vector } from '../lib/search/query'
 
 export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   await db.execute(sql`
@@ -2376,10 +2375,11 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE INDEX "payload_migrations_updated_at_idx" ON "payload_migrations" USING btree ("updated_at");
   CREATE INDEX "payload_migrations_created_at_idx" ON "payload_migrations" USING btree ("created_at");`)
 
-  // Full-text per locale (same expression as src/lib/search/query.ts) and fuzzy title search.
-  // A new locale needs a new migration that adds its index.
-  await db.execute(sql.raw(`CREATE INDEX "search_index_fts_no" ON "search_index" USING gin (${vector('no')}) WHERE locale = 'no'`))
-  await db.execute(sql.raw(`CREATE INDEX "search_index_fts_en" ON "search_index" USING gin (${vector('en')}) WHERE locale = 'en'`))
+  // Full-text per locale (frozen copy of vector() in src/lib/search/query.ts for the demo's no/en with
+  // norwegian/english) and fuzzy title search. A new site whose locales differ regenerates this initial
+  // migration and writes its own index lines; adding a locale later needs a new migration.
+  await db.execute(sql.raw(`CREATE INDEX "search_index_fts_no" ON "search_index" USING gin ((setweight(to_tsvector('norwegian'::regconfig, coalesce(title, '')), 'A') || setweight(to_tsvector('norwegian'::regconfig, coalesce(summary, '')), 'B') || setweight(to_tsvector('norwegian'::regconfig, coalesce(body, '')), 'C'))) WHERE locale = 'no'`))
+  await db.execute(sql.raw(`CREATE INDEX "search_index_fts_en" ON "search_index" USING gin ((setweight(to_tsvector('english'::regconfig, coalesce(title, '')), 'A') || setweight(to_tsvector('english'::regconfig, coalesce(summary, '')), 'B') || setweight(to_tsvector('english'::regconfig, coalesce(body, '')), 'C'))) WHERE locale = 'en'`))
   await db.execute(sql`DO $$ BEGIN CREATE EXTENSION IF NOT EXISTS pg_trgm; EXCEPTION WHEN insufficient_privilege THEN RAISE NOTICE 'pg_trgm missing'; END $$`)
 }
 

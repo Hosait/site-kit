@@ -10,6 +10,8 @@
 import { SITE_CONFIG } from '@/lib/sites'
 
 export const CONSENT_VERSION = 1
+/** Fired by the banner when the visitor allows statistics (the tracker then sends the held-back pageview). */
+export const CONSENT_GIVEN_EVENT = `${SITE_CONFIG.cookiePrefix}:consent-given`
 export const CONSENT_COOKIE = `${SITE_CONFIG.cookiePrefix}-consent`
 export const VISITOR_COOKIE = `${SITE_CONFIG.cookiePrefix}-vid`
 /** Samtykket huskes i 12 måneder; deretter spørres det på nytt. */

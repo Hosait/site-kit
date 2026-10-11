@@ -4,6 +4,7 @@ import { adminOnly, isAdmin } from '@/access/siteAccess'
 import { audit } from '@/lib/analytics/audit'
 import { clearSettingsCache } from '@/lib/analytics/ingest'
 import type { User } from '@/payload-types'
+import { revalidatePath } from 'next/cache'
 
 /**
  * Besøksanalyse: rådata, døgnsalt, samtykkelogg, revisjonslogg og innstillinger.
@@ -12,6 +13,15 @@ import type { User } from '@/payload-types'
  */
 
 /** Administratorer og brukere med «Tilgang til besøksanalyse». */
+/** Re-render cached pages after the analytics settings change (injectable for tests). */
+export async function revalidateStatsSettings(revalidate: (path: string, type: 'layout') => void = revalidatePath) {
+  try {
+    revalidate('/', 'layout')
+  } catch {
+    // Outside a Next request (scripts, tests with the real function) there is no cache to clear.
+  }
+}
+
 export const hasAnalyticsAccess = (user: unknown): boolean => {
   const u = user as (User & { analyticsAccess?: boolean | null }) | null
   return Boolean(u && (isAdmin(u) || u.analyticsAccess))
@@ -133,6 +143,8 @@ export const AnalyticsSettings: GlobalConfig = {
     afterChange: [
       async ({ doc, previousDoc, req }) => {
         clearSettingsCache()
+        // The layout passes 'statistics without consent' to the tracker, so cached pages must re-render.
+        await revalidateStatsSettings()
         const changed = Object.fromEntries(
           ['basicWithoutConsent', 'retentionDays', 'aggregateDays', 'consentLogDays']
             .filter((k) => doc[k] !== previousDoc?.[k])
