@@ -39,8 +39,9 @@ Write `seed/site-plan.json` against `schema/site-plan.schema.json`; the blocks a
 are in `schema/blocks.schema.json`. Map each template once, then fill every page of it. Put
 images and PDFs in `seed/media/` (or use public https URLs). Link with `$media`, `$page`,
 `$pageLink`, `$person`, `$document`; rich text is `$html`. Add `redirects` for every old URL that
-moves, and `gaps` for anything no block matches. Check it locally:
+moves, and `gaps` for anything no block matches. Check it until it passes, then try it locally:
 
+    pnpm kit:check-plan seed/site-plan.json
     pnpm kit:import seed/site-plan.json --reset
     pnpm dev
 
