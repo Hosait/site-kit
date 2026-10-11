@@ -1,0 +1,88 @@
+import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { test } from 'node:test'
+
+import { crawl, normalize, sameSite } from '../src/crawl.js'
+import { serve } from './server.js'
+
+const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'crawl-'))
+const page = (title, body, lang = 'en', head = '') => ({ body: `<!doctype html><html lang="${lang}"><head><title>${title}</title>${head}</head><body>${body}</body></html>` })
+
+function site(extra = {}) {
+  return serve({
+    '/robots.txt': (req) => ({ headers: { 'content-type': 'text/plain' }, body: `User-agent: *\nDisallow: /private\nSitemap: http://${req.headers.host}/sitemap.xml\n` }),
+    '/sitemap.xml': (req) => ({ headers: { 'content-type': 'application/xml' }, body: `<urlset><url><loc>http://${req.headers.host}/</loc></url><url><loc>http://${req.headers.host}/news/a</loc></url></urlset>` }),
+    '/': page('Home',
+      `<nav><a href="/about">About</a> <a href="/contact?utm_source=x">Contact</a></nav>
+       <main><img src="/wp-content/uploads/hero.jpg" alt="Hero"><p>Welcome</p>
+       <a href="https://external.example/">Partner</a> <a href="/private/secret">Secret</a>
+       <a href="/files/report.pdf">Report</a> <a href="/old">Old</a> <a href="/out">Out</a>
+       <iframe src="https://www.youtube.com/embed/abc"></iframe></main>
+       <script src="https://www.googletagmanager.com/gtm.js?id=GTM-X"></script>`,
+      'en', '<link rel="alternate" hreflang="no" href="/no/">'),
+    '/about': page('About', '<p>About us</p>'),
+    '/contact': page('Contact', '<p>Call us</p>'),
+    '/news/a': page('News A', '<p>Story</p>'),
+    '/no/': page('Hjem', '<p>Velkommen</p>', 'no'),
+    '/old': { status: 301, headers: { location: '/about' } },
+    '/out': { status: 301, headers: { location: 'https://elsewhere.example/' } },
+    ...extra,
+  })
+}
+
+test('normalize drops hashes and tracking parameters; sameSite treats www and apex as one site', () => {
+  assert.equal(normalize('/a?utm_source=x&id=2#top', 'https://x.no/'), 'https://x.no/a?id=2')
+  assert.equal(normalize('mailto:a@x.no', 'https://x.no/'), null)
+  assert.equal(sameSite('www.x.no', 'x.no'), true)
+  assert.equal(sameSite('shop.x.no', 'x.no'), false)
+})
+
+test('crawls the site from the start page and sitemap, obeys robots.txt and records what it finds', async () => {
+  const s = await site()
+  const out = tmp()
+  try {
+    const inv = await crawl(s.url + '/', { out, allowPrivate: true, delayMs: 0 })
+    const paths = inv.pages.map((p) => new URL(p.url).pathname + new URL(p.url).search)
+    for (const p of ['/', '/about', '/contact', '/news/a', '/no/', '/old', '/out']) assert.ok(paths.includes(p), p)
+    assert.ok(!s.requests.some((r) => r.startsWith('/private')), 'robots.txt obeyed')
+    assert.ok(inv.robots.blocked.some((u) => u.includes('/private/secret')))
+    assert.ok(!paths.some((p) => p.includes('external')))
+    const old = inv.pages.find((p) => p.url.endsWith('/old'))
+    assert.equal(old.status, 301)
+    const outPage = inv.pages.find((p) => p.url.endsWith('/out'))
+    assert.deepEqual([outPage.status, outPage.location], [301, 'https://elsewhere.example/'])
+    assert.ok(!s.requests.includes('/elsewhere'), 'another host is never followed')
+    assert.ok(inv.media.some((m) => m.url.endsWith('/wp-content/uploads/hero.jpg')))
+    assert.ok(inv.documents.some((d) => d.url.endsWith('/files/report.pdf')))
+    assert.deepEqual(inv.trackers.map((t) => t.name), ['Google Tag Manager'])
+    assert.deepEqual(inv.embeds.map((t) => t.name), ['YouTube'])
+    assert.deepEqual(inv.cms.map((t) => t.name), ['WordPress'])
+    assert.deepEqual(inv.languages.sort(), ['en', 'no'])
+    const home = inv.pages.find((p) => new URL(p.url).pathname === '/')
+    assert.ok(fs.existsSync(path.join(out, home.file)))
+    const urls = JSON.parse(fs.readFileSync(path.join(out, 'urls.json'), 'utf8'))
+    assert.ok(urls.main.en.some((e) => e.path === '/about' && e.status === 200))
+  } finally { await s.close() }
+})
+
+test('the page cap is respected', async () => {
+  const s = await site()
+  try {
+    const inv = await crawl(s.url + '/', { out: tmp(), allowPrivate: true, delayMs: 0, maxPages: 2 })
+    assert.equal(inv.pages.length, 2)
+  } finally { await s.close() }
+})
+
+test('a sitemap index that lists itself does not hang the crawl', async () => {
+  const s = await site({ '/sitemap.xml': (req) => ({ headers: { 'content-type': 'application/xml' }, body: `<sitemapindex><sitemap><loc>http://${req.headers.host}/sitemap.xml</loc></sitemap></sitemapindex>` }) })
+  try {
+    const inv = await crawl(s.url + '/', { out: tmp(), allowPrivate: true, delayMs: 0 })
+    assert.ok(inv.pages.length > 0)
+  } finally { await s.close() }
+})
+
+test('without allowPrivate a local site is refused', async () => {
+  await assert.rejects(crawl('http://localhost/', { out: tmp(), delayMs: 0 }), (e) => e.code === 'EPRIVATE')
+})
