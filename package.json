@@ -22,7 +22,8 @@
     "qa:urls": "tsx scripts/qa/url-parity.ts",
     "qa:axe": "tsx scripts/qa/axe-report.ts",
     "kit:theme-check": "tsx scripts/kit/theme-check.ts",
-    "kit:schema": "tsx scripts/kit/schema.ts"
+    "kit:schema": "tsx scripts/kit/schema.ts",
+    "kit:import": "tsx scripts/kit/import-plan.ts"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.3.0",
