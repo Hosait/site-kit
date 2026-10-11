@@ -1,3 +1,9 @@
+# Who this file is for
+
+Building a customer site from this template? Follow `AGENTS.md`; the rest of this file is for
+Hosait staff working on the kit itself in the `Hosait/site-kit` repository, and does not apply
+to sites made from it.
+
 # Hosait Site Kit
 
 A website template: Next.js 16 (App Router) + Payload CMS 3 + Postgres, hosted on Hosait.
