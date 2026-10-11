@@ -55,7 +55,7 @@ async function resolve(site: SiteKey, locale: string, segments: string[], draft:
     }
   }
 
-  // Omdirigeringer fra gamle Craft-adresser (administreres i CMS-et).
+  // Omdirigeringer fra gamle adresser (administreres i CMS-et).
   const redirects = await getRedirects(isLocale(locale) ? locale : DEFAULT_LOCALE)
   const match = redirects.find(
     (r) => (!r.site || r.site === site) && r.from.replace(/\/$/, '').normalize('NFC') === fullPath.replace(/\/$/, ''),

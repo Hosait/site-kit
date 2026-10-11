@@ -3,13 +3,18 @@
   "runtime": "compose",
   "compose": { "file": "docker-compose.hosait.yml" },
   "web": { "service": "web", "port": 3000 },
+  "storage": { "public": "public/" },
+  "seed": {
+    "files": "seed/files",
+    "run": "wget -qO- --post-data= --header \"Authorization: Bearer $CRON_SECRET\" http://web:3000/next/seed/db"
+  },
   "env": [
-    { "name": "DB_PASSWORD", "required": true, "description": "Postgres-passord. Endres aldri etter første deploy." },
-    { "name": "PAYLOAD_SECRET", "required": true, "description": "Signerer innlogging i CMS-et" },
-    { "name": "PREVIEW_SECRET", "required": true, "description": "Beskytter forhåndsvisning av utkast" },
-    { "name": "CRON_SECRET", "required": true, "description": "Beskytter cache-tømming og planlagte jobber" },
-    { "name": "PUBLIC_URL", "required": true, "description": "Adressen admin og test nås på, f.eks. https://spilka.hosait.com (uten / på slutten)" },
-    { "name": "STAGING_HOST", "required": false, "description": "Test: spilka.hosait.com gir sbs.spilka.hosait.com og dws.spilka.hosait.com (krever «Subdomains of the Hosait address»)" },
-    { "name": "SITE_ORIGINS", "required": false, "description": "Sett til production når spilka.com, spilka-sbs.com og spilka-dws.com peker hit" }
+    { "name": "DB_PASSWORD", "required": true, "generate": "hex24", "description": "Postgres password. Never change it after the first deploy." },
+    { "name": "PAYLOAD_SECRET", "required": true, "generate": "hex32", "description": "Signs CMS sign-ins" },
+    { "name": "PREVIEW_SECRET", "required": true, "generate": "hex32", "description": "Protects draft previews" },
+    { "name": "CRON_SECRET", "required": true, "generate": "hex32", "description": "Protects cache clearing, seeding and scheduled jobs" },
+    { "name": "PUBLIC_URL", "required": true, "from": "url", "description": "The address the admin and preview answer on, e.g. https://kit-demo.hosait.com (no trailing /)" },
+    { "name": "STAGING_HOST", "required": false, "description": "Only for several sites: the Hosait address whose subdomains serve the other sites" },
+    { "name": "SITE_ORIGINS", "required": false, "description": "Set to production when the site's own domains point here" }
   ]
 }

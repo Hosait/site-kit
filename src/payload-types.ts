@@ -211,7 +211,7 @@ export interface Page {
   slug?: string | null;
   path?: string | null;
   /**
-   * Overstyrer adressen, f.eks. for å beholde en gammel Craft-adresse. Uten / foran.
+   * Overstyrer adressen, f.eks. for å beholde en adresse fra det gamle nettstedet. Uten / foran.
    */
   pathOverride?: string | null;
   /**

@@ -21,7 +21,7 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 
-# Craft migration scrape output
+# Migration scrape output (Phase 2 tools)
 /import-data/
 
 # Lokale opplastinger og migreringsdata

@@ -2,7 +2,7 @@ const TRANSLIT: Record<string, string> = { æ: 'ae', ø: 'o', å: 'a', ä: 'a', 
 
 /**
  * Normaliserer en slug. Bokstaver utenfor ASCII (æøå) beholdes som standard, fordi
- * mange eksisterende Craft-adresser har dem og må fortsette å virke.
+ * mange adresser fra gamle nettsteder har dem og må fortsette å virke.
  * Nye slugs fra titler translittereres (`transliterate: true`).
  */
 export function slugify(input: string, { transliterate = false } = {}): string {

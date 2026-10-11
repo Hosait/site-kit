@@ -6,6 +6,7 @@ import configPromise from '@payload-config'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { getPayload } from 'payload'
 
+import { seedDbDecision } from '@/lib/seed-guard'
 import { reindexAll } from '@/lib/search/indexer'
 import { SITE_KEYS } from '@/lib/sites'
 
@@ -22,8 +23,9 @@ export const maxDuration = 900
  *   wget -qO- --header "Authorization: Bearer $CRON_SECRET" http://127.0.0.1:3000/next/seed/status
  *   (…/next/seed/media?only=documents kjører bare dokumentene på nytt)
  *
- * - db:    tømmer innholdstabellene og legger inn seed/content.sql.gz (brukere berøres ikke)
- * - media: henter originalbildene/-dokumentene fra dagens Craft-nettsted (seed/sources.json)
+ * - db:    tømmer innholdstabellene og legger inn seed/content.sql.gz (brukere berøres ikke).
+ *          Bare på en tom installasjon, eller med ?replace=1 (panelet sender det).
+ * - media: henter originalbildene/-dokumentene fra kildene i seed/sources.json
  *          og laster dem opp via Payload, som lager størrelser og lagrer i S3. Går i bakgrunnen.
  * Sperret i produksjon (SITE_ORIGINS=production).
  */
@@ -152,7 +154,18 @@ async function handle(req: Request, step: string) {
   }
   if (step === 'status') return Response.json({ media: g.__seedMedia ?? null })
   if (req.method !== 'POST') return Response.json({ ok: false, error: 'Bruk POST' }, { status: 405 })
-  if (step === 'db') return Response.json(await seedDb())
+  if (step === 'db') {
+    const payload = await getPayload({ config: configPromise })
+    const decision = seedDbDecision({
+      pages: (await payload.count({ collection: 'pages' })).totalDocs,
+      replace: new URL(req.url).searchParams.get('replace') === '1',
+      production: process.env.SITE_ORIGINS === 'production',
+    })
+    if (decision === 'refuse_existing') {
+      return Response.json({ ok: false, error: 'Nettstedet har allerede sider. Bruk ?replace=1 for å erstatte alt innhold.' }, { status: 409 })
+    }
+    return Response.json(await seedDb())
+  }
   if (step === 'media') return Response.json(await seedMedia(new URL(req.url).searchParams.get('only')))
   return Response.json({ ok: false, error: 'Ukjent steg (db, media, status)' }, { status: 404 })
 }

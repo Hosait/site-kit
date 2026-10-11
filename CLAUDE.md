@@ -1,27 +1,25 @@
-# SpilkaWWW
+# Hosait Site Kit
 
-Ny løsning for spilka.com, spilka-sbs.com og spilka-dws.com (erstatter Craft CMS).
-Next.js 16 (App Router) + Payload CMS 3 + Postgres, hostes på Hosait.
+A website template: Next.js 16 (App Router) + Payload CMS 3 + Postgres, hosted on Hosait.
+Each customer site is generated from it.
 
-## Kjøre lokalt
-- `docker compose up -d` (Postgres på 5433) → `pnpm dev` (port 3100) → admin: http://localhost:3100/admin
-- Bytt nettsted lokalt: `?site=sbs` / `?site=dws` (huskes i cookie), eller vertene `industri.localhost`, `sbs.localhost`, `dws.localhost`.
+## Run locally
+- `docker compose up -d` (Postgres on 5433) → `pnpm dev` (port 3100) → admin: http://localhost:3100/admin
 
-## Arkitektur
-- `src/lib/sites.ts` – de tre nettstedene, språk (`no`/`en`), URL-hjelpere. `src/proxy.ts` – Host → `/{site}/{locale}/...`.
-- Én catch-all rute: `src/app/(frontend)/[site]/[locale]/[[...path]]/page.tsx` slår opp side (på `path`), artikkel (`articleBase/slug`) eller omdirigering.
-- Samlinger i `src/collections/`. Alt innhold har `site`. Sider er hierarkiske; `path` bygges i hook per språk.
-- Blokker: konfig i `src/blocks/configs.ts`, visning i `src/blocks/components.tsx`, registreres i `RenderBlocks.tsx`.
-- Data hentes via `src/lib/data.ts` (unstable_cache + tagger); hooks i `src/lib/revalidate.ts` tømmer taggene.
-- Søk: `src/lib/search/` (indeks i samlingen `search-index`, hooks på sider/artikler/dokumenter/personer, Postgres-fulltekst). Søkesiden er `/no/sok` og `/en/search`.
-- Besøksanalyse og samtykke: `src/lib/analytics/` (mottak `/next/a`, rapporter, samtykke), banner og sporing i `src/components/analytics/`, admin-siden `/admin/analytics`. Ingen IP-adresser lagres.
-- Bilder: WebP-størrelser lages ved opplasting (`Media.ts`); `components/Img.tsx` bygger srcset. Ingen runtime-skalering.
-- Etter endring i samlinger/blokker: `pnpm generate:types` og ved nye admin-komponenter `pnpm generate:importmap`.
+## Architecture
+- Kit code is in `src/`. A customer's own files are only `site/config.ts`, `site/theme.json`,
+  `site/fonts.ts`, `site/blocks/custom/` and `public/brand/`. Don't put customer specifics in `src/`.
+- `src/lib/sites.ts` derives sites and locales from `site/config.ts`; `src/proxy.ts` maps Host → `/{site}/{locale}/...`.
+- Blocks: config in `src/blocks/configs.ts`, rendering in `src/blocks/components.tsx`, registered in `RenderBlocks.tsx`.
+- Site plans: schema in `schema/`, validator and refs in `src/lib/site-plan/`, importer `scripts/kit/import-plan.ts`.
+- After changing collections or blocks: `pnpm generate:types`, `pnpm generate:importmap`, `pnpm kit:schema`,
+  and a migration (`pnpm payload migrate:create <name>`).
 
-## Regler
-- Norsk i grensesnitt for redaktører og kodekommentarer; UI-tekster til besøkende i `src/lib/i18n.ts` (no/en).
-- Mobil først, trykkflater ≥ 44 px, WCAG 2.1 AA.
-- Aldri deploy uten eksplisitt «deploy» fra Bjørn.
+## Rules
+- Norwegian in editor-facing admin UI; visitor texts in `src/lib/i18n.ts` (no/en). Code comments in new files: English.
+- Mobile first, tap targets ≥ 44 px, WCAG 2.1 AA.
+- Nothing optional loads before the visitor consents.
+- Never deploy without an explicit OK from Steinar.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

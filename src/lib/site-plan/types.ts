@@ -2,7 +2,8 @@ import type { Locale } from '@/lib/sites'
 
 export type Localized<T> = Partial<Record<Locale, T>>
 /** Inside block data: { $media: ref } → media id, { $page: ref } → page id,
- *  { $pageLink: ref } → { relationTo: 'pages', value: id }, { $html: '<p>…</p>' } → Lexical JSON. */
+ *  { $pageLink: ref } → { relationTo: 'pages', value: id }, { $person: ref } / { $document: ref } → record id,
+ *  { $html: '<p>…</p>' } → Lexical JSON. */
 export type PlanValue = unknown
 export type PlanBlock = { blockType: string } & Record<string, PlanValue>
 

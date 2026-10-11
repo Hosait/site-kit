@@ -372,7 +372,7 @@
           ]
         },
         "pathOverride": {
-          "description": "Overstyrer adressen, f.eks. for å beholde en gammel Craft-adresse. Uten / foran.",
+          "description": "Overstyrer adressen, f.eks. for å beholde en adresse fra det gamle nettstedet. Uten / foran.",
           "type": [
             "string",
             "null"

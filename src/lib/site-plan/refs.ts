@@ -1,13 +1,13 @@
 import type { Locale } from '../sites'
 import type { SitePlan } from './types'
 
-type Ids = { media: Map<string, number>; pages: Map<string, number> }
+type Ids = { media: Map<string, number>; pages: Map<string, number>; people?: Map<string, number>; documents?: Map<string, number> }
 
 function walk(value: unknown, visit: (marker: string, ref: string) => void) {
   if (Array.isArray(value)) return value.forEach((v) => walk(v, visit))
   if (!value || typeof value !== 'object') return
   const o = value as Record<string, unknown>
-  for (const m of ['$media', '$page', '$pageLink'])
+  for (const m of ['$media', '$page', '$pageLink', '$person', '$document'])
     if (typeof o[m] === 'string' && Object.keys(o).length === 1) return visit(m, o[m] as string)
   for (const v of Object.values(o)) walk(v, visit)
 }
@@ -16,10 +16,17 @@ function walk(value: unknown, visit: (marker: string, ref: string) => void) {
 export function findMissingRefs(plan: SitePlan): string[] {
   const media = new Set(plan.media.map((m) => m.ref))
   const pages = new Set(plan.pages.map((p) => p.ref))
+  const people = new Set((plan.people ?? []).map((p) => p.ref))
+  const documents = new Set((plan.documents ?? []).map((d) => d.ref))
   const missing = new Set<string>()
   const needMedia = (r?: string) => r && !media.has(r) && missing.add(`media "${r}"`)
   const needPage = (r?: string) => r && !pages.has(r) && missing.add(`page "${r}"`)
-  walk(plan, (marker, ref) => (marker === '$media' ? needMedia(ref) : needPage(ref)))
+  walk(plan, (marker, ref) => {
+    if (marker === '$media') needMedia(ref)
+    else if (marker === '$person') void (!people.has(ref) && missing.add(`person "${ref}"`))
+    else if (marker === '$document') void (!documents.has(ref) && missing.add(`document "${ref}"`))
+    else needPage(ref)
+  })
   for (const p of plan.pages) {
     needPage(p.parent)
     needMedia(p.cardImage)
@@ -59,6 +66,8 @@ export async function resolveValue(value: unknown, ids: Ids, html: (h: string) =
     if (typeof o.$media === 'string') return ids.media.get(o.$media)
     if (typeof o.$page === 'string') return ids.pages.get(o.$page)
     if (typeof o.$pageLink === 'string') return { relationTo: 'pages', value: ids.pages.get(o.$pageLink) }
+    if (typeof o.$person === 'string') return ids.people?.get(o.$person)
+    if (typeof o.$document === 'string') return ids.documents?.get(o.$document)
     if (typeof o.$html === 'string') return html(o.$html)
   }
   const out: Record<string, unknown> = {}

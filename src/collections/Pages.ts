@@ -42,7 +42,7 @@ const computePath: CollectionBeforeChangeHook<Page> = async ({ data, req, origin
       if (parent.site !== site) throw new APIError('Forelder må høre til samme nettsted.', 400)
       parentPath = parent.path ?? ''
     }
-    // «Fast adresse» vinner, slik at gamle Craft-adresser kan beholdes uendret.
+    // «Fast adresse» vinner, slik at adresser fra et gammelt nettsted kan beholdes uendret.
     const override = data.pathOverride?.trim().replace(/^\/+|\/+$/g, '')
     data.path = override || (parentPath ? `${parentPath}/${slug}` : slug)
   }
@@ -177,7 +177,7 @@ export const Pages: CollectionConfig<'pages'> = {
       localized: true,
       admin: {
         position: 'sidebar',
-        description: 'Overstyrer adressen, f.eks. for å beholde en gammel Craft-adresse. Uten / foran.',
+        description: 'Overstyrer adressen, f.eks. for å beholde en adresse fra det gamle nettstedet. Uten / foran.',
         condition: (data) => !data?.isHome,
       },
     },

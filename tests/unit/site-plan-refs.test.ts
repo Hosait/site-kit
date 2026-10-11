@@ -42,3 +42,14 @@ test('localeData picks one locale of localized fields and keeps plain ones', () 
   const item = { ref: 'a', title: { no: 'Om', en: 'About' }, order: 2 }
   assert.deepEqual(localeData(item, 'en', ['title', 'order']), { title: 'About', order: 2 })
 })
+
+test('people and documents blocks point at records with $person and $document', async () => {
+  const p = plan()
+  p.people = [{ ref: 'kari', name: 'Kari' }]
+  p.documents = [{ ref: 'guide', source: 'media/guide.pdf', title: { no: 'Guide' }, docType: 'manual' }]
+  p.pages[0].layout.no.push({ blockType: 'people', people: [{ $person: 'kari' }, { $person: 'ola' }] })
+  p.pages[0].layout.no.push({ blockType: 'documents', documents: [{ $document: 'guide' }, { $document: 'gone' }] })
+  assert.deepEqual(findMissingRefs(p).sort(), ['document "gone"', 'person "ola"'])
+  const ids = { media: new Map(), pages: new Map(), people: new Map([['kari', 4]]), documents: new Map([['guide', 9]]) }
+  assert.deepEqual(await resolveValue([{ $person: 'kari' }, { $document: 'guide' }], ids, async () => null), [4, 9])
+})

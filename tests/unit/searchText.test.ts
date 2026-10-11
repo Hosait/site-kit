@@ -18,13 +18,13 @@ test('lexicalText gir avsnitt på egne linjer', () => {
 
 test('layoutText henter tekstfelt fra blokker og hopper over lenker, media og innstillinger', () => {
   const layout = [
-    { blockType: 'hero', heading: 'Vinduer og dører', eyebrow: 'Spilka', media: { alt: 'bilde' }, link: { label: 'Les mer' } },
+    { blockType: 'hero', heading: 'Vinduer og dører', eyebrow: 'Nordlys', media: { alt: 'bilde' }, link: { label: 'Les mer' } },
     { blockType: 'content', richText: lexical('Brødtekst om fasader.') },
     { blockType: 'cards', intro: 'Utvalg', items: [{ title: 'Fixade', text: 'Glassfasade' }], columns: '3' },
     { blockType: 'embed', url: 'https://example.com', heading: 'Kart' },
   ]
   const text = layoutText(layout)
-  for (const want of ['Vinduer og dører', 'Spilka', 'Brødtekst om fasader.', 'Utvalg', 'Fixade', 'Glassfasade', 'Kart']) {
+  for (const want of ['Vinduer og dører', 'Nordlys', 'Brødtekst om fasader.', 'Utvalg', 'Fixade', 'Glassfasade', 'Kart']) {
     assert.ok(text.includes(want), `mangler «${want}»`)
   }
   for (const unwanted of ['Les mer', 'bilde', 'https://example.com', 'hero', '3']) {

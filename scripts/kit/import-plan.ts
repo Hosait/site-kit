@@ -36,9 +36,13 @@ const site = plan.site && isSiteKey(plan.site) ? plan.site : DEFAULT_SITE
 const baseDir = path.dirname(path.resolve(file))
 
 const payload = await getPayload({ config })
-if ((await payload.count({ collection: 'pages' })).totalDocs > 0) {
-  if (!flags.includes('--reset')) throw new Error('The database already has pages. Run with --reset to replace them.')
-  for (const c of ['redirects', 'articles', 'pages', 'people', 'documents', 'media', 'site-settings'] as const)
+// Any content counts: a run that failed half-way leaves media without pages, and must not be duplicated.
+const CONTENT = ['redirects', 'articles', 'pages', 'people', 'documents', 'media', 'site-settings'] as const
+let existing = 0
+for (const c of CONTENT) existing += (await payload.count({ collection: c })).totalDocs
+if (existing > 0) {
+  if (!flags.includes('--reset')) throw new Error('The database already has content. Run with --reset to replace it.')
+  for (const c of CONTENT)
     await payload.delete({ collection: c, where: { id: { exists: true } }, context: { disableRevalidate: true } })
 }
 
@@ -47,7 +51,7 @@ const html = async (h: string) => {
   editorConfig ??= await editorConfigFactory.default({ config: payload.config })
   return convertHTMLToLexical({ editorConfig, html: h, JSDOM })
 }
-const ids = { media: new Map<string, number>(), pages: new Map<string, number>() }
+const ids = { media: new Map<string, number>(), pages: new Map<string, number>(), people: new Map<string, number>(), documents: new Map<string, number>() }
 const ctx = { disableRevalidate: true }
 const others = LOCALES.filter((l) => l !== DEFAULT_LOCALE)
 
@@ -80,13 +84,17 @@ for (const m of plan.media) {
 for (const p of plan.people ?? []) {
   const data = { ...localeData(p, DEFAULT_LOCALE, ['name', 'role', 'email', 'phone', 'bio']), image: p.image ? ids.media.get(p.image) : undefined, site }
   const doc = await payload.create({ collection: 'people', data: data as never, locale: DEFAULT_LOCALE, context: ctx })
+  ids.people.set(p.ref, doc.id as number)
   await localized('people', doc.id as number, p, ['role', 'bio'])
 }
 for (const d of plan.documents ?? []) {
   const doc = await upload('documents', d.source, { ...localeData(d, DEFAULT_LOCALE, ['title', 'description']), docType: d.docType, language: d.language, sites: [site] })
+  ids.documents.set(d.ref, doc.id as number)
   await localized('documents', doc.id as number, d, ['title', 'description'])
 }
-for (const p of orderPages(plan.pages)) {
+// Pages link to each other (and may link both ways), so create them all first, then fill in layouts.
+const ordered = orderPages(plan.pages)
+for (const p of ordered) {
   const base = {
     site,
     isHome: p.isHome ?? false,
@@ -96,11 +104,15 @@ for (const p of orderPages(plan.pages)) {
     cardImage: p.cardImage ? ids.media.get(p.cardImage) : undefined,
     _status: 'published',
   }
-  const fields = ['title', 'slug', 'summary', 'meta', 'layout']
-  const data = await resolveValue({ ...base, ...localeData(p, DEFAULT_LOCALE, fields as never) }, ids, html)
-  const doc = await payload.create({ collection: 'pages', data: data as never, locale: DEFAULT_LOCALE, context: ctx })
+  const doc = await payload.create({ collection: 'pages', data: { ...base, ...localeData(p, DEFAULT_LOCALE, ['title', 'slug', 'summary']) } as never, locale: DEFAULT_LOCALE, context: ctx })
   ids.pages.set(p.ref, doc.id as number)
-  await localized('pages', doc.id as number, p, fields, true)
+  await localized('pages', doc.id as number, p, ['title', 'slug', 'summary'])
+}
+for (const p of ordered) {
+  const id = ids.pages.get(p.ref)!
+  const data = await resolveValue(localeData(p, DEFAULT_LOCALE, ['meta', 'layout']), ids, html)
+  await payload.update({ collection: 'pages', id, locale: DEFAULT_LOCALE, data: { ...(data as object), _status: 'published' } as never, context: ctx })
+  await localized('pages', id, p, ['meta', 'layout'], true)
 }
 for (const a of plan.articles ?? []) {
   const contentHtml = a.contentHtml?.[DEFAULT_LOCALE]

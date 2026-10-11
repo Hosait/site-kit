@@ -21,7 +21,7 @@ export const SearchIndex: CollectionConfig = {
     { name: 'locale', type: 'text', required: true, index: true },
     // Nettstedet treffet hører til (lenke og merkelapp).
     { name: 'site', type: 'text', required: true },
-    // Alle nettsteder treffet vises på, med mellomrom rundt: « industri sbs ».
+    // Alle nettsteder treffet vises på, med mellomrom rundt: « main other ».
     { name: 'sites', type: 'text', required: true },
     { name: 'title', type: 'text', required: true },
     { name: 'summary', type: 'textarea' },

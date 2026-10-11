@@ -26,7 +26,7 @@ services:
       PREVIEW_SECRET: ${PREVIEW_SECRET}
       CRON_SECRET: ${CRON_SECRET}
       NEXT_PUBLIC_SERVER_URL: ${PUBLIC_URL}
-      # «production» først når DNS for alle tre domener peker hit; ellers staging (noindex, ?site=).
+      # «production» når nettstedets eget domene peker hit; ellers staging (noindex).
       SITE_ORIGINS: ${SITE_ORIGINS:-staging}
       STAGING_HOST: ${STAGING_HOST:-}
       # Hosait setter commit for hver deploy; vises i /api/health.
@@ -36,6 +36,12 @@ services:
       S3_BUCKET: ${S3_BUCKET:-}
       S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      # E-post fra skjema (valgfritt; uten SMTP skrives e-posten til loggen).
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
     # Uten S3 (S3_BUCKET tom) lagres bilder og dokumenter her, og overlever nye deployer.
     volumes:
       - uploads:/app/uploads
