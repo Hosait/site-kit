@@ -1,0 +1,14 @@
+{
+  "colors": {
+    "ink": "#14213d",
+    "brand": "#2a6fdb",
+    "brandText": "#1f5bbf",
+    "brandDark": "#163e7a",
+    "tint": "#dbe7fb",
+    "muted": "#f4f5f7",
+    "highlight": "#b0144f",
+    "background": "#ffffff"
+  },
+  "radius": { "button": "9999px", "card": "1rem" },
+  "logo": { "src": "/brand/logo.svg", "width": 148, "height": 32 }
+}

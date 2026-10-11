@@ -14,7 +14,7 @@ export function ArticleView({ article, site, locale }: { article: Article; site:
     <>
       <article>
         <header className="wrap-text pb-8 pt-10 md:pt-20">
-          <p className="t-small uppercase tracking-wide text-night/70">
+          <p className="t-small uppercase tracking-wide text-ink/70">
             <time dateTime={article.publishedAt ?? undefined}>{formatDate(article.publishedAt, locale)}</time> | {s.publishedBy}{' '}
             {publisher.name}
           </p>
@@ -25,7 +25,7 @@ export function ArticleView({ article, site, locale }: { article: Article; site:
           <figure className="wrap mb-10">
             <Img media={article.heroImage as Media} priority sizes="(min-width: 72rem) 72rem, 100vw" className="w-full rounded-sm" />
             {(article.heroImage as Media).credit && (
-              <figcaption className="t-small mt-2 text-night/70">Foto: {(article.heroImage as Media).credit}</figcaption>
+              <figcaption className="t-small mt-2 text-ink/70">Foto: {(article.heroImage as Media).credit}</figcaption>
             )}
           </figure>
         )}
@@ -33,7 +33,7 @@ export function ArticleView({ article, site, locale }: { article: Article; site:
           <RichText data={article.content} site={site} locale={locale} />
         </div>
       </article>
-      <aside className="border-t border-night/10">
+      <aside className="border-t border-ink/10">
         <ArticleFeedComponent
           block={{ blockType: 'articleFeed', heading: s.related, sites: [site], kind: 'all', limit: 3 }}
           site={site}

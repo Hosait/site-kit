@@ -1,16 +1,15 @@
 import Link from 'next/link'
 
 import { Logo } from '@/components/Logo'
-import { DEFAULT_SITE } from '@/lib/sites'
 
 /** 404. Vi vet ikke språket her (Next gir ikke params til not-found), så teksten er tospråklig. */
 export default function NotFound() {
   return (
     <main id="innhold" className="wrap-text flex min-h-[70vh] flex-col justify-center gap-6 py-20">
-      <Logo site={DEFAULT_SITE} className="self-start" />
+      <Logo className="self-start" />
       <h1 className="t-h2">Fant ikke siden</h1>
       <p className="t-lead">Siden kan være flyttet eller slettet.</p>
-      <p lang="en" className="text-night/70">
+      <p lang="en" className="text-ink/70">
         Page not found – it may have moved or been removed.
       </p>
       <div className="flex flex-wrap gap-3">

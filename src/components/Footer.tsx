@@ -14,11 +14,11 @@ export function Footer({ site, locale, settings }: { site: SiteKey; locale: Loca
   const copyright = settings?.copyright || `${settings?.legalName || SITE_CONFIG.brand.legalName} – © ${year}`
 
   return (
-    <footer className="on-dark bg-night text-white">
+    <footer className="on-dark bg-ink text-white">
       <div className="wrap-wide grid gap-10 py-14 md:grid-cols-2 lg:grid-cols-[1.2fr_repeat(4,1fr)] lg:py-20">
         <div>
           <Link href={`/${locale}`} className="text-white" aria-label={s.home}>
-            <Logo site={site} tone="white" />
+            <Logo tone="white" />
           </Link>
           {settings?.address?.street && (
             <address className="mt-6 text-sm not-italic text-white/75">

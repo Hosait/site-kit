@@ -76,7 +76,7 @@ export async function SearchView({ site, locale, query }: { site: SiteKey; local
           autoComplete="off"
           enterKeyHint="search"
           maxLength={100}
-          className="min-h-12 flex-1 rounded-full border border-night/20 bg-white px-5 text-base outline-offset-2 focus:border-blue"
+          className="min-h-12 flex-1 rounded-full border border-ink/20 bg-white px-5 text-base outline-offset-2 focus:border-brand"
         />
         {filterSite && <input type="hidden" name="site" value={filterSite} />}
         {filterKind && <input type="hidden" name="kind" value={filterKind} />}
@@ -84,7 +84,7 @@ export async function SearchView({ site, locale, query }: { site: SiteKey; local
           {s.search}
         </button>
       </form>
-      {!q && <p className="t-small mt-4 max-w-2xl text-night/70">{s.searchHint}</p>}
+      {!q && <p className="t-small mt-4 max-w-2xl text-ink/70">{s.searchHint}</p>}
 
       {q && (
         <>
@@ -100,7 +100,7 @@ export async function SearchView({ site, locale, query }: { site: SiteKey; local
               </>
             )}
           </p>
-          {result.fuzzy && <p className="t-small mt-1 text-night/70">{s.fuzzyNote}</p>}
+          {result.fuzzy && <p className="t-small mt-1 text-ink/70">{s.fuzzyNote}</p>}
 
           {allCount > 0 && (
             <div className="mt-6 flex flex-col gap-3">
@@ -132,7 +132,7 @@ export async function SearchView({ site, locale, query }: { site: SiteKey; local
           )}
 
           {result.hits.length > 0 && (
-            <ol className="mt-8 divide-y divide-night/10 border-y border-night/10">
+            <ol className="mt-8 divide-y divide-ink/10 border-y border-ink/10">
               {result.hits.map((hit) => (
                 <li key={hit.id}>
                   <Result hit={hit} site={site} locale={locale} image={hit.image ? mediaById.get(hit.image) : undefined} />
@@ -169,7 +169,7 @@ type FilterItem = { label: string; count: number | null; href: string; active: b
 function FilterRow({ label, items }: { label: string; items: FilterItem[] }) {
   return (
     <nav aria-label={label} className="flex flex-wrap items-center gap-2">
-      <span className="t-small mr-1 font-medium text-night/70">{label}:</span>
+      <span className="t-small mr-1 font-medium text-ink/70">{label}:</span>
       {items.map((it) => (
         <Link
           key={it.href}
@@ -177,11 +177,11 @@ function FilterRow({ label, items }: { label: string; items: FilterItem[] }) {
           aria-current={it.active ? 'true' : undefined}
           className={cn(
             'inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 text-sm no-underline',
-            it.active ? 'border-night bg-night text-white' : 'border-night/20 text-night hover:border-blue hover:text-blue-text',
+            it.active ? 'border-ink bg-ink text-white' : 'border-ink/20 text-ink hover:border-brand hover:text-brand-text',
           )}
         >
           {it.label}
-          {it.count !== null && <span className={it.active ? 'text-white/80' : 'text-night/70'}>({it.count})</span>}
+          {it.count !== null && <span className={it.active ? 'text-white/80' : 'text-ink/70'}>({it.count})</span>}
         </Link>
       ))}
     </nav>
@@ -203,11 +203,11 @@ function Result({ hit, site, locale, image }: { hit: SearchHit; site: SiteKey; l
 
   const title =
     link && (isExternal(link) || hit.kind === 'document') ? (
-      <a href={link} className="text-night no-underline hover:text-blue-text hover:underline">
+      <a href={link} className="text-ink no-underline hover:text-brand-text hover:underline">
         {hit.title}
       </a>
     ) : link ? (
-      <Link href={link} className="text-night no-underline hover:text-blue-text hover:underline">
+      <Link href={link} className="text-ink no-underline hover:text-brand-text hover:underline">
         {hit.title}
       </Link>
     ) : (
@@ -217,11 +217,11 @@ function Result({ hit, site, locale, image }: { hit: SearchHit; site: SiteKey; l
   return (
     <article className="flex gap-4 py-6 md:gap-6">
       <div className="min-w-0 flex-1">
-        <p className="t-small text-night/70">{meta.filter(Boolean).join(' · ')}</p>
+        <p className="t-small text-ink/70">{meta.filter(Boolean).join(' · ')}</p>
         <h2 className="mt-1 text-xl font-bold tracking-tight md:text-2xl">{title}</h2>
         {hit.kind === 'person' ? (
           <div className="mt-2 flex flex-col gap-1">
-            {hit.snippet && <p className="text-night/80">{hit.snippet.replace(/[⟦⟧]/g, '')}</p>}
+            {hit.snippet && <p className="text-ink/80">{hit.snippet.replace(/[⟦⟧]/g, '')}</p>}
             {typeof extra.email === 'string' && extra.email && (
               <a href={`mailto:${extra.email}`} className="inline-flex min-h-11 items-center self-start">
                 {extra.email}
@@ -235,7 +235,7 @@ function Result({ hit, site, locale, image }: { hit: SearchHit; site: SiteKey; l
           </div>
         ) : (
           hit.snippet && (
-            <p className="mt-2 line-clamp-3 text-night/80">
+            <p className="mt-2 line-clamp-3 text-ink/80">
               <Highlight text={hit.snippet} />
             </p>
           )

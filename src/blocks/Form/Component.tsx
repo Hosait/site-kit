@@ -126,17 +126,17 @@ export const FormBlock: React.FC<
   return (
     <div className="wrap-text py-10 md:py-16">
       {enableIntro && introContent && !hasSubmitted && (
-        <ConvertRichText className="prose-spilka mb-8 lg:mb-12" data={introContent} />
+        <ConvertRichText className="prose-site mb-8 lg:mb-12" data={introContent} />
       )}
-      <div className="rounded-2xl bg-mist p-5 md:p-8">
+      <div className="rounded-2xl bg-muted p-5 md:p-8">
         <FormStringsContext.Provider value={strings}>
         <FormProvider {...formMethods}>
           {!isLoading && hasSubmitted && confirmationType === 'message' && (
-            <ConvertRichText className="prose-spilka" data={confirmationMessage} />
+            <ConvertRichText className="prose-site" data={confirmationMessage} />
           )}
           {isLoading && !hasSubmitted && <p role="status">{strings.sending}</p>}
           {error && (
-            <p role="alert" className="mb-4 text-pink">
+            <p role="alert" className="mb-4 text-highlight">
               {strings.error}
             </p>
           )}

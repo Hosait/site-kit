@@ -96,11 +96,11 @@ export function ConsentBanner({ site, locale, strings, policyHref }: { site: Sit
       aria-label={strings.consentTitle}
       tabIndex={-1}
       data-no-track
-      className="fixed inset-x-0 bottom-0 z-[60] max-h-[85dvh] overflow-y-auto border-t border-night/10 bg-white shadow-[0_-8px_30px_rgba(23,33,42,0.12)] outline-none"
+      className="fixed inset-x-0 bottom-0 z-[60] max-h-[85dvh] overflow-y-auto border-t border-ink/10 bg-white shadow-[0_-8px_30px_rgba(23,33,42,0.12)] outline-none"
     >
       <div className="wrap-wide py-5 md:py-6">
         <h2 className="text-lg font-bold">{strings.consentTitle}</h2>
-        <p className="mt-2 max-w-3xl text-sm text-night/80 md:text-base">
+        <p className="mt-2 max-w-3xl text-sm text-ink/80 md:text-base">
           {strings.consentText}{' '}
           <a href={policyHref} className="whitespace-nowrap underline underline-offset-2">
             {strings.consentReadMore}
@@ -108,25 +108,25 @@ export function ConsentBanner({ site, locale, strings, policyHref }: { site: Sit
         </p>
 
         {customize && (
-          <fieldset className="mt-4 max-w-3xl divide-y divide-night/10 rounded-2xl border border-night/10">
+          <fieldset className="mt-4 max-w-3xl divide-y divide-ink/10 rounded-2xl border border-ink/10">
             <legend className="sr-only">{strings.consentCustomize}</legend>
             <div className="flex items-start justify-between gap-4 p-4">
               <div>
                 <p className="font-medium">{strings.consentNecessary}</p>
-                <p className="t-small text-night/70">{strings.consentNecessaryText}</p>
+                <p className="t-small text-ink/70">{strings.consentNecessaryText}</p>
               </div>
-              <span className="t-small shrink-0 text-night/70">{strings.consentAlwaysOn}</span>
+              <span className="t-small shrink-0 text-ink/70">{strings.consentAlwaysOn}</span>
             </div>
             <label className="flex cursor-pointer items-start justify-between gap-4 p-4">
               <span>
                 <span className="block font-medium">{strings.consentStatistics}</span>
-                <span className="t-small block text-night/70">{strings.consentStatisticsText}</span>
+                <span className="t-small block text-ink/70">{strings.consentStatisticsText}</span>
               </span>
               <input
                 type="checkbox"
                 checked={statistics}
                 onChange={(e) => setStatistics(e.target.checked)}
-                className="mt-1 size-6 shrink-0 accent-[var(--color-blue)]"
+                className="mt-1 size-6 shrink-0 accent-[var(--color-brand)]"
               />
             </label>
           </fieldset>

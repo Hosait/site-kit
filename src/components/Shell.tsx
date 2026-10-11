@@ -27,7 +27,7 @@ export async function Shell({
     <>
       <a
         href="#innhold"
-        className="sr-only z-50 rounded-full bg-blue px-4 py-2 text-white focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+        className="sr-only z-50 rounded-full bg-brand px-4 py-2 text-white focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
       >
         {t(locale).skipToContent}
       </a>

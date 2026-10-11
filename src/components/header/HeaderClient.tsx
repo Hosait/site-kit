@@ -64,24 +64,24 @@ export function HeaderClient({ site, locale, nav, contact, alternateHref, string
   const home = `/${locale}`
 
   return (
-    <header className="sticky top-0 z-40 border-b border-night/5 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85">
+    <header className="sticky top-0 z-40 border-b border-ink/5 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85">
       <div className="wrap-wide flex h-16 items-center justify-between gap-4 md:h-20 xl:gap-6">
         <Link href={home} className="shrink-0" aria-label={strings.home}>
-          <Logo site={site} />
+          <Logo />
         </Link>
 
         <nav ref={navRef} aria-label={strings.mainNav} className="hidden lg:block">
           <ul className="flex items-center whitespace-nowrap text-sm xl:text-[0.9375rem]">
             {nav.map((item, i) => (
               <li key={i} className="relative flex items-center">
-                {i > 0 && <span aria-hidden className="mx-1 h-5 w-px bg-night/30" />}
+                {i > 0 && <span aria-hidden className="mx-1 h-5 w-px bg-ink/30" />}
                 {item.children.length ? (
                   <>
                     <button
                       type="button"
                       className={cn(
-                        'flex items-center gap-1 rounded-full px-3 py-2 hover:text-blue-text xl:px-4',
-                        (openIndex === i || item.children.some((c) => isActive(pathname, c.href))) && 'text-blue-text',
+                        'flex items-center gap-1 rounded-full px-3 py-2 hover:text-brand-text xl:px-4',
+                        (openIndex === i || item.children.some((c) => isActive(pathname, c.href))) && 'text-brand-text',
                       )}
                       aria-expanded={openIndex === i}
                       aria-controls={`submenu-${i}`}
@@ -98,12 +98,12 @@ export function HeaderClient({ site, locale, nav, contact, alternateHref, string
                     <div
                       id={`submenu-${i}`}
                       hidden={openIndex !== i}
-                      className="absolute left-0 top-full mt-3 min-w-64 rounded-2xl bg-white p-3 shadow-xl ring-1 ring-night/5"
+                      className="absolute left-0 top-full mt-3 min-w-64 rounded-2xl bg-white p-3 shadow-xl ring-1 ring-ink/5"
                     >
                       <ul>
                         {item.href && (
                           <li>
-                            <Link href={item.href} className="block rounded-lg px-3 py-2 font-medium text-night no-underline hover:bg-mist">
+                            <Link href={item.href} className="block rounded-lg px-3 py-2 font-medium text-ink no-underline hover:bg-muted">
                               {item.label}
                             </Link>
                           </li>
@@ -113,7 +113,7 @@ export function HeaderClient({ site, locale, nav, contact, alternateHref, string
                             <Link
                               href={c.href}
                               aria-current={isActive(pathname, c.href) ? 'page' : undefined}
-                              className="block rounded-lg px-3 py-2 text-night no-underline hover:bg-mist aria-[current=page]:text-blue-text"
+                              className="block rounded-lg px-3 py-2 text-ink no-underline hover:bg-muted aria-[current=page]:text-brand-text"
                             >
                               {c.label}
                             </Link>
@@ -126,7 +126,7 @@ export function HeaderClient({ site, locale, nav, contact, alternateHref, string
                   <Link
                     href={item.href!}
                     aria-current={isActive(pathname, item.href) ? 'page' : undefined}
-                    className="rounded-full px-3 py-2 text-night no-underline xl:px-4 hover:text-blue-text aria-[current=page]:text-blue-text"
+                    className="rounded-full px-3 py-2 text-ink no-underline xl:px-4 hover:text-brand-text aria-[current=page]:text-brand-text"
                   >
                     {item.label}
                   </Link>
@@ -142,7 +142,7 @@ export function HeaderClient({ site, locale, nav, contact, alternateHref, string
             <Link
               href={alternateHref}
               hrefLang={HREFLANG[other]}
-              className="hidden text-sm font-medium text-night no-underline hover:text-blue-text lg:inline"
+              className="hidden text-sm font-medium text-ink no-underline hover:text-brand-text lg:inline"
             >
               {LOCALE_CONFIG[other].short}
             </Link>
@@ -160,7 +160,7 @@ export function HeaderClient({ site, locale, nav, contact, alternateHref, string
             onClick={() => setMobileOpen(true)}
           >
             {strings.menu}
-            <svg aria-hidden viewBox="0 0 24 16" className="h-4 w-6 text-blue">
+            <svg aria-hidden viewBox="0 0 24 16" className="h-4 w-6 text-brand">
               <path d="M0 1h24M0 8h24M0 15h24" stroke="currentColor" strokeWidth="1.75" />
             </svg>
           </button>
@@ -178,33 +178,33 @@ export function HeaderClient({ site, locale, nav, contact, alternateHref, string
       >
         <div className="wrap-wide flex h-16 items-center justify-between">
           <Link href={home} aria-label={strings.home}>
-            <Logo site={site} />
+            <Logo />
           </Link>
           <button type="button" className="btn !min-h-11" onClick={() => setMobileOpen(false)}>
             {strings.close} <span aria-hidden>×</span>
           </button>
         </div>
         <nav className="wrap-wide pb-12 pt-4">
-          <ul className="divide-y divide-night/10">
+          <ul className="divide-y divide-ink/10">
             {nav.map((item, i) => (
               <li key={i} className="py-1">
                 {item.children.length ? (
                   <details className="group">
                     <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between text-2xl font-bold tracking-tight">
                       {item.label}
-                      <span aria-hidden className="text-blue transition-transform group-open:rotate-45">+</span>
+                      <span aria-hidden className="text-brand transition-transform group-open:rotate-45">+</span>
                     </summary>
                     <ul className="pb-3 pl-1">
                       {item.href && (
                         <li>
-                          <Link href={item.href} className="flex min-h-12 items-center text-lg text-night no-underline">
+                          <Link href={item.href} className="flex min-h-12 items-center text-lg text-ink no-underline">
                             {item.label}
                           </Link>
                         </li>
                       )}
                       {item.children.map((c, j) => (
                         <li key={j}>
-                          <Link href={c.href} className="flex min-h-12 items-center text-lg text-night no-underline">
+                          <Link href={c.href} className="flex min-h-12 items-center text-lg text-ink no-underline">
                             {c.label}
                           </Link>
                         </li>
@@ -212,7 +212,7 @@ export function HeaderClient({ site, locale, nav, contact, alternateHref, string
                     </ul>
                   </details>
                 ) : (
-                  <Link href={item.href!} className="flex min-h-14 items-center text-2xl font-bold tracking-tight text-night no-underline">
+                  <Link href={item.href!} className="flex min-h-14 items-center text-2xl font-bold tracking-tight text-ink no-underline">
                     {item.label}
                   </Link>
                 )}

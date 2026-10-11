@@ -2,29 +2,41 @@
 @plugin '@tailwindcss/typography';
 
 /*
- * Spilkas designsystem. Farger, bredder og typografi er hentet fra dagens
- * spilka.com (base.css) slik at uttrykket er gjenkjennelig.
+ * Kit design tokens. Defaults equal site/theme.json; the layout overrides the colour and
+ * radius variables from theme.json at render time (src/lib/theme.ts).
  */
 @theme {
-  --font-sans: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', Roboto, sans-serif;
+  --font-sans: var(--font-site), -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', Roboto, sans-serif;
 
-  --color-blue: #008cd2;
-  --color-night: #17212a;
-  --color-sapphire: #00567e;
-  --color-sky: #bbdde6;
-  --color-mist: #f3f4f4;
-  --color-aero: #cef4eb;
-  --color-aqua: #00cfb4;
-  --color-pink: #c40050;
-  --color-plume: #63223d;
-  --color-yellow: #ffc658;
-  /* Spilka-blå justert for tekst og knapper: 5,26:1 mot hvit, 4,77:1 mot mist (WCAG AA).
-     Ren #008cd2 gir 3,7:1 og brukes bare til logo, grafikk og store flater. */
-  --color-blue-text: #0072ab;
+  --color-ink: #14213d;
+  --color-brand: #2a6fdb;
+  --color-brand-text: #1f5bbf;
+  --color-brand-dark: #163e7a;
+  --color-tint: #dbe7fb;
+  --color-muted: #f4f5f7;
+  --color-highlight: #b0144f;
+  --color-background: #ffffff;
 
-  --container-text: 40rem; /* tekstkolonne */
-  --container-content: 72rem; /* yttermarg */
-  --container-wide: 88rem; /* satsspeil */
+  /* shadcn tokens used by components/ui and the form fields */
+  --color-primary: var(--color-brand-text);
+  --color-primary-foreground: #ffffff;
+  --color-input: #c9ced6;
+  --color-ring: var(--color-brand-text);
+  --color-accent: var(--color-muted);
+  --color-accent-foreground: var(--color-ink);
+  --color-popover: var(--color-background);
+  --color-popover-foreground: var(--color-ink);
+  --color-muted-foreground: #4b5563;
+  --color-destructive: #b42318;
+  --color-card: var(--color-background);
+  --color-card-foreground: var(--color-ink);
+
+  --radius-button: 9999px;
+  --radius-card: 1rem;
+
+  --container-text: 40rem;
+  --container-content: 72rem;
+  --container-wide: 88rem;
 
   --breakpoint-sm: 40rem;
   --breakpoint-md: 48rem;
@@ -38,7 +50,7 @@
     scroll-padding-top: 6rem;
   }
   body {
-    @apply bg-white text-night antialiased;
+    @apply bg-white text-ink antialiased;
     font-family: var(--font-sans);
     font-feature-settings: 'liga', 'calt';
     text-rendering: optimizeLegibility;
@@ -46,18 +58,18 @@
     line-height: 1.5;
   }
   a {
-    color: var(--color-blue-text);
+    color: var(--color-brand-text);
   }
   a:hover {
-    color: var(--color-sapphire);
+    color: var(--color-brand-dark);
   }
   :focus-visible {
-    outline: 3px solid var(--color-blue);
+    outline: 3px solid var(--color-brand);
     outline-offset: 3px;
     border-radius: 2px;
   }
   ::selection {
-    background: var(--color-sky);
+    background: var(--color-tint);
   }
 }
 
@@ -143,13 +155,13 @@
     gap: 0.5rem;
     min-height: 2.75rem;
     padding: 0.625rem 1.5rem;
-    border-radius: 9999px;
-    border: 1px solid var(--color-night);
+    border-radius: var(--radius-button);
+    border: 1px solid var(--color-ink);
     font-size: 0.9375rem;
     line-height: 1;
     font-weight: 500;
     text-decoration: none;
-    color: var(--color-night);
+    color: var(--color-ink);
     background: transparent;
     transition:
       background-color 150ms ease-in-out,
@@ -158,16 +170,16 @@
   }
   .btn:hover {
     transform: scale(1.04);
-    background: var(--color-night);
+    background: var(--color-ink);
     color: #fff;
   }
   .btn-primary {
-    background: var(--color-blue-text);
+    background: var(--color-brand-text);
     border-color: transparent;
     color: #fff;
   }
   .btn-primary:hover {
-    background: var(--color-night);
+    background: var(--color-ink);
     color: #fff;
   }
   .on-dark .btn {
@@ -176,7 +188,7 @@
   }
   .on-dark .btn:hover {
     background: #fff;
-    color: var(--color-blue);
+    color: var(--color-brand);
   }
   .on-dark .btn-primary {
     border-color: transparent;
@@ -197,53 +209,53 @@
   }
 
   /* Seksjonsbakgrunner */
-  .bg-section-mist {
-    background: var(--color-mist);
+  .bg-section-muted {
+    background: var(--color-muted);
   }
-  .bg-section-sky {
-    background: var(--color-sky);
+  .bg-section-tint {
+    background: var(--color-tint);
     /* Blå tekst må være mørkere på lyseblått for å nå 4,5:1. */
-    --color-blue-text: var(--color-sapphire);
+    --color-brand-text: var(--color-brand-dark);
   }
-  .bg-section-night {
-    background: var(--color-night);
+  .bg-section-dark {
+    background: var(--color-ink);
     color: #fff;
   }
-  .bg-section-sapphire {
-    background: var(--color-sapphire);
+  .bg-section-brand {
+    background: var(--color-brand-dark);
     color: #fff;
   }
-  .bg-section-night a:not(.btn),
-  .bg-section-sapphire a:not(.btn) {
-    color: var(--color-sky);
+  .bg-section-dark a:not(.btn),
+  .bg-section-brand a:not(.btn) {
+    color: var(--color-tint);
   }
 
   /* Rik tekst fra CMS-et */
-  .prose-spilka {
+  .prose-site {
     @apply prose max-w-none;
-    --tw-prose-body: var(--color-night);
-    --tw-prose-headings: var(--color-night);
-    --tw-prose-links: var(--color-blue-text);
-    --tw-prose-bold: var(--color-night);
-    --tw-prose-bullets: var(--color-blue);
-    --tw-prose-quote-borders: var(--color-blue);
+    --tw-prose-body: var(--color-ink);
+    --tw-prose-headings: var(--color-ink);
+    --tw-prose-links: var(--color-brand-text);
+    --tw-prose-bold: var(--color-ink);
+    --tw-prose-bullets: var(--color-brand);
+    --tw-prose-quote-borders: var(--color-brand);
     font-size: 1.0625rem;
     line-height: 1.65;
   }
-  .prose-spilka :where(h2) {
+  .prose-site :where(h2) {
     font-size: clamp(1.5rem, 3vw, 2rem);
     letter-spacing: -0.04em;
     line-height: 1.25;
   }
-  .prose-spilka :where(h3) {
+  .prose-site :where(h3) {
     font-size: 1.375rem;
     letter-spacing: -0.02em;
   }
-  .on-dark .prose-spilka,
-  .prose-spilka.on-dark {
+  .on-dark .prose-site,
+  .prose-site.on-dark {
     --tw-prose-body: #fff;
     --tw-prose-headings: #fff;
-    --tw-prose-links: var(--color-sky);
+    --tw-prose-links: var(--color-tint);
     --tw-prose-bold: #fff;
   }
 }

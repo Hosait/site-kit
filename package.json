@@ -20,7 +20,8 @@
     "typecheck": "tsc --noEmit",
     "test:unit": "tsx --test tests/unit/*.test.ts",
     "qa:urls": "tsx scripts/qa/url-parity.ts",
-    "qa:axe": "tsx scripts/qa/axe-report.ts"
+    "qa:axe": "tsx scripts/qa/axe-report.ts",
+    "kit:theme-check": "tsx scripts/kit/theme-check.ts"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.3.0",

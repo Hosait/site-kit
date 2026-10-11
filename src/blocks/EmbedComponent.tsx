@@ -16,12 +16,12 @@ export function EmbedComponent({ block, locale }: { block: EmbedBlock; locale: L
     <section className="py-10 md:py-16">
       <div className="wrap-wide">
         {block.heading && <h2 className="t-h3 mb-6">{block.heading}</h2>}
-        <div className="relative overflow-hidden rounded-sm bg-mist" style={{ height }}>
+        <div className="relative overflow-hidden rounded-sm bg-muted" style={{ height }}>
           {loaded ? (
             <iframe src={block.url} title={block.title} loading="lazy" className="absolute inset-0 size-full border-0" referrerPolicy="no-referrer-when-downgrade" />
           ) : (
             <div className="flex size-full flex-col items-center justify-center gap-4 p-6 text-center">
-              <p className="max-w-md text-night/80">
+              <p className="max-w-md text-ink/80">
                 {isMap ? s.embedMapNote : s.embedNote}
               </p>
               <button type="button" className="btn btn-primary" onClick={() => setLoaded(true)}>

@@ -44,7 +44,7 @@ export function LanguageBanner({ locale, alternateHref }: { locale: Locale; alte
   }
 
   return (
-    <div className="bg-mist text-sm" lang={HREFLANG[other]}>
+    <div className="bg-muted text-sm" lang={HREFLANG[other]}>
       <div className="wrap-wide flex min-h-11 items-center justify-center gap-4">
         <p>
           {s.langBannerPrefix}
@@ -56,7 +56,7 @@ export function LanguageBanner({ locale, alternateHref }: { locale: Locale; alte
         <button
           type="button"
           onClick={dismiss}
-          className="flex size-8 items-center justify-center rounded-full border border-night/30 hover:border-blue hover:text-blue"
+          className="flex size-8 items-center justify-center rounded-full border border-ink/30 hover:border-brand hover:text-brand"
           aria-label={s.close}
         >
           <span aria-hidden>×</span>

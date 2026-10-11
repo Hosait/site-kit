@@ -450,7 +450,7 @@ export interface Article {
 export interface ContentBlock {
   width?: ('text' | 'wide') | null;
   align?: ('left' | 'center') | null;
-  background?: ('none' | 'mist' | 'sky' | 'night' | 'sapphire') | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   richText?: {
     root: {
       type: string;
@@ -495,7 +495,7 @@ export interface TextImageBlock {
   image: number | Media;
   imagePosition?: ('left' | 'right') | null;
   layout?: ('split' | 'feature') | null;
-  background?: ('none' | 'mist' | 'sky' | 'night' | 'sapphire') | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   links?:
     | {
         link?: {
@@ -582,7 +582,7 @@ export interface CardsBlock {
         id?: string | null;
       }[]
     | null;
-  background?: ('none' | 'mist' | 'sky' | 'night' | 'sapphire') | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'cards';
@@ -632,7 +632,7 @@ export interface CallToActionBlock {
         id?: string | null;
       }[]
     | null;
-  background?: ('none' | 'mist' | 'sky' | 'night' | 'sapphire') | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'cta';
@@ -646,7 +646,7 @@ export interface QuoteBlock {
   author?: string | null;
   role?: string | null;
   image?: (number | null) | Media;
-  background?: ('none' | 'mist' | 'sky' | 'night' | 'sapphire') | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'quote';
@@ -675,7 +675,7 @@ export interface StatsBlock {
         id?: string | null;
       }[]
     | null;
-  background?: ('none' | 'mist' | 'sky' | 'night' | 'sapphire') | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'stats';

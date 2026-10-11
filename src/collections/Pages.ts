@@ -13,7 +13,7 @@ import type { Page } from '@/payload-types'
 import { DEFAULT_LOCALE } from '@/lib/sites'
 
 /**
- * Sider er hierarkiske: `path` (f.eks. `om-spilka/kontakt`) bygges av forelderens sti + egen slug,
+ * Sider er hierarkiske: `path` (f.eks. `om-oss/kontakt`) bygges av forelderens sti + egen slug,
  * per språk. Forsiden har `isHome` og tom sti. Stien er unik per nettsted og språk.
  */
 const computePath: CollectionBeforeChangeHook<Page> = async ({ data, req, originalDoc }) => {

@@ -1,9 +1,13 @@
 'use client'
 
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import themeJson from '@site/theme.json'
 
-/** Grafer i Besøksanalyse (Recharts). Farger fra Spilkas palett. */
-export const PALETTE = ['#008cd2', '#00567e', '#00cfb4', '#ffc658', '#c40050', '#63223d', '#7fb8d6', '#5d6469']
+import { validateTheme } from '@/lib/theme'
+
+/** Grafer i Besøksanalyse (Recharts). Farger fra site/theme.json. */
+const c = validateTheme(themeJson).colors
+export const PALETTE = [c.brand, c.brandDark, c.highlight, c.tint, c.ink]
 
 const axis = { stroke: 'var(--theme-elevation-500)', fontSize: 12 }
 const tooltipStyle = {

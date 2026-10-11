@@ -32,8 +32,8 @@ import { formatDate } from '@/lib/locales'
 
 export type BlockProps<T> = { block: T; site: SiteKey; locale: Locale; isFirst?: boolean }
 
-type Background = 'none' | 'mist' | 'sky' | 'night' | 'sapphire' | null | undefined
-const bg = (b: Background) => (b && b !== 'none' ? `bg-section-${b} ${b === 'night' || b === 'sapphire' ? 'on-dark' : ''}` : '')
+type Background = 'none' | 'muted' | 'tint' | 'dark' | 'brand' | null | undefined
+const bg = (b: Background) => (b && b !== 'none' ? `bg-section-${b} ${b === 'dark' || b === 'brand' ? 'on-dark' : ''}` : '')
 const hasBg = (b: Background) => Boolean(b && b !== 'none')
 
 /** Seksjonsramme med luft som i dag: mer luft når seksjonen har bakgrunnsfarge. */
@@ -71,12 +71,12 @@ function Eyebrow({
       {idx >= 0 ? (
         <>
           {full.slice(0, idx)}
-          <span className="text-blue-text">{full.slice(idx, idx + highlight!.length)}</span>
+          <span className="text-brand-text">{full.slice(idx, idx + highlight!.length)}</span>
           {full.slice(idx + highlight!.length)}
         </>
       ) : (
         <>
-          {full} {highlight && <span className="text-blue-text">{highlight}</span>}
+          {full} {highlight && <span className="text-brand-text">{highlight}</span>}
         </>
       )}
     </Tag>
@@ -91,10 +91,10 @@ export function HeroComponent({ block, site, locale, isFirst }: BlockProps<HeroB
 
   if (block.variant === 'image' && media) {
     return (
-      <section className="relative isolate flex min-h-[70vh] items-end overflow-hidden bg-night text-white md:min-h-[80vh]">
+      <section className="relative isolate flex min-h-[70vh] items-end overflow-hidden bg-ink text-white md:min-h-[80vh]">
         <div className="absolute inset-0 -z-10">
           <Img media={media} cover priority={isFirst} sizes="100vw" />
-          <div className="absolute inset-0 bg-gradient-to-t from-night/80 via-night/30 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/30 to-transparent" />
         </div>
         <div className="wrap-wide on-dark pb-12 pt-32 md:pb-20">
           <Eyebrow text={block.eyebrow} highlight={block.eyebrowHighlight} className="mb-4 text-white/90" />
@@ -155,7 +155,7 @@ export function TextImageComponent({ block, site, locale }: BlockProps<TextImage
           <Img media={block.image as Media} sizes={feature ? '(min-width: 48rem) 55vw, 100vw' : '(min-width: 48rem) 36rem, 100vw'} className="w-full" />
         </div>
         <div className={cn(imageRight && 'md:order-1')}>
-          {block.eyebrow && <p className="t-eyebrow mb-3 text-blue-text">{block.eyebrow}</p>}
+          {block.eyebrow && <p className="t-eyebrow mb-3 text-brand-text">{block.eyebrow}</p>}
           {block.heading && <h2 className={cn(feature ? 't-display' : 't-h2', 'mb-6')}>{block.heading}</h2>}
           <RichText data={block.richText} site={site} locale={locale} className={cn(feature && 'prose-lg [&_p]:t-lead')} />
           <LinkRow links={block.links} site={site} locale={locale} className="mt-6" />
@@ -178,9 +178,9 @@ export function FullImageComponent({ block }: BlockProps<FullImageBlock>) {
         className={cn('w-full', block.size !== 'full' && 'rounded-sm')}
       />
       {(block.caption || media?.credit) && (
-        <figcaption className={cn('t-small mt-3 text-night/70', block.size === 'full' && 'wrap-wide')}>
+        <figcaption className={cn('t-small mt-3 text-ink/70', block.size === 'full' && 'wrap-wide')}>
           {block.caption}
-          {media?.credit && <span className="ml-2 text-night/50">Foto: {media.credit}</span>}
+          {media?.credit && <span className="ml-2 text-ink/50">Foto: {media.credit}</span>}
         </figcaption>
       )}
     </figure>
@@ -197,10 +197,10 @@ export function ImageGridComponent({ block }: BlockProps<ImageGridBlock>) {
           {(block.images ?? []).map((im, i) => (
             <li key={im.id ?? i}>
               <figure>
-                <div className="aspect-[4/3] overflow-hidden rounded-sm bg-mist">
+                <div className="aspect-[4/3] overflow-hidden rounded-sm bg-muted">
                   <Img media={im.image as Media} cover sizes="(min-width: 64rem) 30vw, (min-width: 40rem) 50vw, 100vw" />
                 </div>
-                {im.caption && <figcaption className="t-small mt-2 text-night/70">{im.caption}</figcaption>}
+                {im.caption && <figcaption className="t-small mt-2 text-ink/70">{im.caption}</figcaption>}
               </figure>
             </li>
           ))}
@@ -223,23 +223,23 @@ export function CardsComponent({ block, site, locale }: BlockProps<CardsBlock>) 
           {(block.items ?? []).map((item, i) => {
             const linked = item.link?.type === 'custom' ? item.link.url : item.link?.reference
             return (
-              <li key={item.id ?? i} className="group relative flex flex-col overflow-hidden rounded-sm bg-white text-night shadow-sm ring-1 ring-night/5">
+              <li key={item.id ?? i} className="group relative flex flex-col overflow-hidden rounded-sm bg-white text-ink shadow-sm ring-1 ring-ink/5">
                 {item.image && (
-                  <div className="aspect-[16/9] overflow-hidden bg-mist">
+                  <div className="aspect-[16/9] overflow-hidden bg-muted">
                     <Img media={item.image as Media} cover sizes="(min-width: 64rem) 28rem, 100vw" className="transition-transform duration-500 group-hover:scale-105" />
                   </div>
                 )}
                 <div className="flex flex-1 flex-col gap-3 p-6">
                   <h3 className="t-h4">
                     {linked ? (
-                      <CMSLink link={item.link} site={site} locale={locale} className="text-night no-underline after:absolute after:inset-0">
+                      <CMSLink link={item.link} site={site} locale={locale} className="text-ink no-underline after:absolute after:inset-0">
                         {item.title}
                       </CMSLink>
                     ) : (
                       item.title
                     )}
                   </h3>
-                  {item.text && <p className="text-night/80">{item.text}</p>}
+                  {item.text && <p className="text-ink/80">{item.text}</p>}
                 </div>
               </li>
             )
@@ -254,7 +254,7 @@ export function CardsComponent({ block, site, locale }: BlockProps<CardsBlock>) 
 
 export function CallToActionComponent({ block, site, locale }: BlockProps<CallToActionBlock>) {
   return (
-    <Section background={block.background ?? 'mist'}>
+    <Section background={block.background ?? 'muted'}>
       <div className="wrap-text text-center">
         {block.heading && <h2 className="t-h2">{block.heading}</h2>}
         {block.text && <p className="t-lead mt-4">{block.text}</p>}
@@ -297,10 +297,10 @@ export function StatsComponent({ block }: BlockProps<StatsBlock>) {
         {block.intro && <p className="t-lead mb-10 max-w-3xl">{block.intro}</p>}
         <dl className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {(block.items ?? []).map((it, i) => (
-            <div key={it.id ?? i} className="border-t-2 border-blue pt-4">
+            <div key={it.id ?? i} className="border-t-2 border-brand pt-4">
               <dt className="sr-only">{it.label}</dt>
               <dd>
-                <span className="block text-5xl font-bold tracking-tight text-blue-text md:text-6xl">{it.value}</span>
+                <span className="block text-5xl font-bold tracking-tight text-brand-text md:text-6xl">{it.value}</span>
                 <span className="mt-2 block text-lg">{it.label}</span>
               </dd>
             </div>
@@ -314,8 +314,8 @@ export function StatsComponent({ block }: BlockProps<StatsBlock>) {
                   <span>{bar.label}</span>
                   <span>{bar.percent} %</span>
                 </div>
-                <div className="h-4 overflow-hidden rounded-full bg-night/10" aria-hidden>
-                  <div className={cn('h-full rounded-full', i === 0 ? 'bg-blue' : 'bg-night/40')} style={{ width: `${bar.percent}%` }} />
+                <div className="h-4 overflow-hidden rounded-full bg-ink/10" aria-hidden>
+                  <div className={cn('h-full rounded-full', i === 0 ? 'bg-brand' : 'bg-ink/40')} style={{ width: `${bar.percent}%` }} />
                 </div>
               </li>
             ))}
@@ -347,7 +347,7 @@ export async function ArticleFeedComponent({ block, site, locale }: BlockProps<A
             const href = path ? siteHref(a.site as SiteKey, site, path) : null
             return (
               <li key={a.id} className="group relative flex flex-col">
-                <div className="aspect-[16/10] overflow-hidden rounded-sm bg-mist">
+                <div className="aspect-[16/10] overflow-hidden rounded-sm bg-muted">
                   <Img
                     media={a.heroImage as Media}
                     cover
@@ -357,15 +357,15 @@ export async function ArticleFeedComponent({ block, site, locale }: BlockProps<A
                 </div>
                 <h3 className="t-h4 mt-5">
                   {href ? (
-                    <a href={href} className="text-night no-underline after:absolute after:inset-0 group-hover:text-blue">
+                    <a href={href} className="text-ink no-underline after:absolute after:inset-0 group-hover:text-brand">
                       {a.title}
                     </a>
                   ) : (
                     a.title
                   )}
                 </h3>
-                {a.lead && <p className="mt-3 line-clamp-3 text-night/80">{a.lead}</p>}
-                <p className="t-small mt-4 uppercase tracking-wide text-night/70">
+                {a.lead && <p className="mt-3 line-clamp-3 text-ink/80">{a.lead}</p>}
+                <p className="t-small mt-4 uppercase tracking-wide text-ink/70">
                   {formatDate(a.publishedAt, locale)} | {s.publishedBy} {SITES[a.site as SiteKey].name}
                 </p>
               </li>
@@ -391,12 +391,12 @@ export function PeopleComponent({ block, locale }: BlockProps<PeopleBlock>) {
           {people.map((p) => (
             <li key={p.id} className={cn(list && 'flex items-center gap-5')}>
               {p.image ? (
-                <div className={cn('overflow-hidden bg-mist', list ? 'size-24 shrink-0 rounded-full' : 'mb-5 aspect-square rounded-sm')}>
+                <div className={cn('overflow-hidden bg-muted', list ? 'size-24 shrink-0 rounded-full' : 'mb-5 aspect-square rounded-sm')}>
                   <Img media={p.image as Media} cover sizes={list ? '96px' : '(min-width: 64rem) 28rem, 50vw'} alt={p.name} />
                 </div>
               ) : (
                 !list && (
-                  <div aria-hidden className="mb-5 flex aspect-square items-center justify-center rounded-sm bg-mist text-6xl font-bold text-sapphire/80">
+                  <div aria-hidden className="mb-5 flex aspect-square items-center justify-center rounded-sm bg-muted text-6xl font-bold text-brand-dark/80">
                     {p.name
                       .split(' ')
                       .map((n) => n[0])
@@ -442,13 +442,13 @@ export function DocumentsComponent({ block, locale }: BlockProps<DocumentsBlock>
     <Section>
       <div className="wrap">
         {block.heading && <h2 className="t-h3 mb-6">{block.heading}</h2>}
-        <ul className="divide-y divide-night/10 border-y border-night/10">
+        <ul className="divide-y divide-ink/10 border-y border-ink/10">
           {docs.map((d) => (
             <li key={d.id}>
-              <a href={d.url ?? '#'} className="group flex min-h-16 items-center justify-between gap-4 py-3 text-night no-underline" download>
+              <a href={d.url ?? '#'} className="group flex min-h-16 items-center justify-between gap-4 py-3 text-ink no-underline" download>
                 <span>
-                  <span className="font-medium group-hover:text-blue">{d.title}</span>
-                  <span className="t-small block text-night/70">
+                  <span className="font-medium group-hover:text-brand">{d.title}</span>
+                  <span className="t-small block text-ink/70">
                     {(d.filename?.split('.').pop() ?? '').toUpperCase()} {formatBytes(d.filesize)}
                   </span>
                 </span>
@@ -469,11 +469,11 @@ export function TimelineComponent({ block }: BlockProps<TimelineBlock>) {
     <Section>
       <div className="wrap">
         {block.heading && <h2 className="t-h2 mb-12">{block.heading}</h2>}
-        <ol className="relative space-y-12 border-l-2 border-sky pl-8 md:pl-12">
+        <ol className="relative space-y-12 border-l-2 border-tint pl-8 md:pl-12">
           {(block.items ?? []).map((it, i) => (
             <li key={it.id ?? i} className="relative">
-              <span aria-hidden className="absolute -left-[2.6rem] top-1 size-4 rounded-full bg-blue ring-4 ring-white md:-left-[3.6rem]" />
-              <p className="text-3xl font-bold tracking-tight text-blue-text">{it.year}</p>
+              <span aria-hidden className="absolute -left-[2.6rem] top-1 size-4 rounded-full bg-brand ring-4 ring-white md:-left-[3.6rem]" />
+              <p className="text-3xl font-bold tracking-tight text-brand-text">{it.year}</p>
               {it.title && <h3 className="t-h4 mt-2">{it.title}</h3>}
               {it.text && <p className="mt-2 max-w-2xl">{it.text}</p>}
               {it.image && (
@@ -496,12 +496,12 @@ export function AccordionComponent({ block, site, locale }: BlockProps<Accordion
     <Section>
       <div className="wrap-text">
         {block.heading && <h2 className="t-h3 mb-6">{block.heading}</h2>}
-        <div className="divide-y divide-night/10 border-y border-night/10">
+        <div className="divide-y divide-ink/10 border-y border-ink/10">
           {(block.items ?? []).map((it, i) => (
             <details key={it.id ?? i} className="group">
               <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 py-3 text-lg font-medium">
                 {it.title}
-                <span aria-hidden className="text-2xl text-blue transition-transform group-open:rotate-45">
+                <span aria-hidden className="text-2xl text-brand transition-transform group-open:rotate-45">
                   +
                 </span>
               </summary>
@@ -521,8 +521,8 @@ export function AccordionComponent({ block, site, locale }: BlockProps<Accordion
 
 function ChildCard({ page, locale }: { page: ChildPage; locale: Locale }) {
   return (
-    <li className="group relative flex flex-col overflow-hidden rounded-sm bg-white ring-1 ring-night/10 transition-shadow hover:shadow-lg">
-      <div className="aspect-[4/3] overflow-hidden bg-mist">
+    <li className="group relative flex flex-col overflow-hidden rounded-sm bg-white ring-1 ring-ink/10 transition-shadow hover:shadow-lg">
+      <div className="aspect-[4/3] overflow-hidden bg-muted">
         {page.image ? (
           <Img
             media={page.image as Media}
@@ -530,18 +530,18 @@ function ChildCard({ page, locale }: { page: ChildPage; locale: Locale }) {
             className="size-full object-contain p-4 mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
-          <div aria-hidden className="flex size-full items-center justify-center text-4xl font-bold text-sky">
+          <div aria-hidden className="flex size-full items-center justify-center text-4xl font-bold text-tint">
             {page.title.slice(0, 1)}
           </div>
         )}
       </div>
       <div className="flex flex-1 flex-col gap-2 p-5">
         <h3 className="t-h4 !text-xl">
-          <a href={localePath(locale, page.path)} className="text-night no-underline after:absolute after:inset-0 group-hover:text-blue">
+          <a href={localePath(locale, page.path)} className="text-ink no-underline after:absolute after:inset-0 group-hover:text-brand">
             {page.title}
           </a>
         </h3>
-        {page.summary && <p className="t-small text-night/75">{page.summary}</p>}
+        {page.summary && <p className="t-small text-ink/75">{page.summary}</p>}
       </div>
     </li>
   )
@@ -565,7 +565,7 @@ export async function ChildPagesComponent({ block, site, locale, pageId }: Block
           <div className="space-y-14">
             {pages.map((group) => (
               <section key={group.id} aria-labelledby={`grp-${group.id}`}>
-                <div className="mb-5 flex items-baseline justify-between gap-4 border-b border-night/10 pb-3">
+                <div className="mb-5 flex items-baseline justify-between gap-4 border-b border-ink/10 pb-3">
                   <h3 id={`grp-${group.id}`} className="t-h3">
                     {group.title}
                   </h3>
@@ -602,12 +602,12 @@ export function FactsComponent({ block }: BlockProps<FactsBlock>) {
   return (
     <Section>
       <div className="wrap">
-        <div className="rounded-2xl bg-mist p-6 md:p-10">
+        <div className="rounded-2xl bg-muted p-6 md:p-10">
           {block.heading && <h2 className="t-h3 mb-6">{block.heading}</h2>}
           <dl className="grid gap-x-10 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
             {block.items.map((it, i) => (
-              <div key={it.id ?? i} className="border-t border-night/15 pt-3">
-                <dt className="t-small text-night/70">{it.label}</dt>
+              <div key={it.id ?? i} className="border-t border-ink/15 pt-3">
+                <dt className="t-small text-ink/70">{it.label}</dt>
                 <dd className="mt-1 text-lg font-medium">{it.value}</dd>
               </div>
             ))}

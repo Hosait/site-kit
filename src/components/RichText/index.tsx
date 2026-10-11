@@ -42,7 +42,7 @@ export function RichText({ data, site, locale, className }: Props) {
         return (
           <figure className="not-prose my-8">
             <Img media={media} sizes="(min-width: 48rem) 40rem, 100vw" className="w-full rounded-lg" />
-            {media.credit && <figcaption className="t-small mt-2 text-night/70">{media.credit}</figcaption>}
+            {media.credit && <figcaption className="t-small mt-2 text-ink/70">{media.credit}</figcaption>}
           </figure>
         )
       }
@@ -54,7 +54,7 @@ export function RichText({ data, site, locale, className }: Props) {
     },
   })
 
-  return <ConvertRichText data={data} converters={converters} className={cn('prose-spilka', className)} />
+  return <ConvertRichText data={data} converters={converters} className={cn('prose-site', className)} />
 }
 
 export default RichText

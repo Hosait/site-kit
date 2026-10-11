@@ -1,7 +1,10 @@
 import type { Metadata } from 'next'
 
 import type { Article, Media, Page } from '@/payload-types'
+import themeJson from '@site/theme.json'
+
 import { docPath } from './links'
+import { validateTheme } from './theme'
 import { DEFAULT_LOCALE, HREFLANG, type Locale, LOCALE_CONFIG, SITE_CONFIG, type SiteKey, siteOrigin, SITES } from './sites'
 
 type Doc = Page | Article
@@ -15,6 +18,8 @@ const imageUrl = (m: unknown, origin: string): string | undefined => {
 }
 
 /** Tittel, beskrivelse, canonical, hreflang og Open Graph for en side eller artikkel. */
+const LOGO_SRC = validateTheme(themeJson).logo.src
+
 export function buildMetadata({
   site,
   locale,
@@ -81,7 +86,7 @@ export function jsonLdFor({
       '@type': 'Organization',
       name: SITES[site].name,
       url: origin,
-      logo: `${origin}/brand/spilka.svg`,
+      logo: `${origin}${LOGO_SRC}`,
       parentOrganization: SITE_CONFIG.brand.legalName !== SITES[site].name ? { '@type': 'Organization', name: SITE_CONFIG.brand.legalName } : undefined,
     })
   }
@@ -97,7 +102,7 @@ export function jsonLdFor({
       dateModified: a.updatedAt,
       image: imageUrl(a.heroImage, origin),
       inLanguage: HREFLANG[locale],
-      publisher: { '@type': 'Organization', name: SITES[site].name, logo: `${origin}/brand/spilka.svg` },
+      publisher: { '@type': 'Organization', name: SITES[site].name, logo: `${origin}${LOGO_SRC}` },
       mainEntityOfPage: origin + (docPath('articles', a, locale) ?? ''),
     })
   }

@@ -10,18 +10,18 @@ import { FormBlock } from './Form/config'
  * med samme navn i src/blocks/components/ og registreres i RenderBlocks.tsx.
  */
 
-/** Bakgrunnsfarge for en seksjon, fra Spilkas palett. */
+/** Bakgrunnsfarge for en seksjon; fargene kommer fra site/theme.json. */
 const background: Field = {
   name: 'background',
   type: 'select',
   label: 'Bakgrunn',
   defaultValue: 'none',
   options: [
-    { label: 'Ingen (hvit)', value: 'none' },
-    { label: 'Mist (lys grå)', value: 'mist' },
-    { label: 'Sky (lys blå)', value: 'sky' },
-    { label: 'Night (mørk)', value: 'night' },
-    { label: 'Sapphire (mørk blå)', value: 'sapphire' },
+    { label: 'Ingen', value: 'none' },
+    { label: 'Lys grå', value: 'muted' },
+    { label: 'Lys merkefarge', value: 'tint' },
+    { label: 'Mørk', value: 'dark' },
+    { label: 'Merkefarge', value: 'brand' },
   ],
 }
 

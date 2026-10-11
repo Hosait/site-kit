@@ -26,7 +26,7 @@ export function VideoComponent({ block, strings }: { block: VideoBlock; strings:
     <section className="py-10 md:py-16">
       <div className="wrap">
         {block.heading && <h2 className="t-h3 mb-6">{block.heading}</h2>}
-        <div className="relative aspect-video overflow-hidden rounded-sm bg-night">
+        <div className="relative aspect-video overflow-hidden rounded-sm bg-ink">
           {file?.url ? (
             <video controls preload="none" poster={poster?.sizes?.lg?.url ?? poster?.url ?? undefined} className="size-full">
               <source src={file.url} type={file.mimeType ?? 'video/mp4'} />
@@ -47,7 +47,7 @@ export function VideoComponent({ block, strings }: { block: VideoBlock; strings:
               aria-label={`${strings.playVideo}${block.heading ? `: ${block.heading}` : ''}`}
             >
               {poster && <Img media={poster} cover sizes="(min-width: 72rem) 72rem, 100vw" className="absolute inset-0 opacity-80" />}
-              <span className="relative flex size-20 items-center justify-center rounded-full bg-blue text-white shadow-lg transition-transform group-hover:scale-110">
+              <span className="relative flex size-20 items-center justify-center rounded-full bg-brand text-white shadow-lg transition-transform group-hover:scale-110">
                 <svg aria-hidden viewBox="0 0 24 24" className="ml-1 size-8" fill="currentColor">
                   <path d="M8 5v14l11-7z" />
                 </svg>
