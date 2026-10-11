@@ -1,0 +1,15 @@
+{
+  "$schema": "https://hosait.com/schema/hosait.json",
+  "runtime": "compose",
+  "compose": { "file": "docker-compose.hosait.yml" },
+  "web": { "service": "web", "port": 3000 },
+  "env": [
+    { "name": "DB_PASSWORD", "required": true, "description": "Postgres-passord. Endres aldri etter første deploy." },
+    { "name": "PAYLOAD_SECRET", "required": true, "description": "Signerer innlogging i CMS-et" },
+    { "name": "PREVIEW_SECRET", "required": true, "description": "Beskytter forhåndsvisning av utkast" },
+    { "name": "CRON_SECRET", "required": true, "description": "Beskytter cache-tømming og planlagte jobber" },
+    { "name": "PUBLIC_URL", "required": true, "description": "Adressen admin og test nås på, f.eks. https://spilka.hosait.com (uten / på slutten)" },
+    { "name": "STAGING_HOST", "required": false, "description": "Test: spilka.hosait.com gir sbs.spilka.hosait.com og dws.spilka.hosait.com (krever «Subdomains of the Hosait address»)" },
+    { "name": "SITE_ORIGINS", "required": false, "description": "Sett til production når spilka.com, spilka-sbs.com og spilka-dws.com peker hit" }
+  ]
+}

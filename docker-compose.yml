@@ -1,0 +1,16 @@
+# Lokal utvikling: bare databasen. Appen kjøres med `pnpm dev`.
+# Hosait bruker docker-compose.hosait.yml (se hosait.json).
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: sitekit
+      POSTGRES_PASSWORD: sitekit
+      POSTGRES_DB: sitekit
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres_dev:/var/lib/postgresql/data
+
+volumes:
+  postgres_dev:

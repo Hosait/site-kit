@@ -1,0 +1,8 @@
+allowBuilds:
+  esbuild: true
+  sharp: true
+  unrs-resolver: true
+  workerd: true
+
+# Ikke installer pakkeversjoner yngre enn ett døgn (forsyningskjede-vern; samme som pnpm 11-standard).
+minimumReleaseAge: 1440

@@ -1,0 +1,196 @@
+import type { Locale } from './sites'
+
+/** Faste tekster i grensesnittet. Alt redaktørene skal kunne endre, ligger i CMS-et. */
+const STRINGS = {
+  no: {
+    menu: 'Meny',
+    close: 'Lukk',
+    skipToContent: 'Hopp til innhold',
+    mainNav: 'Hovedmeny',
+    contact: 'Kontakt oss',
+    readMore: 'Les mer',
+    goToSite: 'Gå til nettsted',
+    publishedBy: 'Publisert av',
+    showMore: 'Vis flere',
+    notFoundTitle: 'Fant ikke siden',
+    notFoundText: 'Siden kan være flyttet eller slettet. Prøv forsiden eller menyen.',
+    toFrontpage: 'Til forsiden',
+    preferOther: 'Do you prefer',
+    otherLanguage: 'English',
+    switchLanguage: 'Switch to English',
+    languageName: 'Norsk',
+    divisions: 'Spilka-divisjoner',
+    breadcrumbs: 'Brødsmulesti',
+    home: 'Forside',
+    download: 'Last ned',
+    phone: 'Telefon',
+    email: 'E-post',
+    playVideo: 'Spill av video',
+    videoConsent: 'Videoen lastes fra en ekstern tjeneste når du klikker.',
+    search: 'Søk',
+    related: 'Fikk du med deg disse?',
+    searchTitle: 'Søk',
+    searchLabel: 'Søk på alle Spilka-nettstedene',
+    searchPlaceholder: 'Hva leter du etter?',
+    openSearch: 'Åpne søk',
+    resultsFor: 'treff for',
+    oneResultFor: 'treff for',
+    noResults: 'Ingen treff for',
+    noResultsHelp: 'Prøv færre eller andre ord, eller sjekk stavemåten.',
+    fuzzyNote: 'Ingen eksakte treff. Viser titler som ligner.',
+    searchHint: 'Søk i sider, artikler, dokumenter og personer på alle Spilka-nettstedene.',
+    seeAllResults: 'Vis alle treff',
+    filterSite: 'Nettsted',
+    filterKind: 'Type',
+    allSites: 'Alle nettsteder',
+    allKinds: 'Alt',
+    kind_page: 'Sider',
+    kind_article: 'Artikler',
+    kind_document: 'Dokumenter',
+    kind_person: 'Personer',
+    one_page: 'Side',
+    one_article: 'Artikkel',
+    one_document: 'Dokument',
+    one_person: 'Person',
+    previousPage: 'Forrige',
+    nextPage: 'Neste',
+    pageLabel: 'Side',
+    of: 'av',
+    resultPages: 'Sider med treff',
+    consentTitle: 'Informasjonskapsler',
+    consentText:
+      'Vi bruker nødvendige informasjonskapsler for at nettstedet skal virke, og teller besøk anonymt uten informasjonskapsler. Med ditt samtykke bruker vi også en informasjonskapsel for statistikk, så vi ser om du kommer tilbake og hvordan nettstedet brukes over tid. Dataene lagres hos oss og deles ikke med andre.',
+    consentAccept: 'Godta alle',
+    consentReject: 'Avvis valgfrie',
+    consentCustomize: 'Tilpass',
+    consentSave: 'Lagre valg',
+    consentNecessary: 'Nødvendige',
+    consentNecessaryText: 'Husker valget ditt og holder nettstedet sikkert.',
+    consentStatistics: 'Statistikk',
+    consentStatisticsText: 'En anonym ID (spilka-vid) i 13 måneder, så vi kan se tilbakevendende besøk. Lagres bare hos oss.',
+    consentAlwaysOn: 'Alltid på',
+    consentReadMore: 'Les mer om informasjonskapsler',
+    cookieSettings: 'Cookie-innstillinger',
+  },
+  en: {
+    menu: 'Menu',
+    close: 'Close',
+    skipToContent: 'Skip to content',
+    mainNav: 'Main menu',
+    contact: 'Contact us',
+    readMore: 'Read more',
+    goToSite: 'Go to website',
+    publishedBy: 'Published by',
+    showMore: 'Show more',
+    notFoundTitle: 'Page not found',
+    notFoundText: 'The page may have moved or been removed. Try the front page or the menu.',
+    toFrontpage: 'Go to front page',
+    preferOther: 'Foretrekker du',
+    otherLanguage: 'norsk',
+    switchLanguage: 'Bytt til norsk',
+    languageName: 'English',
+    divisions: 'Spilka divisions',
+    breadcrumbs: 'Breadcrumbs',
+    home: 'Home',
+    download: 'Download',
+    phone: 'Phone',
+    email: 'Email',
+    playVideo: 'Play video',
+    videoConsent: 'The video loads from an external service when you click.',
+    search: 'Search',
+    related: 'Did you catch these?',
+    searchTitle: 'Search',
+    searchLabel: 'Search all Spilka websites',
+    searchPlaceholder: 'What are you looking for?',
+    openSearch: 'Open search',
+    resultsFor: 'results for',
+    oneResultFor: 'result for',
+    noResults: 'No results for',
+    noResultsHelp: 'Try fewer or different words, or check the spelling.',
+    fuzzyNote: 'No exact matches. Showing similar titles.',
+    searchHint: 'Search pages, articles, documents and people on all Spilka websites.',
+    seeAllResults: 'Show all results',
+    filterSite: 'Website',
+    filterKind: 'Type',
+    allSites: 'All websites',
+    allKinds: 'All',
+    kind_page: 'Pages',
+    kind_article: 'Articles',
+    kind_document: 'Documents',
+    kind_person: 'People',
+    one_page: 'Page',
+    one_article: 'Article',
+    one_document: 'Document',
+    one_person: 'Person',
+    previousPage: 'Previous',
+    nextPage: 'Next',
+    pageLabel: 'Page',
+    of: 'of',
+    resultPages: 'Result pages',
+    consentTitle: 'Cookies',
+    consentText:
+      'We use necessary cookies to make the website work, and count visits anonymously without cookies. With your consent we also use a statistics cookie, so we can see if you return and how the website is used over time. The data is stored by us and not shared with others.',
+    consentAccept: 'Accept all',
+    consentReject: 'Reject optional',
+    consentCustomize: 'Customise',
+    consentSave: 'Save choices',
+    consentNecessary: 'Necessary',
+    consentNecessaryText: 'Remembers your choice and keeps the website secure.',
+    consentStatistics: 'Statistics',
+    consentStatisticsText: 'An anonymous ID (spilka-vid) for 13 months, so we can see returning visits. Stored only by us.',
+    consentAlwaysOn: 'Always on',
+    consentReadMore: 'Read more about cookies',
+    cookieSettings: 'Cookie settings',
+  },
+} satisfies Record<Locale, Record<string, string>>
+
+export type Strings = (typeof STRINGS)['no']
+
+/** Siden om informasjonskapsler (ligger på Spilka Industri; lenkes fra banneret på alle nettsteder). */
+export const COOKIE_POLICY_PATH: Record<Locale, string> = { no: '/no/informasjonskapsler', en: '/en/cookies' }
+
+/** Søkesiden: /no/sok og /en/search. */
+export const SEARCH_SEGMENT: Record<Locale, string> = { no: 'sok', en: 'search' }
+
+/** Dokumenttyper (feltet docType i dokumentbanken). */
+export const DOC_TYPES: Record<Locale, Record<string, string>> = {
+  no: {
+    datasheet: 'Produktblad',
+    epd: 'Miljødeklarasjon (EPD)',
+    fdv: 'FDV',
+    installation: 'Monteringsanvisning',
+    drawing: 'Tegning/CAD/BIM',
+    certificate: 'Sertifikat/testrapport',
+    brochure: 'Brosjyre',
+    report: 'Rapport',
+    other: 'Dokument',
+  },
+  en: {
+    datasheet: 'Product data sheet',
+    epd: 'Environmental declaration (EPD)',
+    fdv: 'Maintenance documentation',
+    installation: 'Installation guide',
+    drawing: 'Drawing/CAD/BIM',
+    certificate: 'Certificate/test report',
+    brochure: 'Brochure',
+    report: 'Report',
+    other: 'Document',
+  },
+}
+export const t = (locale: Locale): Strings => STRINGS[locale] ?? STRINGS.no
+
+const MONTHS: Record<Locale, string[]> = {
+  no: ['jan.', 'feb.', 'mars', 'apr.', 'mai', 'juni', 'juli', 'aug.', 'sep.', 'okt.', 'nov.', 'des.'],
+  en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+}
+
+/** «17. apr. 2026» / «17 Apr 2026» – uten avhengighet til serverens ICU-data. */
+export function formatDate(iso: string | null | undefined, locale: Locale): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const day = d.getUTCDate()
+  const month = MONTHS[locale][d.getUTCMonth()]
+  const year = d.getUTCFullYear()
+  return locale === 'no' ? `${day}. ${month} ${year}` : `${day} ${month} ${year}`
+}

@@ -1,0 +1,195 @@
+/* Besøksanalyse i admin: bruker Payloads temavariabler (lyst og mørkt tema). */
+.page {
+  padding-bottom: calc(var(--base) * 4);
+}
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--base);
+  margin: calc(var(--base) * 1.5) 0 var(--base);
+}
+.header h1 {
+  margin: 0;
+}
+.muted {
+  color: var(--theme-elevation-500);
+}
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border-bottom: 1px solid var(--theme-elevation-150);
+  margin-bottom: var(--base);
+}
+.tab {
+  padding: 10px 14px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  color: var(--theme-elevation-800);
+  border-bottom: 2px solid transparent;
+}
+.tab[aria-current='page'] {
+  border-bottom-color: var(--theme-success-500, #008cd2);
+  color: var(--theme-text);
+  font-weight: 600;
+}
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  margin-bottom: calc(var(--base) * 1.5);
+}
+.filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+.filters select {
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--theme-elevation-150);
+  border-radius: 4px;
+  background: var(--theme-input-bg, var(--theme-elevation-0));
+  color: var(--theme-text);
+}
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 12px;
+  margin-bottom: calc(var(--base) * 1.5);
+}
+.card {
+  border: 1px solid var(--theme-elevation-150);
+  border-radius: 6px;
+  padding: 14px 16px;
+  background: var(--theme-elevation-0);
+}
+.kpiLabel {
+  font-size: 13px;
+  color: var(--theme-elevation-600);
+}
+.kpiValue {
+  font-size: 26px;
+  font-weight: 700;
+  margin-top: 4px;
+  line-height: 1.2;
+}
+.delta {
+  font-size: 12px;
+  margin-top: 2px;
+}
+.up {
+  color: #0a7f5a;
+}
+.down {
+  color: #c40050;
+}
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.section {
+  margin-bottom: 16px;
+}
+.section h2 {
+  font-size: 17px;
+  margin: 0 0 10px;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.table th,
+.table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--theme-elevation-100);
+  text-align: left;
+  vertical-align: top;
+}
+.table th {
+  font-weight: 600;
+  color: var(--theme-elevation-600);
+  font-size: 12px;
+}
+.num {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.path {
+  word-break: break-all;
+}
+.bar {
+  position: relative;
+}
+.bar::before {
+  content: '';
+  position: absolute;
+  inset: 4px auto 4px 0;
+  width: var(--w, 0%);
+  background: color-mix(in srgb, #008cd2 14%, transparent);
+  border-radius: 3px;
+  z-index: 0;
+}
+.bar > span {
+  position: relative;
+  z-index: 1;
+}
+.note {
+  font-size: 13px;
+  color: var(--theme-elevation-600);
+  margin: 6px 0 0;
+}
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--theme-elevation-150);
+  border-radius: 4px;
+  text-decoration: none;
+}
+
+.reportHead {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.reportHead h2 {
+  margin: 0;
+}
+
+/* Månedsrapporten skrives ut uten admin-menyen. */
+@media print {
+  :global(.nav),
+  :global(.app-header),
+  :global(.template-default__nav-toggler-wrapper),
+  .tabs,
+  .filters,
+  .noPrint {
+    display: none !important;
+  }
+  :global(.template-default__wrap) {
+    padding: 0 !important;
+  }
+  .card {
+    break-inside: avoid;
+  }
+}

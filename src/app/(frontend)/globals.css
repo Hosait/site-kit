@@ -1,0 +1,259 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+
+/*
+ * Spilkas designsystem. Farger, bredder og typografi er hentet fra dagens
+ * spilka.com (base.css) slik at uttrykket er gjenkjennelig.
+ */
+@theme {
+  --font-sans: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', Roboto, sans-serif;
+
+  --color-blue: #008cd2;
+  --color-night: #17212a;
+  --color-sapphire: #00567e;
+  --color-sky: #bbdde6;
+  --color-mist: #f3f4f4;
+  --color-aero: #cef4eb;
+  --color-aqua: #00cfb4;
+  --color-pink: #c40050;
+  --color-plume: #63223d;
+  --color-yellow: #ffc658;
+  /* Spilka-blå justert for tekst og knapper: 5,26:1 mot hvit, 4,77:1 mot mist (WCAG AA).
+     Ren #008cd2 gir 3,7:1 og brukes bare til logo, grafikk og store flater. */
+  --color-blue-text: #0072ab;
+
+  --container-text: 40rem; /* tekstkolonne */
+  --container-content: 72rem; /* yttermarg */
+  --container-wide: 88rem; /* satsspeil */
+
+  --breakpoint-sm: 40rem;
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 64rem;
+  --breakpoint-xl: 80rem;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: 6rem;
+  }
+  body {
+    @apply bg-white text-night antialiased;
+    font-family: var(--font-sans);
+    font-feature-settings: 'liga', 'calt';
+    text-rendering: optimizeLegibility;
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+  a {
+    color: var(--color-blue-text);
+  }
+  a:hover {
+    color: var(--color-sapphire);
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-blue);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+  ::selection {
+    background: var(--color-sky);
+  }
+}
+
+@layer components {
+  /* Typografi – samme skala som i dag, flytende mellom mobil og desktop. */
+  .t-display {
+    font-size: clamp(2.5rem, 7vw, 4rem);
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+    font-weight: 700;
+    hyphens: auto;
+  }
+  .t-h2 {
+    font-size: clamp(2rem, 4.5vw, 3rem);
+    line-height: 1.1675;
+    letter-spacing: -0.04em;
+    font-weight: 700;
+    hyphens: auto;
+  }
+  .t-h3 {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    line-height: 1.25;
+    letter-spacing: -0.045em;
+    font-weight: 700;
+  }
+  .t-h4 {
+    font-size: 1.375rem;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    font-weight: 700;
+  }
+  .t-lead {
+    font-size: clamp(1.125rem, 2.4vw, 1.5rem);
+    line-height: 1.333;
+    letter-spacing: -0.03em;
+    font-weight: 500;
+  }
+  .t-eyebrow {
+    font-size: 0.875rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .t-small {
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  /* Rammer */
+  .wrap {
+    width: 100%;
+    max-width: var(--container-content);
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+  .wrap-wide {
+    width: 100%;
+    max-width: var(--container-wide);
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+  .wrap-text {
+    width: 100%;
+    max-width: calc(var(--container-text) + 2rem);
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+  @media (min-width: 48rem) {
+    .wrap,
+    .wrap-wide,
+    .wrap-text {
+      padding-inline: 2rem;
+    }
+    .wrap-text {
+      max-width: calc(var(--container-text) + 4rem);
+    }
+  }
+
+  /* Knapper – pilleform som i dag. Minst 44 px trykkflate på mobil. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.625rem 1.5rem;
+    border-radius: 9999px;
+    border: 1px solid var(--color-night);
+    font-size: 0.9375rem;
+    line-height: 1;
+    font-weight: 500;
+    text-decoration: none;
+    color: var(--color-night);
+    background: transparent;
+    transition:
+      background-color 150ms ease-in-out,
+      color 150ms ease-in-out,
+      transform 150ms ease-in-out;
+  }
+  .btn:hover {
+    transform: scale(1.04);
+    background: var(--color-night);
+    color: #fff;
+  }
+  .btn-primary {
+    background: var(--color-blue-text);
+    border-color: transparent;
+    color: #fff;
+  }
+  .btn-primary:hover {
+    background: var(--color-night);
+    color: #fff;
+  }
+  .on-dark .btn {
+    border-color: #fff;
+    color: #fff;
+  }
+  .on-dark .btn:hover {
+    background: #fff;
+    color: var(--color-blue);
+  }
+  .on-dark .btn-primary {
+    border-color: transparent;
+  }
+  .link-arrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 500;
+    text-decoration: none;
+  }
+  .link-arrow::before {
+    content: '→';
+    transition: transform 150ms ease-in-out;
+  }
+  .link-arrow:hover::before {
+    transform: translateX(3px);
+  }
+
+  /* Seksjonsbakgrunner */
+  .bg-section-mist {
+    background: var(--color-mist);
+  }
+  .bg-section-sky {
+    background: var(--color-sky);
+    /* Blå tekst må være mørkere på lyseblått for å nå 4,5:1. */
+    --color-blue-text: var(--color-sapphire);
+  }
+  .bg-section-night {
+    background: var(--color-night);
+    color: #fff;
+  }
+  .bg-section-sapphire {
+    background: var(--color-sapphire);
+    color: #fff;
+  }
+  .bg-section-night a:not(.btn),
+  .bg-section-sapphire a:not(.btn) {
+    color: var(--color-sky);
+  }
+
+  /* Rik tekst fra CMS-et */
+  .prose-spilka {
+    @apply prose max-w-none;
+    --tw-prose-body: var(--color-night);
+    --tw-prose-headings: var(--color-night);
+    --tw-prose-links: var(--color-blue-text);
+    --tw-prose-bold: var(--color-night);
+    --tw-prose-bullets: var(--color-blue);
+    --tw-prose-quote-borders: var(--color-blue);
+    font-size: 1.0625rem;
+    line-height: 1.65;
+  }
+  .prose-spilka :where(h2) {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    letter-spacing: -0.04em;
+    line-height: 1.25;
+  }
+  .prose-spilka :where(h3) {
+    font-size: 1.375rem;
+    letter-spacing: -0.02em;
+  }
+  .on-dark .prose-spilka,
+  .prose-spilka.on-dark {
+    --tw-prose-body: #fff;
+    --tw-prose-headings: #fff;
+    --tw-prose-links: var(--color-sky);
+    --tw-prose-bold: #fff;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}

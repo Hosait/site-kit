@@ -1,0 +1,85 @@
+import { postgresAdapter } from '@payloadcms/db-postgres'
+import { nb } from '@payloadcms/translations/languages/nb'
+import { en } from '@payloadcms/translations/languages/en'
+import path from 'path'
+import { buildConfig } from 'payload'
+import sharp from 'sharp'
+import { fileURLToPath } from 'url'
+
+import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
+
+import { Articles } from './collections/Articles'
+import { AnalyticsDaily, AnalyticsEvents, AnalyticsSalts, AnalyticsSettings, AuditLog, ConsentLog } from './collections/Analytics'
+import { migrations } from './migrations'
+import { Documents } from './collections/Documents'
+import { Media } from './collections/Media'
+import { Pages } from './collections/Pages'
+import { People } from './collections/People'
+import { SearchIndex } from './collections/SearchIndex'
+import { SiteSettings } from './collections/SiteSettings'
+import { Users } from './collections/Users'
+import { richTextEditor } from './fields/richText'
+import { plugins } from './plugins'
+import { getServerSideURL } from './utilities/getURL'
+
+const filename = fileURLToPath(import.meta.url)
+const dirname = path.dirname(filename)
+
+export default buildConfig({
+  admin: {
+    importMap: { baseDir: path.resolve(dirname) },
+    user: Users.slug,
+    components: {
+      beforeDashboard: ['/components/admin/SeedPanel#SeedPanel', '/components/admin/SearchPanel#SearchPanel'],
+      afterNavLinks: ['/components/analytics/admin/AnalyticsNav#AnalyticsNav'],
+      views: {
+        analytics: { Component: '/components/analytics/admin/AnalyticsView#AnalyticsView', path: '/analytics' },
+      },
+    },
+    meta: { titleSuffix: ' – Spilka CMS' },
+    livePreview: {
+      breakpoints: [
+        { label: 'Mobil', name: 'mobile', width: 375, height: 812 },
+        { label: 'Nettbrett', name: 'tablet', width: 768, height: 1024 },
+        { label: 'Desktop', name: 'desktop', width: 1440, height: 900 },
+      ],
+    },
+  },
+  i18n: { supportedLanguages: { nb, en }, fallbackLanguage: 'nb' },
+  localization: {
+    locales: [
+      { code: 'no', label: 'Norsk' },
+      { code: 'en', label: 'English' },
+    ],
+    defaultLocale: 'no',
+    fallback: false,
+  },
+  editor: richTextEditor,
+  db: postgresAdapter({
+    pool: { connectionString: process.env.DATABASE_URL || '' },
+    // Skjemaendringer går via migrasjoner (pnpm payload migrate:create). I produksjon kjøres
+    // nye migrasjoner automatisk ved oppstart; lokalt synkes skjemaet direkte (push).
+    push: process.env.NODE_ENV !== 'production',
+    prodMigrations: migrations,
+  }),
+  collections: [Pages, Articles, People, Documents, Media, SiteSettings, Users, SearchIndex, AnalyticsEvents, AnalyticsDaily, AnalyticsSalts, ConsentLog, AuditLog],
+  globals: [AnalyticsSettings],
+  cors: [getServerSideURL()].filter(Boolean),
+  plugins,
+  // E-post (kvitteringer fra kontaktskjema) når SMTP er satt opp; ellers skrives e-post til loggen.
+  email: process.env.SMTP_HOST
+    ? nodemailerAdapter({
+        defaultFromAddress: process.env.SMTP_FROM || 'nettsted@spilka.com',
+        defaultFromName: 'Spilka',
+        transportOptions: {
+          host: process.env.SMTP_HOST,
+          port: Number(process.env.SMTP_PORT || 587),
+          secure: process.env.SMTP_PORT === '465',
+          auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
+        },
+      })
+    : undefined,
+  secret: process.env.PAYLOAD_SECRET || '',
+  sharp,
+  typescript: { outputFile: path.resolve(dirname, 'payload-types.ts') },
+})
