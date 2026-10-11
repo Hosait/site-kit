@@ -61,6 +61,10 @@ Push the repository and connect it to a blank Hosait project (the Hosait wizard,
 into the empty database; `/next/seed/status` shows progress. Then create the first admin user.
 Never commit `.env` or any secret.
 
+When the site's own domain points here, check that `origin` and `hosts` in `site/config.ts` name
+it, then set the variable `SITE_ORIGINS` to `production` and redeploy. Until then every page is
+`noindex`, `robots.txt` blocks search engines, and the sitemap uses the hosait.com address.
+
 ---
 
 <!-- BEGIN:nextjs-agent-rules -->

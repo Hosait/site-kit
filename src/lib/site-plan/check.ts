@@ -26,6 +26,10 @@ export function checkPlan(raw: unknown, baseDir: string): PlanCheck {
       if (!/^https:\/\//i.test(item.source)) errors.push(`${item.ref}: ${item.source} — only https URLs or files next to the plan`)
       continue
     }
+    if (path.isAbsolute(item.source)) {
+      errors.push(`${item.ref}: ${item.source} — use a path relative to the plan`)
+      continue
+    }
     const abs = path.resolve(base, item.source)
     if (!abs.startsWith(base + path.sep)) errors.push(`${item.ref}: ${item.source} is outside the plan's folder`)
     else if (!fs.existsSync(abs)) errors.push(`${item.ref}: ${item.source} does not exist`)

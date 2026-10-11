@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { test } from 'node:test'
 
 import { checkPlan } from '../../src/lib/site-plan/check'
@@ -37,4 +38,13 @@ test('public https media are accepted without being fetched', () => {
   const p = plan()
   p.media[0].source = 'https://old.example/hero.jpg'
   assert.equal(checkPlan(p, 'tests/fixtures').ok, true)
+})
+
+test('an absolute path is refused even when it points into the plan folder', () => {
+  const p = plan()
+  const inside = p.media.find((m: { source: string }) => !/^https:/.test(m.source))
+  inside.source = path.resolve('tests/fixtures', inside.source)
+  const r = checkPlan(p, 'tests/fixtures')
+  assert.equal(r.ok, false)
+  assert.match(r.errors.join('\n'), /use a path relative to the plan/)
 })
