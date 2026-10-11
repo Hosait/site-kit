@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
-import { DEFAULT_SITE, isLocale, isSiteKey, SITE_CONFIG, siteFromHost, type SiteKey } from '@/lib/sites'
+import { DEFAULT_SITE, FEATURES, isLocale, isSiteKey, SITE_CONFIG, siteFromHost, type SiteKey } from '@/lib/sites'
 import { negotiateLocale, searchRewrite } from '@/lib/locales'
 
 /**
@@ -88,7 +88,7 @@ export async function proxy(req: NextRequest) {
     return withCookie(NextResponse.redirect(target, hit.permanent ? 308 : 307))
   }
 
-  const search = searchRewrite(pathname)
+  const search = FEATURES.search ? searchRewrite(pathname) : null
   if (search) {
     const url = new URL(`/${site}/${search.locale}/site-search`, req.url)
     url.search = req.nextUrl.search

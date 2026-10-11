@@ -1,4 +1,4 @@
-import type { Locale } from './sites'
+import { LOCALES, SITE_CONFIG, type Locale } from './sites'
 import type { STRING_LOCALES } from './string-locales'
 
 /** Faste tekster i grensesnittet. Alt redaktørene skal kunne endre, ligger i CMS-et. */
@@ -162,28 +162,7 @@ export type Strings = (typeof STRINGS)['no']
 
 
 /** Dokumenttyper (feltet docType i dokumentbanken). */
-export const DOC_TYPES: Record<Locale, Record<string, string>> = {
-  no: {
-    datasheet: 'Produktblad',
-    epd: 'Miljødeklarasjon (EPD)',
-    fdv: 'FDV',
-    installation: 'Monteringsanvisning',
-    drawing: 'Tegning/CAD/BIM',
-    certificate: 'Sertifikat/testrapport',
-    brochure: 'Brosjyre',
-    report: 'Rapport',
-    other: 'Dokument',
-  },
-  en: {
-    datasheet: 'Product data sheet',
-    epd: 'Environmental declaration (EPD)',
-    fdv: 'Maintenance documentation',
-    installation: 'Installation guide',
-    drawing: 'Drawing/CAD/BIM',
-    certificate: 'Certificate/test report',
-    brochure: 'Brochure',
-    report: 'Report',
-    other: 'Document',
-  },
-}
+export const DOC_TYPES = Object.fromEntries(
+  LOCALES.map((l) => [l, Object.fromEntries(Object.entries(SITE_CONFIG.documentTypes).map(([k, v]) => [k, (v as Record<string, string>)[l]]))]),
+) as Record<Locale, Record<string, string>>
 export const t = (locale: Locale): Strings => STRINGS[locale] ?? STRINGS.no

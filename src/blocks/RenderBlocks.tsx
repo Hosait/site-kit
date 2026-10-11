@@ -21,6 +21,8 @@ import {
   TextImageComponent,
   TimelineComponent,
 } from './components'
+import { customComponents } from '@site/blocks/custom/components'
+
 import { FormBlock } from './Form/Component'
 import { EmbedComponent } from './EmbedComponent'
 import { VideoComponent } from './VideoComponent'
@@ -87,8 +89,11 @@ export function RenderBlocks({
             if (typeof b.form !== 'object') return null
             return <FormBlock key={key} form={b.form} locale={locale} enableIntro={Boolean(b.enableIntro)} introContent={b.introContent as never} />
           }
-          default:
-            return null
+          default: {
+            // Blocks only this site has (site/blocks/custom).
+            const Custom = customComponents[(block as AnyBlock).blockType]
+            return Custom ? <Custom key={key} block={block} {...props} /> : null
+          }
         }
       })}
     </>

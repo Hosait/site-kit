@@ -3,12 +3,14 @@ import { unstable_cache } from 'next/cache'
 import { getPayload, type Where } from 'payload'
 
 import type { Article, Page, SiteSetting } from '@/payload-types'
-import { LOCALES, type Locale, type SiteKey } from './sites'
+import { type Locale, LOCALES, SITE_CONFIG, type SiteKey } from './sites'
 
 /**
  * Alle oppslag frontenden gjør. Publisert innhold caches med tagger som tømmes av
  * src/lib/revalidate.ts; i forhåndsvisning (draft) hentes alt ferskt.
  */
+export type ArticleKind = keyof typeof SITE_CONFIG.articleKinds
+
 export const payload = () => getPayload({ config: configPromise })
 
 const cached = <A extends unknown[], R>(fn: (...args: A) => Promise<R>, key: string, tags: (...args: A) => string[]) =>
@@ -51,7 +53,7 @@ export const getArticle = (site: SiteKey, locale: Locale, slug: string, draft = 
 export type ArticleQuery = {
   locale: Locale
   sites?: SiteKey[] | null
-  kind?: 'all' | 'announcement' | 'blog' | null
+  kind?: 'all' | ArticleKind | null
   limit?: number
   page?: number
   exclude?: number

@@ -4,7 +4,7 @@ import { Suspense, type ReactNode } from 'react'
 import { ConsentBanner } from '@/components/analytics/ConsentBanner'
 import { Tracker } from '@/components/analytics/Tracker'
 import { t } from '@/lib/i18n'
-import { DEFAULT_SITE, HREFLANG, isLocale, isSiteKey, LOCALE_CONFIG, LOCALES, localePath, SITE_KEYS, SITES, siteHref, siteOrigin } from '@/lib/sites'
+import { DEFAULT_SITE, FEATURES, HREFLANG, isLocale, isSiteKey, LOCALE_CONFIG, localePath, LOCALES, SITE_KEYS, siteHref, siteOrigin, SITES } from '@/lib/sites'
 
 import themeJson from '@site/theme.json'
 import { siteFont } from '@site/fonts'
@@ -48,11 +48,15 @@ export default async function SiteLayout({ children, params }: { children: React
       </head>
       <body>
         {children}
-        {/* Besøksanalyse og samtykke (se src/lib/analytics). useSearchParams krever Suspense. */}
-        <Suspense fallback={null}>
-          <Tracker site={key} locale={loc} />
-        </Suspense>
-        <ConsentBanner site={key} locale={loc} strings={t(loc)} policyHref={siteHref(DEFAULT_SITE, key, localePath(loc, LOCALE_CONFIG[loc].cookiePolicyPath))} />
+        {/* Besøksanalyse og samtykke (se src/lib/analytics); av når site/config.ts sier analytics: 'none'. useSearchParams krever Suspense. */}
+        {FEATURES.analytics === 'builtin' && (
+          <>
+            <Suspense fallback={null}>
+              <Tracker site={key} locale={loc} />
+            </Suspense>
+            <ConsentBanner site={key} locale={loc} strings={t(loc)} policyHref={siteHref(DEFAULT_SITE, key, localePath(loc, LOCALE_CONFIG[loc].cookiePolicyPath))} />
+          </>
+        )}
       </body>
     </html>
   )

@@ -5,6 +5,9 @@ import { useState } from 'react'
 import { Img } from '@/components/Img'
 import type { Strings } from '@/lib/i18n'
 import type { Media, VideoBlock } from '@/payload-types'
+import { cn } from '@/utilities/ui'
+
+import { hasSectionBg, sectionBg } from './variants'
 
 /** youtube.com/watch?v=…, youtu.be/…, vimeo.com/… → innebygd adresse uten sporing der det går. */
 function embedUrl(url: string): string | null {
@@ -23,7 +26,7 @@ export function VideoComponent({ block, strings }: { block: VideoBlock; strings:
   const src = block.url ? embedUrl(block.url) : null
 
   return (
-    <section className="py-10 md:py-16">
+    <section className={cn(hasSectionBg(block.background) ? 'py-16 md:py-24' : 'py-10 md:py-16', sectionBg(block.background))}>
       <div className="wrap">
         {block.heading && <h2 className="t-h3 mb-6">{block.heading}</h2>}
         <div className="relative aspect-video overflow-hidden rounded-sm bg-ink">

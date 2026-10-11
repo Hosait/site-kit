@@ -29,12 +29,12 @@ import type {
 } from '@/payload-types'
 import { cn } from '@/utilities/ui'
 import { formatDate } from '@/lib/locales'
+import { alignClass, hasSectionBg, sectionBg, type Background } from './variants'
 
 export type BlockProps<T> = { block: T; site: SiteKey; locale: Locale; isFirst?: boolean }
 
-type Background = 'none' | 'muted' | 'tint' | 'dark' | 'brand' | null | undefined
-const bg = (b: Background) => (b && b !== 'none' ? `bg-section-${b} ${b === 'dark' || b === 'brand' ? 'on-dark' : ''}` : '')
-const hasBg = (b: Background) => Boolean(b && b !== 'none')
+const bg = sectionBg
+const hasBg = hasSectionBg
 
 /** Seksjonsramme med luft som i dag: mer luft når seksjonen har bakgrunnsfarge. */
 function Section({
@@ -98,9 +98,9 @@ export function HeroComponent({ block, site, locale, isFirst }: BlockProps<HeroB
         </div>
         <div className="wrap-wide on-dark pb-12 pt-32 md:pb-20">
           <Eyebrow text={block.eyebrow} highlight={block.eyebrowHighlight} className="mb-4 text-white/90" />
-          {block.heading && <H className="t-display max-w-4xl">{block.heading}</H>}
-          {block.text && <p className="t-lead mt-6 max-w-2xl">{block.text}</p>}
-          <LinkRow links={block.links} site={site} locale={locale} className="mt-8" />
+          {block.heading && <H className={cn('t-display max-w-4xl', alignClass(block.align))}>{block.heading}</H>}
+          {block.text && <p className={cn('t-lead mt-6 max-w-2xl', alignClass(block.align))}>{block.text}</p>}
+          <LinkRow links={block.links} site={site} locale={locale} className={cn('mt-8', block.align === 'center' && 'justify-center')} />
         </div>
       </section>
     )
@@ -111,9 +111,9 @@ export function HeroComponent({ block, site, locale, isFirst }: BlockProps<HeroB
       <section className="wrap-wide grid items-center gap-8 py-10 md:grid-cols-2 md:gap-16 md:py-16">
         <div>
           <Eyebrow text={block.eyebrow} highlight={block.eyebrowHighlight} className="mb-4" />
-          {block.heading && <H className="t-display">{block.heading}</H>}
-          {block.text && <p className="t-lead mt-6">{block.text}</p>}
-          <LinkRow links={block.links} site={site} locale={locale} className="mt-8" />
+          {block.heading && <H className={cn('t-display', alignClass(block.align))}>{block.heading}</H>}
+          {block.text && <p className={cn('t-lead mt-6', alignClass(block.align))}>{block.text}</p>}
+          <LinkRow links={block.links} site={site} locale={locale} className={cn('mt-8', block.align === 'center' && 'justify-center')} />
         </div>
         <div className="overflow-hidden rounded-2xl">
           <Img media={media} priority={isFirst} sizes="(min-width: 48rem) 50vw, 100vw" className="w-full" />
@@ -125,9 +125,9 @@ export function HeroComponent({ block, site, locale, isFirst }: BlockProps<HeroB
   return (
     <section className="wrap-wide pb-6 pt-10 md:pb-10 md:pt-20">
       <Eyebrow text={block.eyebrow} highlight={block.eyebrowHighlight} className="mb-4" />
-      {block.heading && <H className="t-display max-w-5xl">{block.heading}</H>}
-      {block.text && <p className="t-lead mt-6 max-w-3xl">{block.text}</p>}
-      <LinkRow links={block.links} site={site} locale={locale} className="mt-8" />
+      {block.heading && <H className={cn('t-display max-w-5xl', alignClass(block.align))}>{block.heading}</H>}
+      {block.text && <p className={cn('t-lead mt-6 max-w-3xl', alignClass(block.align))}>{block.text}</p>}
+      <LinkRow links={block.links} site={site} locale={locale} className={cn('mt-8', block.align === 'center' && 'justify-center')} />
     </section>
   )
 }
@@ -190,7 +190,7 @@ export function FullImageComponent({ block }: BlockProps<FullImageBlock>) {
 export function ImageGridComponent({ block }: BlockProps<ImageGridBlock>) {
   const cols = { '2': 'sm:grid-cols-2', '3': 'sm:grid-cols-2 lg:grid-cols-3', '4': 'sm:grid-cols-2 lg:grid-cols-4' }[block.columns ?? '3']
   return (
-    <Section>
+    <Section background={block.background}>
       <div className="wrap-wide">
         {block.heading && <h2 className="t-h3 mb-8">{block.heading}</h2>}
         <ul className={cn('grid gap-4 md:gap-6', cols)}>
@@ -217,8 +217,8 @@ export function CardsComponent({ block, site, locale }: BlockProps<CardsBlock>) 
   return (
     <Section background={block.background}>
       <div className="wrap-wide">
-        {block.heading && <h2 className="t-h2 mb-4">{block.heading}</h2>}
-        {block.intro && <p className="t-lead mb-10 max-w-3xl">{block.intro}</p>}
+        {block.heading && <h2 className={cn('t-h2 mb-4', alignClass(block.align))}>{block.heading}</h2>}
+        {block.intro && <p className={cn('t-lead mb-10 max-w-3xl', alignClass(block.align))}>{block.intro}</p>}
         <ul className={cn('grid gap-6', cols)}>
           {(block.items ?? []).map((item, i) => {
             const linked = item.link?.type === 'custom' ? item.link.url : item.link?.reference
@@ -255,10 +255,10 @@ export function CardsComponent({ block, site, locale }: BlockProps<CardsBlock>) 
 export function CallToActionComponent({ block, site, locale }: BlockProps<CallToActionBlock>) {
   return (
     <Section background={block.background ?? 'muted'}>
-      <div className="wrap-text text-center">
+      <div className={cn('wrap-text', block.align !== 'left' && 'text-center')}>
         {block.heading && <h2 className="t-h2">{block.heading}</h2>}
         {block.text && <p className="t-lead mt-4">{block.text}</p>}
-        <LinkRow links={block.links} site={site} locale={locale} className="mt-8 justify-center" />
+        <LinkRow links={block.links} site={site} locale={locale} className={cn('mt-8', block.align !== 'left' && 'justify-center')} />
       </div>
     </Section>
   )
@@ -267,12 +267,12 @@ export function CallToActionComponent({ block, site, locale }: BlockProps<CallTo
 export function QuoteComponent({ block }: BlockProps<QuoteBlock>) {
   return (
     <Section background={block.background}>
-      <figure className="wrap-text">
+      <figure className={cn('wrap-text', block.align === 'center' && 'text-center')}>
         <blockquote className="t-h3 font-medium">
           <p>«{block.quote.replace(/^[«"“]|[»"”]$/g, '')}»</p>
         </blockquote>
         {(block.author || block.role) && (
-          <figcaption className="mt-6 flex items-center gap-4">
+          <figcaption className={cn('mt-6 flex items-center gap-4', block.align === 'center' && 'justify-center')}>
             {block.image && (
               <span className="size-14 overflow-hidden rounded-full">
                 <Img media={block.image as Media} cover sizes="56px" />
@@ -293,8 +293,8 @@ export function StatsComponent({ block }: BlockProps<StatsBlock>) {
   return (
     <Section background={block.background}>
       <div className="wrap">
-        {block.heading && <h2 className="t-h2 mb-4">{block.heading}</h2>}
-        {block.intro && <p className="t-lead mb-10 max-w-3xl">{block.intro}</p>}
+        {block.heading && <h2 className={cn('t-h2 mb-4', alignClass(block.align))}>{block.heading}</h2>}
+        {block.intro && <p className={cn('t-lead mb-10 max-w-3xl', alignClass(block.align))}>{block.intro}</p>}
         <dl className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {(block.items ?? []).map((it, i) => (
             <div key={it.id ?? i} className="border-t-2 border-brand pt-4">
@@ -338,7 +338,7 @@ export async function ArticleFeedComponent({ block, site, locale }: BlockProps<A
   })
   if (!res.docs.length) return null
   return (
-    <Section>
+    <Section background={block.background}>
       <div className="wrap-wide">
         {block.heading && <h2 className="t-h2 mb-8 md:mb-12">{block.heading}</h2>}
         <ul className="grid gap-x-6 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
@@ -384,7 +384,7 @@ export function PeopleComponent({ block, locale }: BlockProps<PeopleBlock>) {
   const people = (block.people ?? []).filter((p): p is Person => typeof p === 'object')
   const list = block.layout === 'list'
   return (
-    <Section>
+    <Section background={block.background}>
       <div className="wrap-wide">
         {block.heading && <h2 className="t-h2 mb-10">{block.heading}</h2>}
         <ul className={cn('grid gap-x-6 gap-y-12', list ? 'md:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-3')}>
@@ -439,7 +439,7 @@ export function DocumentsComponent({ block, locale }: BlockProps<DocumentsBlock>
   const docs = (block.documents ?? []).filter((d): d is Document => typeof d === 'object')
   if (!docs.length) return null
   return (
-    <Section>
+    <Section background={block.background}>
       <div className="wrap">
         {block.heading && <h2 className="t-h3 mb-6">{block.heading}</h2>}
         <ul className="divide-y divide-ink/10 border-y border-ink/10">
@@ -466,7 +466,7 @@ export function DocumentsComponent({ block, locale }: BlockProps<DocumentsBlock>
 
 export function TimelineComponent({ block }: BlockProps<TimelineBlock>) {
   return (
-    <Section>
+    <Section background={block.background}>
       <div className="wrap">
         {block.heading && <h2 className="t-h2 mb-12">{block.heading}</h2>}
         <ol className="relative space-y-12 border-l-2 border-tint pl-8 md:pl-12">
@@ -493,7 +493,7 @@ export function TimelineComponent({ block }: BlockProps<TimelineBlock>) {
 
 export function AccordionComponent({ block, site, locale }: BlockProps<AccordionBlock>) {
   return (
-    <Section>
+    <Section background={block.background}>
       <div className="wrap-text">
         {block.heading && <h2 className="t-h3 mb-6">{block.heading}</h2>}
         <div className="divide-y divide-ink/10 border-y border-ink/10">
@@ -557,7 +557,7 @@ export async function ChildPagesComponent({ block, site, locale, pageId }: Block
   const grouped = depth === 2 && pages.some((p) => p.children.length)
 
   return (
-    <Section>
+    <Section background={block.background}>
       <div className="wrap-wide">
         {block.heading && <h2 className="t-h2 mb-4">{block.heading}</h2>}
         {block.intro && <p className="t-lead mb-10 max-w-3xl">{block.intro}</p>}
@@ -600,7 +600,7 @@ export async function ChildPagesComponent({ block, site, locale, pageId }: Block
 export function FactsComponent({ block }: BlockProps<FactsBlock>) {
   if (!block.items?.length) return null
   return (
-    <Section>
+    <Section background={block.background}>
       <div className="wrap">
         <div className="rounded-2xl bg-muted p-6 md:p-10">
           {block.heading && <h2 className="t-h3 mb-6">{block.heading}</h2>}

@@ -21,7 +21,7 @@ import { Users } from './collections/Users'
 import { richTextEditor } from './fields/richText'
 import { plugins } from './plugins'
 import { getServerSideURL } from './utilities/getURL'
-import { DEFAULT_LOCALE, LOCALE_CONFIG, LOCALES, SITE_CONFIG } from './lib/sites'
+import { DEFAULT_LOCALE, FEATURES, LOCALE_CONFIG, LOCALES, SITE_CONFIG } from './lib/sites'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -30,12 +30,14 @@ export default buildConfig({
   admin: {
     importMap: { baseDir: path.resolve(dirname) },
     user: Users.slug,
+    // Feature switches in site/config.ts decide which admin panels exist.
     components: {
-      beforeDashboard: ['/components/admin/SeedPanel#SeedPanel', '/components/admin/SearchPanel#SearchPanel'],
-      afterNavLinks: ['/components/analytics/admin/AnalyticsNav#AnalyticsNav'],
-      views: {
-        analytics: { Component: '/components/analytics/admin/AnalyticsView#AnalyticsView', path: '/analytics' },
-      },
+      beforeDashboard: ['/components/admin/SeedPanel#SeedPanel', ...(FEATURES.search ? ['/components/admin/SearchPanel#SearchPanel'] : [])],
+      afterNavLinks: FEATURES.analytics === 'builtin' ? ['/components/analytics/admin/AnalyticsNav#AnalyticsNav'] : [],
+      views:
+        FEATURES.analytics === 'builtin'
+          ? { analytics: { Component: '/components/analytics/admin/AnalyticsView#AnalyticsView', path: '/analytics' } }
+          : {},
     },
     meta: { titleSuffix: SITE_CONFIG.admin.titleSuffix },
     livePreview: {

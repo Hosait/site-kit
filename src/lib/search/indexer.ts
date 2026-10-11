@@ -1,7 +1,7 @@
 import type { CollectionAfterChangeHook, CollectionAfterDeleteHook, Payload, PayloadRequest } from 'payload'
 
 import type { Article, Document, Page, Person } from '@/payload-types'
-import { DEFAULT_SITE, isSiteKey, type Locale, localePath, LOCALES, SITE_KEYS, type SiteKey, SITES } from '@/lib/sites'
+import { DEFAULT_SITE, FEATURES, isSiteKey, type Locale, localePath, LOCALES, SITE_KEYS, type SiteKey, SITES } from '@/lib/sites'
 import { pdfText } from './pdf'
 import { layoutText, lexicalText } from './text'
 
@@ -181,7 +181,7 @@ const isIndexed = (slug: string): slug is IndexedCollection => slug in KIND
 
 /** afterChange: oppdaterer indeksen når noe publiseres, avpubliseres eller endres. */
 export const indexDoc: CollectionAfterChangeHook = async ({ doc, collection, req }) => {
-  if (req.context.skipSearchIndex || !isIndexed(collection.slug)) return doc
+  if (!FEATURES.search || req.context.skipSearchIndex || !isIndexed(collection.slug)) return doc
   // Autolagrede utkast endrer ikke det publiserte innholdet.
   if (doc._status === 'draft' && (req.query as { autosave?: unknown } | undefined)?.autosave === 'true') return doc
   try {
@@ -193,7 +193,7 @@ export const indexDoc: CollectionAfterChangeHook = async ({ doc, collection, req
 }
 
 export const unindexDoc: CollectionAfterDeleteHook = async ({ doc, collection, req }) => {
-  if (!isIndexed(collection.slug) || !doc?.id) return doc
+  if (!FEATURES.search || !isIndexed(collection.slug) || !doc?.id) return doc
   try {
     await removeFromIndex({ payload: req.payload, req }, collection.slug, doc.id)
   } catch (err) {

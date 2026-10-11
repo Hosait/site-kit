@@ -10,7 +10,7 @@ import { revalidateDoc, revalidateDocDelete } from '@/lib/revalidate'
 import { indexDoc, unindexDoc } from '@/lib/search/indexer'
 import { slugify } from '@/lib/slugify'
 import type { Article } from '@/payload-types'
-import { DEFAULT_LOCALE } from '@/lib/sites'
+import { DEFAULT_LOCALE, SITE_CONFIG } from '@/lib/sites'
 
 /** Artikler (nyheter, fagblogg …; typene står i site/config.ts). Adresse: /{språk}/{articleBase}/{slug}. */
 const normalizeSlug: CollectionBeforeChangeHook<Article> = async ({ data, req, originalDoc }) => {
@@ -79,11 +79,11 @@ export const Articles: CollectionConfig<'articles'> = {
       type: 'select',
       label: 'Type',
       required: true,
-      defaultValue: 'announcement',
-      options: [
-        { label: 'Kunngjøring', value: 'announcement' },
-        { label: 'Fagblogg', value: 'blog' },
-      ],
+      defaultValue: Object.keys(SITE_CONFIG.articleKinds)[0],
+      options: Object.entries(SITE_CONFIG.articleKinds).map(([value, l]) => {
+        const labels = l as Record<string, string>
+        return { value, label: { nb: labels[DEFAULT_LOCALE], en: labels.en ?? labels[DEFAULT_LOCALE] } }
+      }),
       admin: { position: 'sidebar' },
     },
     {

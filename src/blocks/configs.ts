@@ -2,8 +2,11 @@ import type { Block, Field } from 'payload'
 
 import { link, linkArray } from '@/fields/link'
 import { richTextEditor } from '@/fields/richText'
-import { SITE_OPTIONS } from '@/lib/sites'
+import { DEFAULT_LOCALE, SINGLE_SITE, SITE_CONFIG, SITE_OPTIONS } from '@/lib/sites'
+import { customBlocks } from '@site/blocks/custom/configs'
+
 import { FormBlock } from './Form/config'
+import { align, assertUniqueSlugs } from './variants'
 
 /**
  * Alle blokker redaktører kan bygge sider med. Hver blokk har en React-komponent
@@ -69,6 +72,7 @@ export const Hero: Block = {
       admin: { condition: (_, s) => s?.variant !== 'text' },
     },
     linkArray('links', 2),
+    align,
   ],
 }
 
@@ -184,6 +188,7 @@ export const ImageGrid: Block = {
         { name: 'caption', type: 'text', label: 'Bildetekst' },
       ],
     },
+    background,
   ],
 }
 
@@ -207,6 +212,7 @@ export const Cards: Block = {
       ],
     },
     background,
+    align,
   ],
 }
 
@@ -214,7 +220,7 @@ export const CallToAction: Block = {
   slug: 'cta',
   labels: { singular: 'Handlingsoppfordring', plural: 'Handlingsoppfordringer' },
   interfaceName: 'CallToActionBlock',
-  fields: [heading, { name: 'text', type: 'textarea', label: 'Tekst' }, linkArray('links', 2), background],
+  fields: [heading, { name: 'text', type: 'textarea', label: 'Tekst' }, linkArray('links', 2), background, { ...align, defaultValue: 'center' } as Field],
 }
 
 export const Quote: Block = {
@@ -227,6 +233,7 @@ export const Quote: Block = {
     { name: 'role', type: 'text', label: 'Tittel' },
     { name: 'image', type: 'upload', relationTo: 'media', label: 'Portrett' },
     background,
+    align,
   ],
 }
 
@@ -259,6 +266,7 @@ export const Stats: Block = {
       ],
     },
     background,
+    align,
   ],
 }
 
@@ -296,7 +304,7 @@ export const ArticleFeed: Block = {
       label: 'Hent fra nettsteder',
       hasMany: true,
       options: SITE_OPTIONS,
-      admin: { description: 'Tomt = alle nettsteder (felles nyhetsstrøm).' },
+      admin: { description: 'Tomt = alle nettsteder (felles nyhetsstrøm).', condition: () => !SINGLE_SITE },
     },
     {
       name: 'kind',
@@ -305,12 +313,12 @@ export const ArticleFeed: Block = {
       defaultValue: 'all',
       options: [
         { label: 'Alle', value: 'all' },
-        { label: 'Kunngjøringer', value: 'announcement' },
-        { label: 'Fagblogg', value: 'blog' },
+        ...Object.entries(SITE_CONFIG.articleKinds).map(([value, l]) => ({ value, label: (l as Record<string, string>)[DEFAULT_LOCALE] })),
       ],
     },
     { name: 'limit', type: 'number', label: 'Antall', defaultValue: 3, min: 1, max: 48 },
     { name: 'paginate', type: 'checkbox', label: 'Vis alle med «Vis flere»', defaultValue: false },
+    background,
   ],
 }
 
@@ -331,6 +339,7 @@ export const People: Block = {
         { label: 'Kompakt liste', value: 'list' },
       ],
     },
+    background,
   ],
 }
 
@@ -341,6 +350,7 @@ export const Documents: Block = {
   fields: [
     heading,
     { name: 'documents', type: 'relationship', relationTo: 'documents', hasMany: true, label: 'Dokumenter' },
+    background,
   ],
 }
 
@@ -361,6 +371,7 @@ export const Timeline: Block = {
         { name: 'image', type: 'upload', relationTo: 'media', label: 'Bilde' },
       ],
     },
+    background,
   ],
 }
 
@@ -379,6 +390,7 @@ export const Accordion: Block = {
         { name: 'content', type: 'richText', editor: richTextEditor, label: 'Innhold' },
       ],
     },
+    background,
   ],
 }
 
@@ -396,6 +408,7 @@ export const Video: Block = {
     },
     { name: 'file', type: 'upload', relationTo: 'media', label: 'Eller videofil' },
     { name: 'poster', type: 'upload', relationTo: 'media', label: 'Forhåndsbilde' },
+    background,
   ],
 }
 
@@ -424,6 +437,7 @@ export const ChildPages: Block = {
       ],
     },
     columns,
+    background,
   ],
 }
 
@@ -448,10 +462,11 @@ export const Facts: Block = {
         },
       ],
     },
+    background,
   ],
 }
 
-export const pageBlocks: Block[] = [
+const kitBlocks: Block[] = [
   Hero,
   Content,
   TextImage,
@@ -472,3 +487,5 @@ export const pageBlocks: Block[] = [
   Embed,
   FormBlock,
 ]
+
+export const pageBlocks = assertUniqueSlugs([...kitBlocks, ...customBlocks])

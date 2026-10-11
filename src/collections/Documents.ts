@@ -2,7 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { anyone } from '@/access/anyone'
 import { authenticated } from '@/access/authenticated'
-import { DEFAULT_LOCALE, LOCALE_CONFIG, LOCALES, SITE_OPTIONS } from '@/lib/sites'
+import { DEFAULT_LOCALE, LOCALE_CONFIG, LOCALES, SITE_CONFIG, SITE_OPTIONS } from '@/lib/sites'
 import { revalidateDoc, revalidateDocDelete } from '@/lib/revalidate'
 import { indexDoc, unindexDoc } from '@/lib/search/indexer'
 
@@ -38,18 +38,11 @@ export const Documents: CollectionConfig = {
       type: 'select',
       label: 'Type',
       required: true,
-      defaultValue: 'other',
-      options: [
-        { label: 'Produktblad', value: 'datasheet' },
-        { label: 'Miljødeklarasjon (EPD)', value: 'epd' },
-        { label: 'FDV', value: 'fdv' },
-        { label: 'Monteringsanvisning', value: 'installation' },
-        { label: 'Tegning/CAD/BIM', value: 'drawing' },
-        { label: 'Sertifikat/testrapport', value: 'certificate' },
-        { label: 'Brosjyre', value: 'brochure' },
-        { label: 'Rapport', value: 'report' },
-        { label: 'Annet', value: 'other' },
-      ],
+      defaultValue: Object.keys(SITE_CONFIG.documentTypes).at(-1),
+      options: Object.entries(SITE_CONFIG.documentTypes).map(([value, l]) => {
+        const labels = l as Record<string, string>
+        return { value, label: { nb: labels[DEFAULT_LOCALE], en: labels.en ?? labels[DEFAULT_LOCALE] } }
+      }),
     },
     {
       name: 'language',

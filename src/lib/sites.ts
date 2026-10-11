@@ -4,13 +4,15 @@
  */
 import { siteConfig } from '@site/config'
 
-import { checkSiteConfig } from './site-config'
+import { checkSiteConfig, type SiteConfigInput } from './site-config'
 import { STRING_LOCALES } from './string-locales'
 
 const problems = checkSiteConfig(siteConfig, STRING_LOCALES)
 if (problems.length) throw new Error(`site/config.ts: ${problems.join('; ')}`)
 
 export const SITE_CONFIG = siteConfig
+/** Feature switches, widened so code can compare them whatever site/config.ts sets. */
+export const FEATURES: SiteConfigInput['features'] = siteConfig.features
 export type SiteKey = keyof typeof siteConfig.sites & string
 export type Locale = keyof typeof siteConfig.locales & string
 

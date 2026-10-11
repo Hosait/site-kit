@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Logo } from '@/components/Logo'
 import { SearchBox } from './SearchBox'
 import type { Strings } from '@/lib/i18n'
-import { HREFLANG, type Locale, LOCALE_CONFIG, type SiteKey } from '@/lib/sites'
+import { FEATURES, HREFLANG, type Locale, LOCALE_CONFIG, type SiteKey } from '@/lib/sites'
 import { cn } from '@/utilities/ui'
 import { otherLocale } from '@/lib/locales'
 
@@ -137,7 +137,7 @@ export function HeaderClient({ site, locale, nav, contact, alternateHref, string
         </nav>
 
         <div className="flex items-center gap-2 lg:gap-3">
-          <SearchBox site={site} locale={locale} strings={strings} />
+          {FEATURES.search && <SearchBox site={site} locale={locale} strings={strings} />}
           {alternateHref && other && (
             <Link
               href={alternateHref}

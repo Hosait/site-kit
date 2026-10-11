@@ -263,6 +263,7 @@ export interface HeroBlock {
         id?: string | null;
       }[]
     | null;
+  align?: ('left' | 'center') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'hero';
@@ -380,7 +381,7 @@ export interface FolderInterface {
 export interface Document {
   id: number;
   title: string;
-  docType: 'datasheet' | 'epd' | 'fdv' | 'installation' | 'drawing' | 'certificate' | 'brochure' | 'report' | 'other';
+  docType: 'brochure' | 'datasheet' | 'manual' | 'certificate' | 'other';
   language?: ('no' | 'en' | 'multi') | null;
   sites?: 'main'[] | null;
   description?: string | null;
@@ -433,7 +434,7 @@ export interface Article {
     noindex?: boolean | null;
   };
   site: 'main';
-  kind: 'announcement' | 'blog';
+  kind: 'news' | 'blog';
   publishedAt?: string | null;
   /**
    * Lages fra tittelen hvis tom.
@@ -547,6 +548,7 @@ export interface ImageGridBlock {
         id?: string | null;
       }[]
     | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'imageGrid';
@@ -583,6 +585,7 @@ export interface CardsBlock {
       }[]
     | null;
   background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
+  align?: ('left' | 'center') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'cards';
@@ -600,6 +603,7 @@ export interface ChildPagesBlock {
   parent?: (number | null) | Page;
   depth?: ('1' | '2') | null;
   columns?: ('2' | '3' | '4') | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'childPages';
@@ -633,6 +637,7 @@ export interface CallToActionBlock {
       }[]
     | null;
   background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
+  align?: ('left' | 'center') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'cta';
@@ -647,6 +652,7 @@ export interface QuoteBlock {
   role?: string | null;
   image?: (number | null) | Media;
   background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
+  align?: ('left' | 'center') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'quote';
@@ -676,6 +682,7 @@ export interface StatsBlock {
       }[]
     | null;
   background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
+  align?: ('left' | 'center') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'stats';
@@ -693,6 +700,7 @@ export interface FactsBlock {
         id?: string | null;
       }[]
     | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'facts';
@@ -707,9 +715,10 @@ export interface ArticleFeedBlock {
    * Tomt = alle nettsteder (felles nyhetsstrøm).
    */
   sites?: 'main'[] | null;
-  kind?: ('all' | 'announcement' | 'blog') | null;
+  kind?: ('all' | 'news' | 'blog') | null;
   limit?: number | null;
   paginate?: boolean | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'articleFeed';
@@ -722,6 +731,7 @@ export interface PeopleBlock {
   heading?: string | null;
   people?: (number | Person)[] | null;
   layout?: ('grid' | 'list') | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'people';
@@ -753,6 +763,7 @@ export interface Person {
 export interface DocumentsBlock {
   heading?: string | null;
   documents?: (number | Document)[] | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'documents';
@@ -772,6 +783,7 @@ export interface TimelineBlock {
         id?: string | null;
       }[]
     | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'timeline';
@@ -803,6 +815,7 @@ export interface AccordionBlock {
         id?: string | null;
       }[]
     | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'accordion';
@@ -819,6 +832,7 @@ export interface VideoBlock {
   url?: string | null;
   file?: (number | null) | Media;
   poster?: (number | null) | Media;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'video';
@@ -1663,6 +1677,7 @@ export interface HeroBlockSelect<T extends boolean = true> {
             };
         id?: T;
       };
+  align?: T;
   id?: T;
   blockName?: T;
 }
@@ -1733,6 +1748,7 @@ export interface ImageGridBlockSelect<T extends boolean = true> {
         caption?: T;
         id?: T;
       };
+  background?: T;
   id?: T;
   blockName?: T;
 }
@@ -1762,6 +1778,7 @@ export interface CardsBlockSelect<T extends boolean = true> {
         id?: T;
       };
   background?: T;
+  align?: T;
   id?: T;
   blockName?: T;
 }
@@ -1775,6 +1792,7 @@ export interface ChildPagesBlockSelect<T extends boolean = true> {
   parent?: T;
   depth?: T;
   columns?: T;
+  background?: T;
   id?: T;
   blockName?: T;
 }
@@ -1801,6 +1819,7 @@ export interface CallToActionBlockSelect<T extends boolean = true> {
         id?: T;
       };
   background?: T;
+  align?: T;
   id?: T;
   blockName?: T;
 }
@@ -1814,6 +1833,7 @@ export interface QuoteBlockSelect<T extends boolean = true> {
   role?: T;
   image?: T;
   background?: T;
+  align?: T;
   id?: T;
   blockName?: T;
 }
@@ -1839,6 +1859,7 @@ export interface StatsBlockSelect<T extends boolean = true> {
         id?: T;
       };
   background?: T;
+  align?: T;
   id?: T;
   blockName?: T;
 }
@@ -1855,6 +1876,7 @@ export interface FactsBlockSelect<T extends boolean = true> {
         value?: T;
         id?: T;
       };
+  background?: T;
   id?: T;
   blockName?: T;
 }
@@ -1868,6 +1890,7 @@ export interface ArticleFeedBlockSelect<T extends boolean = true> {
   kind?: T;
   limit?: T;
   paginate?: T;
+  background?: T;
   id?: T;
   blockName?: T;
 }
@@ -1879,6 +1902,7 @@ export interface PeopleBlockSelect<T extends boolean = true> {
   heading?: T;
   people?: T;
   layout?: T;
+  background?: T;
   id?: T;
   blockName?: T;
 }
@@ -1889,6 +1913,7 @@ export interface PeopleBlockSelect<T extends boolean = true> {
 export interface DocumentsBlockSelect<T extends boolean = true> {
   heading?: T;
   documents?: T;
+  background?: T;
   id?: T;
   blockName?: T;
 }
@@ -1907,6 +1932,7 @@ export interface TimelineBlockSelect<T extends boolean = true> {
         image?: T;
         id?: T;
       };
+  background?: T;
   id?: T;
   blockName?: T;
 }
@@ -1923,6 +1949,7 @@ export interface AccordionBlockSelect<T extends boolean = true> {
         content?: T;
         id?: T;
       };
+  background?: T;
   id?: T;
   blockName?: T;
 }
@@ -1935,6 +1962,7 @@ export interface VideoBlockSelect<T extends boolean = true> {
   url?: T;
   file?: T;
   poster?: T;
+  background?: T;
   id?: T;
   blockName?: T;
 }
