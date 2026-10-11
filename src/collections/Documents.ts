@@ -5,7 +5,6 @@ import { authenticated } from '@/access/authenticated'
 import { SITE_OPTIONS } from '@/lib/sites'
 import { revalidateDoc, revalidateDocDelete } from '@/lib/revalidate'
 import { indexDoc, unindexDoc } from '@/lib/search/indexer'
-import { productGroupField } from '@/lib/analytics/productGroups'
 
 /** Felles dokumentbank: produktblad, EPD, FDV, monteringsanvisninger, tegninger, sertifikater. */
 export const Documents: CollectionConfig = {
@@ -65,7 +64,6 @@ export const Documents: CollectionConfig = {
     },
     { name: 'sites', type: 'select', label: 'Nettsteder', hasMany: true, options: SITE_OPTIONS },
     { name: 'description', type: 'textarea', label: 'Beskrivelse', localized: true },
-    productGroupField,
   ],
   hooks: { afterChange: [revalidateDoc, indexDoc], afterDelete: [revalidateDocDelete, unindexDoc] },
 }

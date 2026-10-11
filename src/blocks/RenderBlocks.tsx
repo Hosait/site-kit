@@ -10,7 +10,6 @@ import {
   CardsComponent,
   ChildPagesComponent,
   ContentComponent,
-  DivisionCardsComponent,
   DocumentsComponent,
   FactsComponent,
   FullImageComponent,
@@ -24,8 +23,6 @@ import {
 } from './components'
 import { FormBlock } from './Form/Component'
 import { EmbedComponent } from './EmbedComponent'
-import { FrameWeightCalculator } from './FrameWeightCalculator'
-import { ImageSequence } from './ImageSequence'
 import { VideoComponent } from './VideoComponent'
 
 type AnyBlock = NonNullable<Page['layout']>[number]
@@ -53,8 +50,6 @@ export function RenderBlocks({
             return <HeroComponent key={key} block={block as never} {...props} />
           case 'childPages':
             return <ChildPagesComponent key={key} block={block as never} {...props} pageId={pageId} />
-          case 'divisionCards':
-            return <DivisionCardsComponent key={key} block={block as never} {...props} />
           case 'content':
             return <ContentComponent key={key} block={block as never} {...props} />
           case 'textImage':
@@ -87,10 +82,6 @@ export function RenderBlocks({
             return <VideoComponent key={key} block={block as never} strings={t(locale)} />
           case 'embed':
             return <EmbedComponent key={key} block={block as never} locale={locale} />
-          case 'frameWeight':
-            return <FrameWeightCalculator key={key} systems={(block as { systems?: ('Classic' | 'Opus')[] }).systems ?? ['Classic']} locale={locale} />
-          case 'imageSequence':
-            return <ImageSequence key={key} block={block as never} locale={locale} />
           case 'formBlock': {
             const b = block as unknown as { form: Form; enableIntro?: boolean | null; introContent?: unknown }
             if (typeof b.form !== 'object') return null

@@ -6,7 +6,6 @@ import configPromise from '@payload-config'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { getPayload } from 'payload'
 
-import { ensureContactForms, setProductGroups } from '@/lib/analytics/setup'
 import { reindexAll } from '@/lib/search/indexer'
 import { SITE_KEYS } from '@/lib/sites'
 
@@ -74,9 +73,6 @@ async function seedDb() {
     return { ok: false, error: err instanceof Error ? err.message : String(err) }
   }
   client.release(true)
-  // Produktgrupper og kontaktskjema (seed-dumpen kan være eldre enn disse), før cachen tømmes.
-  await setProductGroups(payload)
-  await ensureContactForms(payload)
   flushCache()
   // Importen går utenom hooks, så søkeindeksen bygges på nytt (i bakgrunnen).
   await reindexAll(payload)

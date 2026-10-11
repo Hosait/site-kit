@@ -19,7 +19,7 @@ export async function Shell({
   locale: Locale
   alternateHref: string | null
   /** Hva siden er, for besøksanalysen (leses av src/components/analytics/Tracker.tsx). */
-  analytics?: { kind: 'page' | 'article' | 'search' | 'other'; id?: number; group?: string | null }
+  analytics?: { kind: 'page' | 'article' | 'search' | 'other'; id?: number }
   children: ReactNode
 }) {
   const settings = await getSettings(site, locale)
@@ -39,7 +39,6 @@ export async function Shell({
         className="outline-none"
         data-a-kind={analytics?.kind}
         data-a-id={analytics?.id}
-        data-a-group={analytics?.group ?? undefined}
       >
         {children}
       </main>

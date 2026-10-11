@@ -72,36 +72,6 @@ export const Hero: Block = {
   ],
 }
 
-export const DivisionCards: Block = {
-  slug: 'divisionCards',
-  labels: { singular: 'Divisjonskort', plural: 'Divisjonskort' },
-  interfaceName: 'DivisionCardsBlock',
-  fields: [
-    eyebrow,
-    eyebrowHighlight,
-    {
-      name: 'items',
-      type: 'array',
-      label: 'Kort',
-      minRows: 1,
-      maxRows: 4,
-      fields: [
-        { name: 'title', type: 'text', label: 'Tittel', required: true },
-        { name: 'image', type: 'upload', relationTo: 'media', label: 'Bilde', required: true },
-        {
-          name: 'site',
-          type: 'select',
-          label: 'Lenker til nettsted',
-          options: SITE_OPTIONS,
-          admin: { description: 'Tomt = bruk URL under.' },
-        },
-        { name: 'url', type: 'text', label: 'URL (eksternt)', admin: { condition: (_, s) => !s?.site } },
-        { name: 'linkLabel', type: 'text', label: 'Knappetekst' },
-      ],
-    },
-  ],
-}
-
 export const Content: Block = {
   slug: 'content',
   labels: { singular: 'Tekst', plural: 'Tekst' },
@@ -457,47 +427,6 @@ export const ChildPages: Block = {
   ],
 }
 
-export const FrameWeight: Block = {
-  slug: 'frameWeight',
-  labels: { singular: 'Rammevektskalkulator', plural: 'Rammevektskalkulatorer' },
-  interfaceName: 'FrameWeightBlock',
-  fields: [
-    {
-      name: 'systems',
-      type: 'select',
-      label: 'Hengselsystem',
-      hasMany: true,
-      required: true,
-      defaultValue: ['Classic'],
-      options: [
-        { label: 'Spilka Classic™', value: 'Classic' },
-        { label: 'Spilka Opus™', value: 'Opus' },
-      ],
-      admin: { description: 'Formler og modultabeller ligger i koden (src/lib/frameWeight.ts).' },
-    },
-  ],
-}
-
-export const ImageSequenceBlockConfig: Block = {
-  slug: 'imageSequence',
-  labels: { singular: 'Bildesekvens (animasjon)', plural: 'Bildesekvenser' },
-  interfaceName: 'ImageSequenceBlock',
-  fields: [
-    heading,
-    { name: 'intro', type: 'textarea', label: 'Ingress' },
-    {
-      name: 'sequence',
-      type: 'select',
-      label: 'Sekvens',
-      required: true,
-      options: [{ label: 'Classic – vindu som åpnes (sort)', value: 'classic-black' }],
-      admin: { description: 'Nye sekvenser legges i public/sequences/ og registreres i ImageSequence.tsx.' },
-    },
-    { name: 'startLabel', type: 'text', label: 'Tekst ved start', admin: { placeholder: 'Lukket' } },
-    { name: 'endLabel', type: 'text', label: 'Tekst ved slutt', admin: { placeholder: 'Åpent' } },
-  ],
-}
-
 export const Facts: Block = {
   slug: 'facts',
   labels: { singular: 'Faktaboks', plural: 'Faktabokser' },
@@ -530,7 +459,6 @@ export const pageBlocks: Block[] = [
   ImageGrid,
   Cards,
   ChildPages,
-  DivisionCards,
   CallToAction,
   Quote,
   Stats,
@@ -542,7 +470,5 @@ export const pageBlocks: Block[] = [
   Accordion,
   Video,
   Embed,
-  FrameWeight,
-  ImageSequenceBlockConfig,
   FormBlock,
 ]

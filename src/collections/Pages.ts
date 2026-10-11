@@ -8,7 +8,6 @@ import { siteField } from '@/fields/site'
 import { slugify } from '@/lib/slugify'
 import { revalidateDoc, revalidateDocDelete } from '@/lib/revalidate'
 import { indexDoc, unindexDoc } from '@/lib/search/indexer'
-import { productGroupField } from '@/lib/analytics/productGroups'
 import { previewUrl } from '@/lib/preview'
 import type { Page } from '@/payload-types'
 
@@ -201,7 +200,6 @@ export const Pages: CollectionConfig<'pages'> = {
       localized: true,
       admin: { position: 'sidebar' },
     },
-    productGroupField,
     {
       name: 'hideFromNav',
       type: 'checkbox',

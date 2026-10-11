@@ -4,7 +4,7 @@ import { ConsentSettingsButton } from '@/components/analytics/ConsentBanner'
 import { CMSLink } from '@/components/CMSLink'
 import { Logo } from '@/components/Logo'
 import { t } from '@/lib/i18n'
-import { siteHref, SITE_KEYS, SITES, type Locale, type SiteKey } from '@/lib/sites'
+import type { Locale, SiteKey } from '@/lib/sites'
 import type { SiteSetting } from '@/payload-types'
 
 /** Bunntekst: kolonner fra CMS-et, fast kolonne med alle Spilka-divisjoner, juridisk tekst. */
@@ -56,28 +56,6 @@ export function Footer({ site, locale, settings }: { site: SiteKey; locale: Loca
             </ul>
           </nav>
         ))}
-
-        <nav aria-label={s.divisions}>
-          <h2 className="mb-3 text-sm font-bold">{s.divisions}</h2>
-          <ul className="space-y-1.5 text-sm">
-            {SITE_KEYS.map((key) => (
-              <li key={key}>
-                <a
-                  href={siteHref(key, site, `/${locale}`)}
-                  aria-current={key === site ? 'true' : undefined}
-                  className="!text-white/75 no-underline hover:!text-white aria-[current=true]:!text-white"
-                >
-                  {SITES[key].division ?? SITES[key].name}
-                </a>
-              </li>
-            ))}
-            <li>
-              <a href="https://www.spilkacomposites.com/" className="!text-white/75 no-underline hover:!text-white">
-                Spilka Composites
-              </a>
-            </li>
-          </ul>
-        </nav>
       </div>
 
       <div className="border-t border-white/10">

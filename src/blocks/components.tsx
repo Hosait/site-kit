@@ -13,7 +13,6 @@ import type {
   CardsBlock,
   ChildPagesBlock,
   ContentBlock,
-  DivisionCardsBlock,
   Document,
   DocumentsBlock,
   FactsBlock,
@@ -132,54 +131,6 @@ export function HeroComponent({ block, site, locale, isFirst }: BlockProps<HeroB
   )
 }
 
-/* ---------- Divisjonskort (forsiden på spilka.com) ---------- */
-
-export function DivisionCardsComponent({ block, site, locale, isFirst }: BlockProps<DivisionCardsBlock>) {
-  const s = t(locale)
-  return (
-    <section className="bg-mist pb-12 pt-10 md:pb-20 md:pt-16">
-      <div className="wrap">
-        {(block.eyebrow || block.eyebrowHighlight) &&
-          (isFirst ? (
-            <h1 className="mb-10 text-center md:mb-14">
-              <Eyebrow as="span" text={block.eyebrow} highlight={block.eyebrowHighlight} className="text-base md:text-lg" />
-            </h1>
-          ) : (
-            <Eyebrow text={block.eyebrow} highlight={block.eyebrowHighlight} className="mb-10 text-center md:mb-14" />
-          ))}
-        <ul className={cn('grid gap-6 md:gap-8', (block.items?.length ?? 0) > 1 && 'md:grid-cols-2')}>
-          {(block.items ?? []).map((item, i) => {
-            const href = item.site ? siteHref(item.site, site, `/${locale}`) : item.url || null
-            return (
-              <li key={item.id ?? i} className="group relative isolate aspect-[3/4] overflow-hidden rounded-sm bg-night md:aspect-[4/5]">
-                <Img
-                  media={item.image as Media}
-                  cover
-                  priority={isFirst}
-                  sizes="(min-width: 48rem) 36rem, 100vw"
-                  className="absolute inset-0 -z-10 transition-transform duration-700 group-hover:scale-105"
-                />
-                {/* Blå tone over bildet, som på dagens spilka.com. */}
-                <div className="absolute inset-0 -z-10 bg-sapphire/45 mix-blend-multiply" />
-                <div className="absolute inset-0 -z-10 bg-gradient-to-t from-night/40 to-transparent" />
-                <div className="flex h-full flex-col items-center justify-center gap-5 p-6 text-center text-white">
-                  <h2 className="t-h3 drop-shadow">{item.title}</h2>
-                  {href && (
-                    <a href={href} className="btn btn-primary after:absolute after:inset-0">
-                      <span aria-hidden>→</span> {item.linkLabel || s.goToSite}
-                    </a>
-                  )}
-                </div>
-              </li>
-            )
-          })}
-        </ul>
-      </div>
-    </section>
-  )
-}
-
-/* ---------- Tekst ---------- */
 
 export function ContentComponent({ block, site, locale }: BlockProps<ContentBlock>) {
   return (

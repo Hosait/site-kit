@@ -179,7 +179,6 @@ export interface Page {
         | ImageGridBlock
         | CardsBlock
         | ChildPagesBlock
-        | DivisionCardsBlock
         | CallToActionBlock
         | QuoteBlock
         | StatsBlock
@@ -191,8 +190,6 @@ export interface Page {
         | AccordionBlock
         | VideoBlock
         | EmbedBlock
-        | FrameWeightBlock
-        | ImageSequenceBlock
         | FormBlock
       )[]
     | null;
@@ -226,11 +223,6 @@ export interface Page {
    */
   cardImage?: (number | null) | Media;
   summary?: string | null;
-  /**
-   * Brukes i besøksanalysen (koder fra Spilka360). Tomt på en side = arves fra overordnet side.
-   */
-  productGroup?:
-    ('Classic' | 'Opus' | 'Swing' | 'SideHinged' | 'TopHinged' | 'Tango' | 'BalconyDoor' | 'FixedFrame') | null;
   hideFromNav?: boolean | null;
   updatedAt: string;
   createdAt: string;
@@ -392,11 +384,6 @@ export interface Document {
   language?: ('no' | 'en' | 'multi') | null;
   sites?: ('industri' | 'sbs' | 'dws')[] | null;
   description?: string | null;
-  /**
-   * Brukes i besøksanalysen (koder fra Spilka360). Tomt på en side = arves fra overordnet side.
-   */
-  productGroup?:
-    ('Classic' | 'Opus' | 'Swing' | 'SideHinged' | 'TopHinged' | 'Tango' | 'BalconyDoor' | 'FixedFrame') | null;
   prefix?: string | null;
   _objectKey?: string | null;
   folder?: (number | null) | FolderInterface;
@@ -616,33 +603,6 @@ export interface ChildPagesBlock {
   id?: string | null;
   blockName?: string | null;
   blockType: 'childPages';
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "DivisionCardsBlock".
- */
-export interface DivisionCardsBlock {
-  eyebrow?: string | null;
-  /**
-   * Vises i blått, f.eks. «WE BUILD A BRIGHTER».
-   */
-  eyebrowHighlight?: string | null;
-  items?:
-    | {
-        title: string;
-        image: number | Media;
-        /**
-         * Tomt = bruk URL under.
-         */
-        site?: ('industri' | 'sbs' | 'dws') | null;
-        url?: string | null;
-        linkLabel?: string | null;
-        id?: string | null;
-      }[]
-    | null;
-  id?: string | null;
-  blockName?: string | null;
-  blockType: 'divisionCards';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -876,36 +836,6 @@ export interface EmbedBlock {
   id?: string | null;
   blockName?: string | null;
   blockType: 'embed';
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "FrameWeightBlock".
- */
-export interface FrameWeightBlock {
-  /**
-   * Formler og modultabeller ligger i koden (src/lib/frameWeight.ts).
-   */
-  systems: ('Classic' | 'Opus')[];
-  id?: string | null;
-  blockName?: string | null;
-  blockType: 'frameWeight';
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ImageSequenceBlock".
- */
-export interface ImageSequenceBlock {
-  heading?: string | null;
-  intro?: string | null;
-  /**
-   * Nye sekvenser legges i public/sequences/ og registreres i ImageSequence.tsx.
-   */
-  sequence: 'classic-black';
-  startLabel?: string | null;
-  endLabel?: string | null;
-  id?: string | null;
-  blockName?: string | null;
-  blockType: 'imageSequence';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1216,10 +1146,6 @@ export interface SiteSetting {
         id?: string | null;
       }[]
     | null;
-  /**
-   * Personvernvennlig analyse uten cookies (samme som i dag).
-   */
-  fathomSiteId?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1299,7 +1225,6 @@ export interface AnalyticsEvent {
   path?: string | null;
   pageKind?: string | null;
   pageId?: number | null;
-  productGroup?: string | null;
   docId?: number | null;
   label?: string | null;
   value?: number | null;
@@ -1432,7 +1357,6 @@ export interface FormSubmission {
   site?: string | null;
   locale?: string | null;
   pagePath?: string | null;
-  productGroup?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1678,7 +1602,6 @@ export interface PagesSelect<T extends boolean = true> {
         imageGrid?: T | ImageGridBlockSelect<T>;
         cards?: T | CardsBlockSelect<T>;
         childPages?: T | ChildPagesBlockSelect<T>;
-        divisionCards?: T | DivisionCardsBlockSelect<T>;
         cta?: T | CallToActionBlockSelect<T>;
         quote?: T | QuoteBlockSelect<T>;
         stats?: T | StatsBlockSelect<T>;
@@ -1690,8 +1613,6 @@ export interface PagesSelect<T extends boolean = true> {
         accordion?: T | AccordionBlockSelect<T>;
         video?: T | VideoBlockSelect<T>;
         embed?: T | EmbedBlockSelect<T>;
-        frameWeight?: T | FrameWeightBlockSelect<T>;
-        imageSequence?: T | ImageSequenceBlockSelect<T>;
         formBlock?: T | FormBlockSelect<T>;
       };
   meta?:
@@ -1711,7 +1632,6 @@ export interface PagesSelect<T extends boolean = true> {
   order?: T;
   cardImage?: T;
   summary?: T;
-  productGroup?: T;
   hideFromNav?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -1855,26 +1775,6 @@ export interface ChildPagesBlockSelect<T extends boolean = true> {
   parent?: T;
   depth?: T;
   columns?: T;
-  id?: T;
-  blockName?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "DivisionCardsBlock_select".
- */
-export interface DivisionCardsBlockSelect<T extends boolean = true> {
-  eyebrow?: T;
-  eyebrowHighlight?: T;
-  items?:
-    | T
-    | {
-        title?: T;
-        image?: T;
-        site?: T;
-        url?: T;
-        linkLabel?: T;
-        id?: T;
-      };
   id?: T;
   blockName?: T;
 }
@@ -2053,28 +1953,6 @@ export interface EmbedBlockSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "FrameWeightBlock_select".
- */
-export interface FrameWeightBlockSelect<T extends boolean = true> {
-  systems?: T;
-  id?: T;
-  blockName?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ImageSequenceBlock_select".
- */
-export interface ImageSequenceBlockSelect<T extends boolean = true> {
-  heading?: T;
-  intro?: T;
-  sequence?: T;
-  startLabel?: T;
-  endLabel?: T;
-  id?: T;
-  blockName?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "FormBlock_select".
  */
 export interface FormBlockSelect<T extends boolean = true> {
@@ -2135,7 +2013,6 @@ export interface DocumentsSelect<T extends boolean = true> {
   language?: T;
   sites?: T;
   description?: T;
-  productGroup?: T;
   prefix?: T;
   _objectKey?: T;
   folder?: T;
@@ -2335,7 +2212,6 @@ export interface SiteSettingsSelect<T extends boolean = true> {
         url?: T;
         id?: T;
       };
-  fathomSiteId?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -2399,7 +2275,6 @@ export interface AnalyticsEventsSelect<T extends boolean = true> {
   path?: T;
   pageKind?: T;
   pageId?: T;
-  productGroup?: T;
   docId?: T;
   label?: T;
   value?: T;
@@ -2625,7 +2500,6 @@ export interface FormSubmissionsSelect<T extends boolean = true> {
   site?: T;
   locale?: T;
   pagePath?: T;
-  productGroup?: T;
   updatedAt?: T;
   createdAt?: T;
 }

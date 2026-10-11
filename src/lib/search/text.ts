@@ -18,8 +18,6 @@ const TEXT_KEYS = new Set([
   'label',
   'value',
   'year',
-  'startLabel',
-  'endLabel',
 ])
 
 /** Grener som aldri har lesbar tekst (lenkeknapper, innbygging, media). */

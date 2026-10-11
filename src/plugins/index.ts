@@ -115,14 +115,13 @@ export const plugins: Plugin[] = [
     },
     formSubmissionOverrides: {
       labels: { singular: 'Innsending', plural: 'Innsendinger' },
-      admin: { group: 'Skjema', defaultColumns: ['form', 'site', 'pagePath', 'productGroup', 'createdAt'] },
-      // Hvor skjemaet ble sendt fra (siden, ikke besøket): til besøksanalysen og senere Spilka360.
+      admin: { group: 'Skjema', defaultColumns: ['form', 'site', 'pagePath', 'createdAt'] },
+      // Hvor skjemaet ble sendt fra (siden, ikke besøket): til besøksanalysen.
       fields: ({ defaultFields }) => [
         ...defaultFields,
         { name: 'site', type: 'text', label: 'Nettsted', admin: { readOnly: true, position: 'sidebar' } },
         { name: 'locale', type: 'text', label: 'Språk', admin: { readOnly: true, position: 'sidebar' } },
         { name: 'pagePath', type: 'text', label: 'Side', admin: { readOnly: true, position: 'sidebar' } },
-        { name: 'productGroup', type: 'text', label: 'Produktgruppe', admin: { readOnly: true, position: 'sidebar' } },
       ],
     },
   }),

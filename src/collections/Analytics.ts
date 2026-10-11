@@ -34,7 +34,6 @@ export const AnalyticsEvents: CollectionConfig = {
     // page | article | search | other
     { name: 'pageKind', type: 'text' },
     { name: 'pageId', type: 'number' },
-    { name: 'productGroup', type: 'text', index: true },
     // Nedlastet dokument (documents.id).
     { name: 'docId', type: 'number' },
     // Knappetekst, søkeord, utgående vert eller skjemanavn.

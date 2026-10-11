@@ -7,7 +7,6 @@ const LINKS = [
   { tab: '', label: 'Oversikt' },
   { tab: 'sources', label: 'Besøkende og trafikkilder' },
   { tab: 'behaviour', label: 'Sider og brukeratferd' },
-  { tab: 'products', label: 'Produkter og markeder' },
   { tab: 'conversions', label: 'Konverteringer' },
   { tab: 'reports', label: 'Rapporter' },
   { tab: 'settings', label: 'Innstillinger og cookies' },

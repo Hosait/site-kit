@@ -67,8 +67,7 @@ export const FormBlock: React.FC<
         }, 1000)
 
         try {
-          // Hvor skjemaet ble sendt fra (siden og produktgruppen; ikke besøkshistorikken).
-          const main = document.getElementById('innhold')?.dataset
+          // Hvor skjemaet ble sendt fra (siden, ikke besøkshistorikken).
           const req = await fetch(`${getClientSideURL()}/api/form-submissions`, {
             body: JSON.stringify({
               form: formID,
@@ -76,7 +75,6 @@ export const FormBlock: React.FC<
               site: document.documentElement.dataset.site,
               locale: document.documentElement.lang === 'en' ? 'en' : 'no',
               pagePath: window.location.pathname,
-              productGroup: main?.aGroup || undefined,
             }),
             headers: {
               'Content-Type': 'application/json',

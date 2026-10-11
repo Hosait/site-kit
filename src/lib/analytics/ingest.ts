@@ -8,7 +8,6 @@ import { cleanPath, deviceFrom, hostOf, isBot, sourceFrom, type Source } from '.
 import { CONSENT_COOKIE, isVisitorId, parseConsent, randomId, readCookie, VISITOR_COOKIE } from './consent'
 import { pruneDaily, rollup } from './aggregate'
 import { countryOf } from './geo'
-import { isProductGroup } from './productGroups'
 
 /**
  * Tar imot hendelser fra sporingsskriptet (src/components/analytics/Tracker.tsx) og lagrer dem.
@@ -26,7 +25,6 @@ export type IncomingEvent = {
   q?: string // spørrestreng på landingssiden (UTM)
   k?: string // sidetype
   i?: number // side-ID
-  g?: string // produktgruppe
   h?: string // lenke (nedlasting, utgående)
   b?: string // etikett (knappetekst, søkeord, skjema)
   v?: number // verdi (ms på siden, antall treff)
@@ -143,16 +141,14 @@ export async function ingest(payload: Payload, headers: Headers, e: IncomingEven
     }
   }
 
-  // Nedlasting: finn dokumentet (og produktgruppen) fra filnavnet i lenken.
+  // Nedlasting: finn dokumentet fra filnavnet i lenken.
   let docId: number | null = null
-  let productGroup = isProductGroup(e.g) ? e.g : null
   let label = str(e.b, 200)
   if (type === 'download' && e.h) {
     const filename = decodeURIComponent(e.h.split('?')[0].split('/').pop() ?? '')
-    const doc = (await db(payload).execute(sql`select d.id, d.product_group, l.title from documents d left join documents_locales l on l._parent_id = d.id and l._locale = 'no' where d.filename = ${filename} limit 1`)).rows[0]
+    const doc = (await db(payload).execute(sql`select d.id, l.title from documents d left join documents_locales l on l._parent_id = d.id and l._locale = 'no' where d.filename = ${filename} limit 1`)).rows[0]
     if (doc) {
       docId = Number(doc.id)
-      productGroup = productGroup ?? (isProductGroup(doc.product_group) ? doc.product_group : null)
       // Dokumentets tittel fra CMS-et (lenketeksten har ofte «PDF 3,4 MB Last ned» i seg).
       label = (doc.title as string | null) ?? label
     } else {
@@ -163,10 +159,10 @@ export async function ingest(payload: Payload, headers: Headers, e: IncomingEven
 
   await db(payload).execute(sql`
     insert into analytics_events
-      (site, locale, type, path, page_kind, page_id, product_group, doc_id, label, value, visitor, session, consent, is_new,
+      (site, locale, type, path, page_kind, page_id, doc_id, label, value, visitor, session, consent, is_new,
        channel, source, medium, campaign, country, device)
     values
-      (${site}, ${isLocale(e.l) ? e.l : null}, ${type}, ${path}, ${str(e.k, 20)}, ${num(e.i)}, ${productGroup}, ${docId}, ${label},
+      (${site}, ${isLocale(e.l) ? e.l : null}, ${type}, ${path}, ${str(e.k, 20)}, ${num(e.i)}, ${docId}, ${label},
        ${num(e.v)}, ${visitor}, ${session}, ${consented}, ${isNew}, ${source.channel}, ${source.source}, ${source.medium},
        ${source.campaign}, ${countryOf(ip)}, ${deviceFrom(ua, headers.get('sec-ch-ua-mobile'))})`)
 

@@ -98,9 +98,7 @@ export default async function Page({ params }: { params: Params }) {
   const jsonLd = jsonLdFor({ site, locale: loc, kind: found.kind, doc: found.doc })
 
   // Brødsmuler for undersider: tittelen til hver forelder langs stien.
-  // Produktgruppe til besøksanalysen: sidens egen, ellers nærmeste overordnede sides.
   const crumbs: { title: string; href: string }[] = []
-  let productGroup = found.kind === 'page' ? (found.doc.productGroup ?? null) : null
   if (found.kind === 'page' && found.doc.path) {
     const parts = found.doc.path.split('/')
     for (let i = 1; i < parts.length; i++) {
@@ -108,16 +106,13 @@ export default async function Page({ params }: { params: Params }) {
       const ancestor = await getPage(site, loc, prefix)
       if (ancestor) crumbs.push({ title: ancestor.title, href: localePath(loc, prefix) })
     }
-    for (let i = parts.length - 1; i >= 1 && !productGroup; i--) {
-      productGroup = (await getPage(site, loc, parts.slice(0, i).join('/')))?.productGroup ?? null
-    }
   }
   // Sider uten toppseksjon får tittelen som h1 (dagens nettsted mangler h1 på flere sider).
   const firstBlock = found.kind === 'page' ? found.doc.layout?.[0]?.blockType : null
-  const needsTitle = found.kind === 'page' && firstBlock !== 'hero' && firstBlock !== 'divisionCards'
+  const needsTitle = found.kind === 'page' && firstBlock !== 'hero'
 
   return (
-    <Shell site={site} locale={loc} alternateHref={alternateHref} analytics={{ kind: found.kind, id: found.doc.id, group: productGroup }}>
+    <Shell site={site} locale={loc} alternateHref={alternateHref} analytics={{ kind: found.kind, id: found.doc.id }}>
       {draft && <LivePreviewListener />}
       {crumbs.length > 0 && <Breadcrumbs crumbs={crumbs} locale={loc} home={localePath(loc, '')} />}
       {needsTitle && (

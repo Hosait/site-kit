@@ -31,9 +31,6 @@ async function rollupDay(payload: Payload, day: string) {
       select ${day}, site, coalesce(locale, ''), 'total', '', ${metrics}
         from analytics_events where ${range} group by site, coalesce(locale, '')
       union all
-      select ${day}, site, coalesce(locale, ''), 'group', product_group, ${metrics}
-        from analytics_events where ${range} and product_group is not null group by site, coalesce(locale, ''), product_group
-      union all
       select ${day}, site, coalesce(locale, ''), 'channel', coalesce(channel, 'direct'), ${metrics}
         from analytics_events where ${range} group by site, coalesce(locale, ''), coalesce(channel, 'direct')
       union all
@@ -82,7 +79,7 @@ export type MonthRow = { month: string; visitors: number; sessions: number; page
 export async function monthlyHistory(
   payload: Payload,
   f: { site: string | null; locale: string | null },
-  dimension: 'total' | 'group' = 'total',
+  dimension: 'total' = 'total',
 ): Promise<(MonthRow & { key: string })[]> {
   await rollup(payload)
   const filters: SQL[] = [sql`dimension = ${dimension}`]

@@ -110,17 +110,6 @@ export const SiteSettings: CollectionConfig = {
             },
           ],
         },
-        {
-          label: 'Analyse',
-          fields: [
-            {
-              name: 'fathomSiteId',
-              type: 'text',
-              label: 'Fathom site-ID',
-              admin: { description: 'Personvernvennlig analyse uten cookies (samme som i dag).' },
-            },
-          ],
-        },
       ],
     },
   ],

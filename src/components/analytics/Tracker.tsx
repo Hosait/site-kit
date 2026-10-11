@@ -35,7 +35,6 @@ function pageInfo() {
   return {
     k: d.aKind || 'other',
     i: d.aId ? Number(d.aId) : undefined,
-    g: d.aGroup || undefined,
     search: search?.aSearch,
     hits: search?.aHits ? Number(search.aHits) : undefined,
   }
@@ -48,7 +47,7 @@ export function Tracker({ site, locale }: { site: SiteKey; locale: Locale }) {
   const base = useRef({ s: site, l: locale })
   base.current = { s: site, l: locale }
   // Synlig tid på gjeldende side (ms), og hvilken side den gjelder.
-  const visible = useRef({ path: '', since: 0, total: 0, group: undefined as string | undefined, sent: true })
+  const visible = useRef({ path: '', since: 0, total: 0, sent: true })
   const lastKey = useRef<string | null>(null)
   const first = useRef(true)
 
@@ -73,11 +72,10 @@ export function Tracker({ site, locale }: { site: SiteKey; locale: Locale }) {
       q: campaign.toString() || undefined,
       k: info.k,
       i: info.i,
-      g: info.g,
     })
     if (info.search) send({ ...base.current, t: 'search', p: pathname, k: 'search', b: info.search, v: info.hits })
     first.current = false
-    visible.current = { path: pathname, since: document.visibilityState === 'visible' ? performance.now() : 0, total: 0, group: info.g, sent: false }
+    visible.current = { path: pathname, since: document.visibilityState === 'visible' ? performance.now() : 0, total: 0, sent: false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, query])
 
@@ -86,7 +84,7 @@ export function Tracker({ site, locale }: { site: SiteKey; locale: Locale }) {
     if (v.sent || !v.path) return
     const total = v.total + (v.since ? performance.now() - v.since : 0)
     v.sent = true
-    if (total >= 500) send({ ...base.current, t: 'leave', p: v.path, g: v.group, v: Math.round(Math.min(total, 30 * 60_000)) })
+    if (total >= 500) send({ ...base.current, t: 'leave', p: v.path, v: Math.round(Math.min(total, 30 * 60_000)) })
   }
 
   // Tid på siden: teller bare mens fanen er synlig; sendes når siden forlates eller skjules.
@@ -119,7 +117,7 @@ export function Tracker({ site, locale }: { site: SiteKey; locale: Locale }) {
       const el = (e.target as Element | null)?.closest?.('a, button, [data-track]')
       if (!el || el.closest('[data-no-track]')) return
       const info = pageInfo()
-      const common = { ...base.current, p: window.location.pathname, g: info.g, k: info.k }
+      const common = { ...base.current, p: window.location.pathname, k: info.k }
       const href = el instanceof HTMLAnchorElement ? el.href : ''
       if (href.startsWith('mailto:')) return send({ ...common, t: 'email', b: href.slice(7).split('?')[0] })
       if (href.startsWith('tel:')) return send({ ...common, t: 'phone', b: href.slice(4) })
@@ -137,7 +135,7 @@ export function Tracker({ site, locale }: { site: SiteKey; locale: Locale }) {
     }
     const onCustom = (e: Event) => {
       const d = (e as CustomEvent<Payload>).detail
-      if (d?.t) send({ ...base.current, p: window.location.pathname, g: pageInfo().g, ...d })
+      if (d?.t) send({ ...base.current, p: window.location.pathname, ...d })
     }
     document.addEventListener('click', onClick, { capture: true })
     window.addEventListener('site:track', onCustom)
