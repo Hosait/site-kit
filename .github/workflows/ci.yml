@@ -1,0 +1,42 @@
+# Lean on purpose (spending is tracked): pull requests only, one job, 10-minute cap,
+# superseded runs cancelled, no end-to-end tests (run those locally: pnpm test:e2e).
+name: CI
+on:
+  pull_request:
+    paths-ignore: ['**/*.md', 'docs/**']
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env: { POSTGRES_USER: sitekit, POSTGRES_PASSWORD: sitekit, POSTGRES_DB: sitekit }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U sitekit" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgres://sitekit:sitekit@127.0.0.1:5432/sitekit
+      PAYLOAD_SECRET: ci-only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test:unit
+      - run: pnpm kit:theme-check
+      - name: Block schema up to date
+        run: pnpm kit:schema && git diff --exit-code schema/
+      - name: Schema drift (site/config.ts or blocks changed without a migration)
+        run: |
+          pnpm payload migrate:create drift-check --skip-empty
+          if [ -n "$(git status --porcelain src/migrations)" ]; then
+            echo "::error::The schema changed without a migration. Run: pnpm payload migrate:create <name>"
+            exit 1
+          fi
