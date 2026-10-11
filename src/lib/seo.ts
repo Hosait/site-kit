@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 
 import type { Article, Media, Page } from '@/payload-types'
 import { docPath } from './links'
-import { HREFLANG, SITES, siteOrigin, type Locale, type SiteKey } from './sites'
+import { HREFLANG, SITE_CONFIG, SITES, siteOrigin, type Locale, type SiteKey } from './sites'
 
 type Doc = Page | Article
 
@@ -82,7 +82,7 @@ export function jsonLdFor({
       name: SITES[site].name,
       url: origin,
       logo: `${origin}/brand/spilka.svg`,
-      parentOrganization: site === 'industri' ? undefined : { '@type': 'Organization', name: 'AS Spilka Industri', url: SITES.industri.origin },
+      parentOrganization: SITE_CONFIG.brand.legalName !== SITES[site].name ? { '@type': 'Organization', name: SITE_CONFIG.brand.legalName } : undefined,
     })
   }
 

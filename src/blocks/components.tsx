@@ -365,7 +365,7 @@ export async function ArticleFeedComponent({ block, site, locale }: BlockProps<A
                 </h3>
                 {a.lead && <p className="mt-3 line-clamp-3 text-night/80">{a.lead}</p>}
                 <p className="t-small mt-4 uppercase tracking-wide text-night/70">
-                  {formatDate(a.publishedAt, locale)} | {s.publishedBy} {SITES[a.site as SiteKey].division ?? SITES[a.site as SiteKey].name}
+                  {formatDate(a.publishedAt, locale)} | {s.publishedBy} {SITES[a.site as SiteKey].name}
                 </p>
               </li>
             )

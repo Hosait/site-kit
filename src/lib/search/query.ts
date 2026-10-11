@@ -1,7 +1,7 @@
 import { sql } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
 
-import { isSiteKey, SITE_KEYS, type Locale, type SiteKey } from '@/lib/sites'
+import { DEFAULT_SITE, isSiteKey, type Locale, SITE_KEYS, type SiteKey } from '@/lib/sites'
 import type { SearchKind } from './indexer'
 import { toTsQuery } from './text'
 
@@ -167,7 +167,7 @@ export async function search(payload: Payload, params: SearchParams): Promise<Se
       {
         id: s.id,
         kind: s.kind,
-        site: isSiteKey(r.site) ? r.site : 'industri',
+        site: isSiteKey(r.site) ? r.site : DEFAULT_SITE,
         sites: s.sites,
         title: String(r.title),
         snippet: snippet.slice(0, 400),

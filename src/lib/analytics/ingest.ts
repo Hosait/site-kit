@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto'
 import { sql } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
 
-import { isLocale, isSiteKey, SITE_KEYS, SITES, type SiteKey } from '@/lib/sites'
+import { isLocale, isSiteKey, SITE_CONFIG, SITE_KEYS, type SiteKey, SITES } from '@/lib/sites'
 import { cleanPath, deviceFrom, hostOf, isBot, sourceFrom, type Source } from './classify'
 import { CONSENT_COOKIE, isVisitorId, parseConsent, randomId, readCookie, VISITOR_COOKIE } from './consent'
 import { pruneDaily, rollup } from './aggregate'
@@ -36,7 +36,7 @@ const db = (payload: Payload) => (payload.db as unknown as { drizzle: { execute:
 
 const SESSION_GAP = "interval '30 minutes'"
 const hash = (v: string) => createHash('sha256').update(v).digest('base64url').slice(0, 24)
-const osloDay = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' })
+const osloDay = () => new Date().toLocaleDateString('sv-SE', { timeZone: SITE_CONFIG.timezone })
 const str = (v: unknown, max: number) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null)
 const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.round(Math.min(v, 2_147_483_647)) : null)
 

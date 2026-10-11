@@ -40,7 +40,7 @@ export const AnalyticsEvents: CollectionConfig = {
     { name: 'label', type: 'text' },
     // Tid på siden i ms (leave) eller antall treff (search).
     { name: 'value', type: 'number' },
-    // Uten samtykke: hash av døgnsalt, nettsted, IP og nettleser (byttes hver dag). Med samtykke: hash av spilka-vid.
+    // Uten samtykke: hash av døgnsalt, nettsted, IP og nettleser (byttes hver dag). Med samtykke: hash av <cookiePrefix>-vid.
     { name: 'visitor', type: 'text', required: true, index: true },
     { name: 'session', type: 'text', required: true, index: true },
     { name: 'consent', type: 'checkbox' },

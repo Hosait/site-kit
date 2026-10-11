@@ -1,4 +1,5 @@
 import { localePath, SITES, type Locale, type SiteKey } from './sites'
+import { DEFAULT_SITE } from '@/lib/sites'
 
 type PreviewDoc = { site?: SiteKey | null; path?: string | null; slug?: string | null; kind?: string | null }
 
@@ -8,7 +9,7 @@ type PreviewDoc = { site?: SiteKey | null; path?: string | null; slug?: string |
  */
 export function previewUrl(collection: 'pages' | 'articles', data: Partial<PreviewDoc> | undefined, locale?: string) {
   const loc: Locale = locale === 'en' ? 'en' : 'no'
-  const site = (data?.site ?? 'industri') as SiteKey
+  const site = (data?.site ?? DEFAULT_SITE) as SiteKey
   const path =
     collection === 'pages'
       ? localePath(loc, data?.path ?? '')

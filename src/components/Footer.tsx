@@ -4,14 +4,14 @@ import { ConsentSettingsButton } from '@/components/analytics/ConsentBanner'
 import { CMSLink } from '@/components/CMSLink'
 import { Logo } from '@/components/Logo'
 import { t } from '@/lib/i18n'
-import type { Locale, SiteKey } from '@/lib/sites'
+import { SITE_CONFIG, type Locale, type SiteKey } from '@/lib/sites'
 import type { SiteSetting } from '@/payload-types'
 
-/** Bunntekst: kolonner fra CMS-et, fast kolonne med alle Spilka-divisjoner, juridisk tekst. */
+/** Bunntekst: kolonner fra CMS-et og juridisk tekst. */
 export function Footer({ site, locale, settings }: { site: SiteKey; locale: Locale; settings: SiteSetting | null }) {
   const s = t(locale)
   const year = new Date().getFullYear()
-  const copyright = settings?.copyright || `${settings?.legalName || 'AS Spilka Industri'} – © ${year}`
+  const copyright = settings?.copyright || `${settings?.legalName || SITE_CONFIG.brand.legalName} – © ${year}`
 
   return (
     <footer className="on-dark bg-night text-white">

@@ -3,7 +3,10 @@
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 
-import type { Locale, SiteKey } from '@/lib/sites'
+import { SITE_KEYS, SITES, type Locale, type SiteKey } from '@/lib/sites'
+
+/** Hosts of this install's own sites: links between them are navigation, not outbound clicks. */
+const OWN_HOSTS = new Set(SITE_KEYS.flatMap((k) => SITES[k].hosts))
 
 /**
  * Sporingsskriptet: sidevisninger, tid på siden og viktige klikk, sendt til /next/a med sendBeacon.
@@ -123,8 +126,9 @@ export function Tracker({ site, locale }: { site: SiteKey; locale: Locale }) {
       if (href.startsWith('tel:')) return send({ ...common, t: 'phone', b: href.slice(4) })
       if (href && DOWNLOAD.test(href)) return send({ ...common, t: 'download', h: href, b: el.textContent?.trim().slice(0, 120) })
       if (href && /^https?:/.test(href) && new URL(href).host !== window.location.host) {
-        // Lenker til de andre Spilka-nettstedene telles som vanlig navigasjon der.
-        if (!/spilka(-sbs|-dws)?\.com$|hosait\.com$/.test(new URL(href).hostname)) return send({ ...common, t: 'outbound', h: href })
+        // Lenker til installasjonens egne nettsteder telles som vanlig navigasjon der.
+        const host = new URL(href).hostname
+        if (!OWN_HOSTS.has(host) && !/hosait\.com$/.test(host)) return send({ ...common, t: 'outbound', h: href })
       }
       const tracked = (el as HTMLElement).dataset?.track
       // Knapper: lenker med knappestil (f.eks. «Kontakt oss») og alt merket data-track.

@@ -1,7 +1,7 @@
 import type { CollectionAfterChangeHook, CollectionAfterDeleteHook, Payload, PayloadRequest } from 'payload'
 
 import type { Article, Document, Page, Person } from '@/payload-types'
-import { isSiteKey, localePath, LOCALES, SITE_KEYS, SITES, type Locale, type SiteKey } from '@/lib/sites'
+import { DEFAULT_SITE, isSiteKey, type Locale, localePath, LOCALES, SITE_KEYS, type SiteKey, SITES } from '@/lib/sites'
 import { pdfText } from './pdf'
 import { layoutText, lexicalText } from './text'
 
@@ -39,7 +39,7 @@ type Entry = {
 
 const idOf = (v: unknown): number | null =>
   typeof v === 'number' ? v : v && typeof v === 'object' && 'id' in v ? Number((v as { id: unknown }).id) : null
-const siteOf = (v: unknown): SiteKey => (isSiteKey(v) ? v : 'industri')
+const siteOf = (v: unknown): SiteKey => (isSiteKey(v) ? v : DEFAULT_SITE)
 const sitesText = (sites: readonly string[]) => ` ${sites.join(' ')} `
 
 type Ctx = { payload: Payload; req?: PayloadRequest }

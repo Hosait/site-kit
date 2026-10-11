@@ -4,8 +4,8 @@ import { Suspense, type ReactNode } from 'react'
 
 import { ConsentBanner } from '@/components/analytics/ConsentBanner'
 import { Tracker } from '@/components/analytics/Tracker'
-import { COOKIE_POLICY_PATH, t } from '@/lib/i18n'
-import { HREFLANG, isLocale, isSiteKey, LOCALES, SITE_KEYS, SITES, siteHref, siteOrigin } from '@/lib/sites'
+import { t } from '@/lib/i18n'
+import { DEFAULT_SITE, HREFLANG, isLocale, isSiteKey, LOCALE_CONFIG, LOCALES, localePath, SITE_KEYS, SITES, siteHref, siteOrigin } from '@/lib/sites'
 
 import '../../globals.css'
 
@@ -26,7 +26,7 @@ type Params = Promise<{ site: string; locale: string }>
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { site } = await params
-  const key = isSiteKey(site) ? site : 'industri'
+  const key = isSiteKey(site) ? site : DEFAULT_SITE
   return {
     metadataBase: new URL(siteOrigin(key)),
     title: { default: SITES[key].name, template: `%s | ${SITES[key].name}` },
@@ -40,7 +40,7 @@ export const viewport: Viewport = { themeColor: '#ffffff', width: 'device-width'
 
 export default async function SiteLayout({ children, params }: { children: ReactNode; params: Params }) {
   const { site, locale } = await params
-  const key = isSiteKey(site) ? site : 'industri'
+  const key = isSiteKey(site) ? site : DEFAULT_SITE
   const loc = isLocale(locale) ? locale : 'no'
 
   return (
@@ -51,7 +51,7 @@ export default async function SiteLayout({ children, params }: { children: React
         <Suspense fallback={null}>
           <Tracker site={key} locale={loc} />
         </Suspense>
-        <ConsentBanner site={key} locale={loc} strings={t(loc)} policyHref={siteHref('industri', key, COOKIE_POLICY_PATH[loc])} />
+        <ConsentBanner site={key} locale={loc} strings={t(loc)} policyHref={siteHref(DEFAULT_SITE, key, localePath(loc, LOCALE_CONFIG[loc].cookiePolicyPath))} />
       </body>
     </html>
   )

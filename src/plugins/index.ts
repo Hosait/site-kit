@@ -7,18 +7,18 @@ import { s3Storage } from '@payloadcms/storage-s3'
 import type { Plugin } from 'payload'
 
 import { revalidateRedirects } from '@/hooks/revalidateRedirects'
-import { isSiteKey, localePath, SITES, siteOrigin } from '@/lib/sites'
+import { DEFAULT_SITE, isSiteKey, localePath, siteOrigin, SITES } from '@/lib/sites'
 import { SITE_OPTIONS } from '@/lib/sites'
 
 const generateTitle: GenerateTitle = ({ doc }) => {
   const key: unknown = doc?.site
-  const site = isSiteKey(key) ? SITES[key] : SITES.industri
+  const site = isSiteKey(key) ? SITES[key] : SITES[DEFAULT_SITE]
   return doc?.title ? `${doc.title} | ${site.name}` : site.name
 }
 
 const generateURL: GenerateURL = ({ doc, locale, collectionSlug }) => {
   const key: unknown = doc?.site
-  const site = isSiteKey(key) ? key : 'industri'
+  const site = isSiteKey(key) ? key : DEFAULT_SITE
   const loc = locale === 'en' ? 'en' : 'no'
   const path =
     collectionSlug === 'articles'

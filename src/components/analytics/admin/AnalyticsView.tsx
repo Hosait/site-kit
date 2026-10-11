@@ -21,7 +21,7 @@ import {
 } from '@/lib/analytics/reports'
 import { monthlyHistory } from '@/lib/analytics/aggregate'
 import { analyticsSettings } from '@/lib/analytics/ingest'
-import { SITE_KEYS, SITES } from '@/lib/sites'
+import { DEFAULT_LOCALE, LOCALE_CONFIG, SITE_CONFIG, SITE_KEYS, SITES } from '@/lib/sites'
 import { Donut, MonthlyChart, PrintButton, TrendChart } from './Charts'
 import styles from './analytics.module.css'
 
@@ -62,7 +62,7 @@ const CONSENT_ACTION: Record<string, string> = {
 }
 const PERIOD_LABEL: Record<number, string> = { 1: 'I dag', 7: 'Siste 7 dager', 30: 'Siste 30 dager', 90: 'Siste 90 dager', 365: 'Siste 365 dager' }
 
-const nf = new Intl.NumberFormat('nb-NO')
+const nf = new Intl.NumberFormat(LOCALE_CONFIG[DEFAULT_LOCALE].intl)
 const fmt = (v: number) => nf.format(v)
 const pct = (v: number) => `${nf.format(Math.round(v * 1000) / 10)} %`
 const dur = (s: number) => (s >= 60 ? `${Math.floor(s / 60)} min ${s % 60} s` : `${s} s`)
@@ -76,7 +76,7 @@ const countryName = (code: string) => {
     return code
   }
 }
-const siteName = (k: string) => (k in SITES ? SITES[k as keyof typeof SITES].name.replace('Spilka ', '') : k)
+const siteName = (k: string) => (k in SITES ? SITES[k as keyof typeof SITES].name : k)
 
 export async function AnalyticsView({ initPageResult, params, searchParams }: AdminViewServerProps) {
   const { req, permissions, visibleEntities, locale } = initPageResult
@@ -454,9 +454,9 @@ const REPORTS: { key: string; label: string }[] = [
   { key: 'maaneder', label: 'Utvikling per måned (25 mnd)' },
 ]
 
-const osloToday = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' })
+const osloToday = () => new Date().toLocaleDateString('sv-SE', { timeZone: SITE_CONFIG.timezone })
 const monthName = (ym: string) =>
-  new Date(`${ym}-15T12:00:00Z`).toLocaleDateString('nb-NO', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+  new Date(`${ym}-15T12:00:00Z`).toLocaleDateString(LOCALE_CONFIG[DEFAULT_LOCALE].intl, { month: 'long', year: 'numeric', timeZone: 'UTC' })
 
 async function Reports({ filters, req }: TabProps) {
   const current = osloToday().slice(0, 7)
@@ -653,7 +653,7 @@ async function Settings({ filters, req }: TabProps) {
       <Card title="Slik fungerer det">
         <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.6 }}>
           <li>Uten samtykke: besøk telles anonymt per døgn (ingen informasjonskapsler, ingen IP-adresser lagres).</li>
-          <li>Med samtykke til statistikk: en anonym ID (spilka-vid) gjør det mulig å se tilbakevendende besøkende.</li>
+          <li>Med samtykke til statistikk: en anonym ID gjør det mulig å se tilbakevendende besøkende.</li>
           <li>Innloggede redaktører og kjente roboter telles ikke.</li>
           <li>Hendelser eldre enn lagringstiden slettes automatisk.</li>
         </ul>

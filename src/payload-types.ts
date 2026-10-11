@@ -202,7 +202,7 @@ export interface Page {
     description?: string | null;
     noindex?: boolean | null;
   };
-  site: 'industri' | 'sbs' | 'dws';
+  site: 'main';
   isHome?: boolean | null;
   parent?: (number | null) | Page;
   /**
@@ -382,7 +382,7 @@ export interface Document {
   title: string;
   docType: 'datasheet' | 'epd' | 'fdv' | 'installation' | 'drawing' | 'certificate' | 'brochure' | 'report' | 'other';
   language?: ('no' | 'en' | 'multi') | null;
-  sites?: ('industri' | 'sbs' | 'dws')[] | null;
+  sites?: 'main'[] | null;
   description?: string | null;
   prefix?: string | null;
   _objectKey?: string | null;
@@ -432,7 +432,7 @@ export interface Article {
     description?: string | null;
     noindex?: boolean | null;
   };
-  site: 'industri' | 'sbs' | 'dws';
+  site: 'main';
   kind: 'announcement' | 'blog';
   publishedAt?: string | null;
   /**
@@ -706,7 +706,7 @@ export interface ArticleFeedBlock {
   /**
    * Tomt = alle nettsteder (felles nyhetsstrøm).
    */
-  sites?: ('industri' | 'sbs' | 'dws')[] | null;
+  sites?: 'main'[] | null;
   kind?: ('all' | 'announcement' | 'blog') | null;
   limit?: number | null;
   paginate?: boolean | null;
@@ -738,7 +738,7 @@ export interface Person {
   phone?: string | null;
   image?: (number | null) | Media;
   bio?: string | null;
-  site: 'industri' | 'sbs' | 'dws';
+  site: 'main';
   /**
    * Vises ikke i søket på nettstedene.
    */
@@ -1025,7 +1025,7 @@ export interface Form {
  */
 export interface SiteSetting {
   id: number;
-  site: 'industri' | 'sbs' | 'dws';
+  site: 'main';
   nav?:
     | {
         link?: {
@@ -1157,7 +1157,7 @@ export interface User {
   id: number;
   name?: string | null;
   role: 'admin' | 'editor';
-  sites?: ('industri' | 'sbs' | 'dws')[] | null;
+  sites?: 'main'[] | null;
   /**
    * Administratorer har alltid tilgang.
    */
@@ -1318,7 +1318,7 @@ export interface Redirect {
   /**
    * Tomt = gjelder alle nettsteder.
    */
-  site?: ('industri' | 'sbs' | 'dws') | null;
+  site?: 'main' | null;
   /**
    * Gammel sti, f.eks. /en/career/test
    */

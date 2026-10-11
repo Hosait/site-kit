@@ -1,7 +1,7 @@
 import { sql } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
 
-import { isLocale, isSiteKey, type Locale, type SiteKey } from '@/lib/sites'
+import { isLocale, isSiteKey, type Locale, SITE_CONFIG, type SiteKey } from '@/lib/sites'
 import { monthlyHistory } from './aggregate'
 
 /**
@@ -47,7 +47,7 @@ type SQL = ReturnType<typeof sql>
 const run = async (payload: Payload, q: SQL): Promise<Row[]> =>
   (await (payload.db as unknown as { drizzle: { execute: (q: SQL) => Promise<{ rows: Row[] }> } }).drizzle.execute(q)).rows
 
-const TZ = `'Europe/Oslo'`
+const TZ = `'${SITE_CONFIG.timezone}'`
 const dayStart = (daysBack: number) =>
   sql.raw(`((date_trunc('day', now() at time zone ${TZ}) - interval '${Math.trunc(daysBack)} days') at time zone ${TZ})`)
 const localMidnight = (date: string) => sql.raw(`('${date}'::timestamp at time zone ${TZ})`)
@@ -149,7 +149,7 @@ export async function overview(payload: Payload, f: Filters) {
 function fillDays(rows: Row[], f: Filters): Row[] {
   const byDay = new Map(rows.map((r) => [String(r.day), r]))
   const out: Row[] = []
-  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' })
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: SITE_CONFIG.timezone })
   if (f.month) {
     const end = monthStart(f.month, 1)
     for (let d = new Date(`${monthStart(f.month)}T12:00:00Z`); d.toISOString().slice(0, 10) < end; d = new Date(d.getTime() + 86_400_000)) {

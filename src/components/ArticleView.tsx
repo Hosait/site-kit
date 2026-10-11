@@ -15,7 +15,7 @@ export function ArticleView({ article, site, locale }: { article: Article; site:
         <header className="wrap-text pb-8 pt-10 md:pt-20">
           <p className="t-small uppercase tracking-wide text-night/70">
             <time dateTime={article.publishedAt ?? undefined}>{formatDate(article.publishedAt, locale)}</time> | {s.publishedBy}{' '}
-            {publisher.division ?? publisher.name}
+            {publisher.name}
           </p>
           <h1 className="t-h2 mt-4">{article.title}</h1>
           {article.lead && <p className="t-lead mt-6">{article.lead}</p>}

@@ -3,9 +3,9 @@
 import Link from 'next/link'
 import { useState, useSyncExternalStore } from 'react'
 
-import type { Locale } from '@/lib/sites'
+import { type Locale, SITE_CONFIG } from '@/lib/sites'
 
-const KEY = 'spilka-lang-banner-dismissed'
+const KEY = `${SITE_CONFIG.cookiePrefix}-lang-banner-dismissed`
 
 const noSubscribe = () => () => {}
 

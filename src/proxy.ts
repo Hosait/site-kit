@@ -1,18 +1,18 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
-import { DEFAULT_LOCALE, isLocale, isSiteKey, siteFromHost, type SiteKey } from '@/lib/sites'
+import { DEFAULT_LOCALE, DEFAULT_SITE, isLocale, isSiteKey, SITE_CONFIG, siteFromHost, type SiteKey } from '@/lib/sites'
 
 /**
  * Host → nettsted. Offentlige stier skrives internt om til /{site}/{locale}/...
  * slik at hvert nettsted kan genereres statisk for seg.
  *
  * Ukjent vert (staging på *.hosait.com, localhost): nettstedet velges med `?site=sbs`
- * og huskes i en cookie. Standard er industri.
+ * og huskes i en cookie. Standard er DEFAULT_SITE fra site/config.ts.
  *
  * Omdirigeringer fra CMS-et utføres her, før siden rendres (raskere, og unngår at Next
  * sender dobbel Location-header når en ISR-side omdirigerer).
  */
-const SITE_COOKIE = 'spilka-site'
+const SITE_COOKIE = `${SITE_CONFIG.cookiePrefix}-site`
 
 type Redirect = { from: string; to: string; site: SiteKey | null; permanent: boolean }
 let redirectCache: { at: number; list: Redirect[] } | null = null
@@ -58,7 +58,7 @@ export async function proxy(req: NextRequest) {
     } else if (isSiteKey(fromCookie)) {
       site = fromCookie
     } else {
-      site = 'industri'
+      site = DEFAULT_SITE
     }
   }
 

@@ -2,7 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { adminOnly, isAdmin } from '@/access/siteAccess'
 import { authenticated } from '@/access/authenticated'
-import { SITE_OPTIONS } from '@/lib/sites'
+import { SINGLE_SITE, SITE_OPTIONS } from '@/lib/sites'
 import { audit } from '@/lib/analytics/audit'
 import type { User } from '@/payload-types'
 
@@ -44,7 +44,7 @@ export const Users: CollectionConfig = {
       label: 'Nettsteder (redaktør)',
       hasMany: true,
       options: SITE_OPTIONS,
-      admin: { condition: (data) => data?.role !== 'admin' },
+      admin: { hidden: SINGLE_SITE, condition: (data) => data?.role !== 'admin' },
       access: { update: ({ req: { user } }) => isAdmin(user as User | null) },
       saveToJWT: true,
     },
