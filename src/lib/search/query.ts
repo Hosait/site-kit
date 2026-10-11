@@ -1,7 +1,7 @@
 import { sql } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
 
-import { DEFAULT_SITE, isSiteKey, type Locale, SITE_KEYS, type SiteKey } from '@/lib/sites'
+import { DEFAULT_LOCALE, DEFAULT_SITE, isLocale, isSiteKey, type Locale, LOCALE_CONFIG, SITE_KEYS, type SiteKey } from '@/lib/sites'
 import type { SearchKind } from './indexer'
 import { toTsQuery } from './text'
 
@@ -14,13 +14,12 @@ export const SEARCH_KINDS: SearchKind[] = ['page', 'article', 'document', 'perso
 export const HL_START = '⟦'
 export const HL_END = '⟧'
 
-const CONFIG: Record<Locale, 'norwegian' | 'english'> = { no: 'norwegian', en: 'english' }
 const KIND_WEIGHT: Record<SearchKind, number> = { page: 1, article: 0.9, document: 0.85, person: 1 }
 const PAGE_SIZE = 20
 const MAX_QUERY = 100
 
 export const vector = (locale: Locale) => {
-  const c = CONFIG[locale]
+  const c = LOCALE_CONFIG[locale].textSearch
   return `(setweight(to_tsvector('${c}'::regconfig, coalesce(title, '')), 'A') || setweight(to_tsvector('${c}'::regconfig, coalesce(summary, '')), 'B') || setweight(to_tsvector('${c}'::regconfig, coalesce(body, '')), 'C'))`
 }
 
@@ -94,8 +93,8 @@ export async function search(payload: Payload, params: SearchParams): Promise<Se
   const result = emptyResult(q)
   if (!tsq) return result
 
-  const loc = params.locale === 'en' ? 'en' : 'no'
-  const cfg = sql.raw(`'${CONFIG[loc]}'::regconfig`)
+  const loc = isLocale(params.locale) ? params.locale : DEFAULT_LOCALE
+  const cfg = sql.raw(`'${LOCALE_CONFIG[loc].textSearch}'::regconfig`)
   const vec = sql.raw(vector(loc))
   const locSql = sql.raw(`'${loc}'`)
 

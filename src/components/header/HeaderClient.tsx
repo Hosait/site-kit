@@ -7,8 +7,9 @@ import { useEffect, useRef, useState } from 'react'
 import { Logo } from '@/components/Logo'
 import { SearchBox } from './SearchBox'
 import type { Strings } from '@/lib/i18n'
-import type { Locale, SiteKey } from '@/lib/sites'
+import { HREFLANG, type Locale, LOCALE_CONFIG, type SiteKey } from '@/lib/sites'
 import { cn } from '@/utilities/ui'
+import { otherLocale } from '@/lib/locales'
 
 export type NavItem = { label: string; href: string | null; children: { label: string; href: string }[] }
 
@@ -25,6 +26,7 @@ const isActive = (pathname: string, href: string | null) =>
   Boolean(href && !/^https?:/.test(href) && (pathname === href || pathname.startsWith(href + '/')))
 
 export function HeaderClient({ site, locale, nav, contact, alternateHref, strings }: Props) {
+  const other = otherLocale(locale)
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [openIndex, setOpenIndex] = useState<number | null>(null)
@@ -136,13 +138,13 @@ export function HeaderClient({ site, locale, nav, contact, alternateHref, string
 
         <div className="flex items-center gap-2 lg:gap-3">
           <SearchBox site={site} locale={locale} strings={strings} />
-          {alternateHref && (
+          {alternateHref && other && (
             <Link
               href={alternateHref}
-              hrefLang={locale === 'no' ? 'en' : 'nb'}
+              hrefLang={HREFLANG[other]}
               className="hidden text-sm font-medium text-night no-underline hover:text-blue-text lg:inline"
             >
-              {locale === 'no' ? 'EN' : 'NO'}
+              {LOCALE_CONFIG[other].short}
             </Link>
           )}
           {contact && (
@@ -223,8 +225,8 @@ export function HeaderClient({ site, locale, nav, contact, alternateHref, string
                 {contact.label}
               </Link>
             )}
-            {alternateHref && (
-              <Link href={alternateHref} hrefLang={locale === 'no' ? 'en' : 'nb'} className="btn">
+            {alternateHref && other && (
+              <Link href={alternateHref} hrefLang={HREFLANG[other]} className="btn">
                 {strings.switchLanguage}
               </Link>
             )}

@@ -72,6 +72,12 @@ export const STRINGS = {
     consentAlwaysOn: 'Alltid på',
     consentReadMore: 'Les mer om informasjonskapsler',
     cookieSettings: 'Cookie-innstillinger',
+    langBannerPrefix: 'Foretrekker du ',
+    langBannerName: 'norsk',
+    embedMapNote: 'Kartet lastes fra Google når du klikker.',
+    embedNote: 'Innholdet lastes fra en ekstern tjeneste når du klikker.',
+    embedShowMap: 'Vis kart',
+    embedShow: 'Vis innhold',
   },
   en: {
     menu: 'Menu',
@@ -142,14 +148,18 @@ export const STRINGS = {
     consentAlwaysOn: 'Always on',
     consentReadMore: 'Read more about cookies',
     cookieSettings: 'Cookie settings',
+    langBannerPrefix: 'Do you prefer ',
+    langBannerName: 'English',
+    embedMapNote: 'The map loads from Google when you click.',
+    embedNote: 'The content loads from an external service when you click.',
+    embedShowMap: 'Show map',
+    embedShow: 'Show content',
   },
 } satisfies Record<(typeof STRING_LOCALES)[number], Record<string, string>>
 
 export type Strings = (typeof STRINGS)['no']
 
 
-/** Søkesiden: /no/sok og /en/search. */
-export const SEARCH_SEGMENT: Record<Locale, string> = { no: 'sok', en: 'search' }
 
 /** Dokumenttyper (feltet docType i dokumentbanken). */
 export const DOC_TYPES: Record<Locale, Record<string, string>> = {
@@ -177,19 +187,3 @@ export const DOC_TYPES: Record<Locale, Record<string, string>> = {
   },
 }
 export const t = (locale: Locale): Strings => STRINGS[locale] ?? STRINGS.no
-
-const MONTHS: Record<Locale, string[]> = {
-  no: ['jan.', 'feb.', 'mars', 'apr.', 'mai', 'juni', 'juli', 'aug.', 'sep.', 'okt.', 'nov.', 'des.'],
-  en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-}
-
-/** «17. apr. 2026» / «17 Apr 2026» – uten avhengighet til serverens ICU-data. */
-export function formatDate(iso: string | null | undefined, locale: Locale): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  const day = d.getUTCDate()
-  const month = MONTHS[locale][d.getUTCMonth()]
-  const year = d.getUTCFullYear()
-  return locale === 'no' ? `${day}. ${month} ${year}` : `${day} ${month} ${year}`
-}

@@ -10,8 +10,9 @@ import { RenderBlocks } from '@/blocks/RenderBlocks'
 import { getAllRoutes, getAlternatePaths, getArticle, getPage, getRedirects } from '@/lib/data'
 import { docPath, resolveLink } from '@/lib/links'
 import { buildMetadata, jsonLdFor } from '@/lib/seo'
-import { isLocale, isSiteKey, localePath, LOCALES, SITE_KEYS, SITES, type Locale, type SiteKey } from '@/lib/sites'
+import { DEFAULT_LOCALE, isLocale, isSiteKey, type Locale, localePath, SITE_KEYS, type SiteKey, SITES } from '@/lib/sites'
 import type { Article, Page as PageDoc } from '@/payload-types'
+import { otherLocale } from '@/lib/locales'
 
 type Params = Promise<{ site: string; locale: string; path?: string[] }>
 
@@ -55,7 +56,7 @@ async function resolve(site: SiteKey, locale: string, segments: string[], draft:
   }
 
   // Omdirigeringer fra gamle Craft-adresser (administreres i CMS-et).
-  const redirects = await getRedirects(isLocale(locale) ? locale : 'no')
+  const redirects = await getRedirects(isLocale(locale) ? locale : DEFAULT_LOCALE)
   const match = redirects.find(
     (r) => (!r.site || r.site === site) && r.from.replace(/\/$/, '').normalize('NFC') === fullPath.replace(/\/$/, ''),
   )
@@ -63,7 +64,7 @@ async function resolve(site: SiteKey, locale: string, segments: string[], draft:
     const to = resolveLink(
       match.to as never,
       site,
-      isLocale(locale) ? locale : 'no',
+      isLocale(locale) ? locale : DEFAULT_LOCALE,
     )
     if (to) return { kind: 'redirect', to, permanent: (match as { permanent?: boolean }).permanent !== false }
   }
@@ -86,10 +87,10 @@ export default async function Page({ params }: { params: Params }) {
   const loc = locale as Locale
   const collection = found.kind === 'page' ? 'pages' : 'articles'
   const alternates = await getAlternatePaths(collection, found.doc.id)
-  const other = LOCALES.find((l) => l !== loc)!
-  const otherValue = alternates[other]
+  const other = otherLocale(loc)
+  const otherValue = other ? alternates[other] : undefined
   const alternateHref =
-    otherValue === undefined
+    !other || otherValue === undefined
       ? null
       : collection === 'pages'
         ? localePath(other, otherValue)

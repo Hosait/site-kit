@@ -3,7 +3,7 @@ import { CMSLink, LinkRow } from '@/components/CMSLink'
 import { Img } from '@/components/Img'
 import { RichText } from '@/components/RichText'
 import { getArticles, getChildPages, type ChildPage } from '@/lib/data'
-import { formatDate, t } from '@/lib/i18n'
+import { t } from '@/lib/i18n'
 import { docPath } from '@/lib/links'
 import { localePath, siteHref, SITES, type Locale, type SiteKey } from '@/lib/sites'
 import type {
@@ -28,6 +28,7 @@ import type {
   TimelineBlock,
 } from '@/payload-types'
 import { cn } from '@/utilities/ui'
+import { formatDate } from '@/lib/locales'
 
 export type BlockProps<T> = { block: T; site: SiteKey; locale: Locale; isFirst?: boolean }
 

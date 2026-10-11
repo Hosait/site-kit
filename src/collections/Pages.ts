@@ -10,13 +10,14 @@ import { revalidateDoc, revalidateDocDelete } from '@/lib/revalidate'
 import { indexDoc, unindexDoc } from '@/lib/search/indexer'
 import { previewUrl } from '@/lib/preview'
 import type { Page } from '@/payload-types'
+import { DEFAULT_LOCALE } from '@/lib/sites'
 
 /**
  * Sider er hierarkiske: `path` (f.eks. `om-spilka/kontakt`) bygges av forelderens sti + egen slug,
  * per språk. Forsiden har `isHome` og tom sti. Stien er unik per nettsted og språk.
  */
 const computePath: CollectionBeforeChangeHook<Page> = async ({ data, req, originalDoc }) => {
-  const locale = req.locale && req.locale !== 'all' ? req.locale : 'no'
+  const locale = req.locale && req.locale !== 'all' ? req.locale : DEFAULT_LOCALE
   const site = data.site ?? originalDoc?.site
   if (data.isHome) {
     data.slug = ''
@@ -70,7 +71,7 @@ const computePath: CollectionBeforeChangeHook<Page> = async ({ data, req, origin
 /** Når en side flytter eller får ny slug, må undersidenes stier bygges på nytt. */
 const resaveChildren: CollectionAfterChangeHook<Page> = async ({ doc, previousDoc, req }) => {
   if (doc.path === previousDoc?.path || req.context.skipResaveChildren) return doc
-  const locale = req.locale && req.locale !== 'all' ? req.locale : 'no'
+  const locale = req.locale && req.locale !== 'all' ? req.locale : DEFAULT_LOCALE
   const children = await req.payload.find({
     collection: 'pages',
     where: { parent: { equals: doc.id } },

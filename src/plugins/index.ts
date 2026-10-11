@@ -7,7 +7,7 @@ import { s3Storage } from '@payloadcms/storage-s3'
 import type { Plugin } from 'payload'
 
 import { revalidateRedirects } from '@/hooks/revalidateRedirects'
-import { DEFAULT_SITE, isSiteKey, localePath, siteOrigin, SITES } from '@/lib/sites'
+import { DEFAULT_LOCALE, DEFAULT_SITE, isLocale, isSiteKey, localePath, siteOrigin, SITES } from '@/lib/sites'
 import { SITE_OPTIONS } from '@/lib/sites'
 
 const generateTitle: GenerateTitle = ({ doc }) => {
@@ -19,7 +19,7 @@ const generateTitle: GenerateTitle = ({ doc }) => {
 const generateURL: GenerateURL = ({ doc, locale, collectionSlug }) => {
   const key: unknown = doc?.site
   const site = isSiteKey(key) ? key : DEFAULT_SITE
-  const loc = locale === 'en' ? 'en' : 'no'
+  const loc = isLocale(locale) ? locale : DEFAULT_LOCALE
   const path =
     collectionSlug === 'articles'
       ? localePath(loc, `${SITES[site].articleBase[loc]}/${doc?.slug ?? ''}`)

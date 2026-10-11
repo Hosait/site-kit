@@ -2,7 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { anyone } from '@/access/anyone'
 import { authenticated } from '@/access/authenticated'
-import { SITE_OPTIONS } from '@/lib/sites'
+import { DEFAULT_LOCALE, LOCALE_CONFIG, LOCALES, SITE_OPTIONS } from '@/lib/sites'
 import { revalidateDoc, revalidateDocDelete } from '@/lib/revalidate'
 import { indexDoc, unindexDoc } from '@/lib/search/indexer'
 
@@ -55,12 +55,8 @@ export const Documents: CollectionConfig = {
       name: 'language',
       type: 'select',
       label: 'Dokumentets språk',
-      defaultValue: 'no',
-      options: [
-        { label: 'Norsk', value: 'no' },
-        { label: 'Engelsk', value: 'en' },
-        { label: 'Flerspråklig', value: 'multi' },
-      ],
+      defaultValue: DEFAULT_LOCALE,
+      options: [...LOCALES.map((l) => ({ label: LOCALE_CONFIG[l].label, value: l })), { label: 'Flerspråklig', value: 'multi' }],
     },
     { name: 'sites', type: 'select', label: 'Nettsteder', hasMany: true, options: SITE_OPTIONS },
     { name: 'description', type: 'textarea', label: 'Beskrivelse', localized: true },

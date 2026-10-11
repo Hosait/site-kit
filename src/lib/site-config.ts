@@ -50,6 +50,8 @@ export function checkSiteConfig(c: SiteConfigInput, stringLocales: readonly stri
   for (const l of locales) {
     if (!stringLocales.includes(l)) problems.push(`locale "${l}" has no visitor strings in src/lib/i18n.ts`)
     if (!KEY.test(l)) problems.push(`locale "${l}" must be lowercase letters and digits`)
+    // textSearch is written into SQL as a regconfig name.
+    if (!/^[a-z_]+$/.test(c.locales[l].textSearch)) problems.push(`locale "${l}": textSearch must be a Postgres config name like 'norwegian'`)
   }
   if (sites.length < 1) problems.push('sites: at least one site is needed')
   for (const key of sites) {

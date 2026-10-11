@@ -50,3 +50,9 @@ test('a time zone that is not a plain IANA name is refused (it reaches SQL)', ()
   c.timezone = "Europe/Oslo'; drop table x; --"
   assert.ok(checkSiteConfig(c, ['no', 'en']).includes('timezone must be an IANA name such as Europe/Oslo'))
 })
+
+test('a textSearch value that is not a plain config name is refused (it reaches SQL)', () => {
+  const c = clone()
+  c.locales.en.textSearch = "english'::regconfig; --"
+  assert.ok(checkSiteConfig(c, ['no', 'en']).some((p) => p.startsWith('locale "en": textSearch')))
+})

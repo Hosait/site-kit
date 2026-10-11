@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 
 import type { Article, Media, Page } from '@/payload-types'
 import { docPath } from './links'
-import { HREFLANG, SITE_CONFIG, SITES, siteOrigin, type Locale, type SiteKey } from './sites'
+import { DEFAULT_LOCALE, HREFLANG, type Locale, LOCALE_CONFIG, SITE_CONFIG, type SiteKey, siteOrigin, SITES } from './sites'
 
 type Doc = Page | Article
 
@@ -39,7 +39,7 @@ export function buildMetadata({
 
   const languages: Record<string, string> = {}
   for (const [l, p] of Object.entries(alternates)) languages[HREFLANG[l as Locale]] = origin + p
-  if (alternates.en) languages['x-default'] = origin + alternates.en
+  if (alternates[DEFAULT_LOCALE]) languages['x-default'] = origin + alternates[DEFAULT_LOCALE]
 
   return {
     title: { absolute: title },
@@ -48,7 +48,7 @@ export function buildMetadata({
     openGraph: {
       type: 'kind' in doc ? 'article' : 'website',
       siteName: SITES[site].name,
-      locale: locale === 'no' ? 'nb_NO' : 'en_GB',
+      locale: LOCALE_CONFIG[locale].ogLocale,
       title,
       description,
       url: origin + path,

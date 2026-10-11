@@ -62,6 +62,7 @@ const CONSENT_ACTION: Record<string, string> = {
 }
 const PERIOD_LABEL: Record<number, string> = { 1: 'I dag', 7: 'Siste 7 dager', 30: 'Siste 30 dager', 90: 'Siste 90 dager', 365: 'Siste 365 dager' }
 
+const localeLabel = (l: string) => (l in LOCALE_CONFIG ? LOCALE_CONFIG[l as keyof typeof LOCALE_CONFIG].label : l)
 const nf = new Intl.NumberFormat(LOCALE_CONFIG[DEFAULT_LOCALE].intl)
 const fmt = (v: number) => nf.format(v)
 const pct = (v: number) => `${nf.format(Math.round(v * 1000) / 10)} %`
@@ -124,7 +125,7 @@ export async function AnalyticsView({ initPageResult, params, searchParams }: Ad
           <h1>Besøksanalyse</h1>
           <p className={styles.muted}>
             {tab === 'reports' ? 'Rapporter' : PERIOD_LABEL[filters.days]} · {filters.site ? SITES[filters.site].name : 'Alle nettsteder'}
-            {filters.locale ? ` · ${filters.locale === 'no' ? 'Norsk' : 'Engelsk'}` : ''}
+            {filters.locale ? ` · ${localeLabel(filters.locale)}` : ''}
           </p>
         </div>
       </div>
@@ -556,7 +557,7 @@ async function MonthlyReport({ filters, req }: TabProps) {
       <div className={styles.reportHead}>
         <h2>
           Månedsrapport {monthName(month)} – {filters.site ? SITES[filters.site].name : 'alle nettsteder'}
-          {filters.locale ? ` (${filters.locale === 'no' ? 'norsk' : 'engelsk'})` : ''}
+          {filters.locale ? ` (${localeLabel(filters.locale).toLowerCase()})` : ''}
         </h2>
         <div className={styles.noPrint}>
           <PrintButton />

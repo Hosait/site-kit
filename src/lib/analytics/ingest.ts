@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto'
 import { sql } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
 
-import { isLocale, isSiteKey, SITE_CONFIG, SITE_KEYS, type SiteKey, SITES } from '@/lib/sites'
+import { DEFAULT_LOCALE, isLocale, isSiteKey, SITE_CONFIG, SITE_KEYS, type SiteKey, SITES } from '@/lib/sites'
 import { cleanPath, deviceFrom, hostOf, isBot, sourceFrom, type Source } from './classify'
 import { CONSENT_COOKIE, isVisitorId, parseConsent, randomId, readCookie, VISITOR_COOKIE } from './consent'
 import { pruneDaily, rollup } from './aggregate'
@@ -146,7 +146,7 @@ export async function ingest(payload: Payload, headers: Headers, e: IncomingEven
   let label = str(e.b, 200)
   if (type === 'download' && e.h) {
     const filename = decodeURIComponent(e.h.split('?')[0].split('/').pop() ?? '')
-    const doc = (await db(payload).execute(sql`select d.id, l.title from documents d left join documents_locales l on l._parent_id = d.id and l._locale = 'no' where d.filename = ${filename} limit 1`)).rows[0]
+    const doc = (await db(payload).execute(sql`select d.id, l.title from documents d left join documents_locales l on l._parent_id = d.id and l._locale = ${DEFAULT_LOCALE} where d.filename = ${filename} limit 1`)).rows[0]
     if (doc) {
       docId = Number(doc.id)
       // Dokumentets tittel fra CMS-et (lenketeksten har ofte «PDF 3,4 MB Last ned» i seg).

@@ -4,8 +4,8 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 import { Highlight } from '@/components/search/Highlight'
-import { SEARCH_SEGMENT, type Strings } from '@/lib/i18n'
-import { SITES, type Locale, type SiteKey } from '@/lib/sites'
+import type { Strings } from '@/lib/i18n'
+import { type Locale, LOCALE_CONFIG, type SiteKey, SITES } from '@/lib/sites'
 
 type Suggestion = { kind: 'page' | 'article' | 'document' | 'person'; site: SiteKey; title: string; snippet: string; href: string | null }
 
@@ -24,7 +24,7 @@ export function SearchBox({ site, locale, strings }: { site: SiteKey; locale: Lo
   const buttonRef = useRef<HTMLAnchorElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const action = `/${locale}/${SEARCH_SEGMENT[locale]}`
+  const action = `/${locale}/${LOCALE_CONFIG[locale].searchSegment}`
 
   // Lukk ved navigasjon (juster under rendring, som i HeaderClient).
   const [lastPathname, setLastPathname] = useState(pathname)

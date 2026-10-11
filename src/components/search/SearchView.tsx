@@ -3,14 +3,15 @@ import Link from 'next/link'
 import { Img } from '@/components/Img'
 import { Highlight } from '@/components/search/Highlight'
 import { payload } from '@/lib/data'
-import { DOC_TYPES, formatDate, SEARCH_SEGMENT, t } from '@/lib/i18n'
+import { DOC_TYPES, t } from '@/lib/i18n'
 import { hitHref } from '@/lib/search/href'
 import type { SearchKind } from '@/lib/search/indexer'
 import { emptyResult, search, SEARCH_KINDS, type SearchHit } from '@/lib/search/query'
 import { isExternal } from '@/lib/links'
-import { isSiteKey, SITE_KEYS, SITES, type Locale, type SiteKey } from '@/lib/sites'
+import { isSiteKey, type Locale, LOCALE_CONFIG, SITE_KEYS, type SiteKey, SITES } from '@/lib/sites'
 import type { Media } from '@/payload-types'
 import { cn } from '@/utilities/ui'
+import { formatDate } from '@/lib/locales'
 
 export type SearchQuery = { q?: string; site?: string; kind?: string; page?: string }
 
@@ -24,8 +25,8 @@ const formatSize = (bytes: unknown, locale: Locale) => {
   const n = Number(bytes)
   if (!n) return ''
   const mb = n / 1024 / 1024
-  const v = mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} kB`
-  return locale === 'no' ? v.replace('.', ',') : v
+  const fmt = new Intl.NumberFormat(LOCALE_CONFIG[locale].intl, { maximumFractionDigits: 1, minimumFractionDigits: mb >= 1 ? 1 : 0 })
+  return mb >= 1 ? `${fmt.format(mb)} MB` : `${fmt.format(Math.max(1, Math.round(n / 1024)))} kB`
 }
 
 /** Søkesiden: søker i alt innhold på alle tre nettsteder, med filtre for nettsted og type. */
@@ -46,7 +47,7 @@ export async function SearchView({ site, locale, query }: { site: SiteKey; local
     : []
   const mediaById = new Map(media.map((m) => [m.id, m as Media]))
 
-  const base = `/${locale}/${SEARCH_SEGMENT[locale]}`
+  const base = `/${locale}/${LOCALE_CONFIG[locale].searchSegment}`
   const href = (over: Partial<Record<'site' | 'kind' | 'page', string | null>>) => {
     const params = new URLSearchParams()
     params.set('q', q)

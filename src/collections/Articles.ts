@@ -10,10 +10,11 @@ import { revalidateDoc, revalidateDocDelete } from '@/lib/revalidate'
 import { indexDoc, unindexDoc } from '@/lib/search/indexer'
 import { slugify } from '@/lib/slugify'
 import type { Article } from '@/payload-types'
+import { DEFAULT_LOCALE } from '@/lib/sites'
 
-/** Kunngjøringer (spilka.com) og fagblogg (SBS/DWS). Adresse: /{språk}/{articleBase}/{slug}. */
+/** Artikler (nyheter, fagblogg …; typene står i site/config.ts). Adresse: /{språk}/{articleBase}/{slug}. */
 const normalizeSlug: CollectionBeforeChangeHook<Article> = async ({ data, req, originalDoc }) => {
-  const locale = req.locale && req.locale !== 'all' ? req.locale : 'no'
+  const locale = req.locale && req.locale !== 'all' ? req.locale : DEFAULT_LOCALE
   data.slug = data.slug ? slugify(data.slug) : slugify(data.title || '', { transliterate: true })
   if (!data.slug) throw new APIError('Artikkelen må ha en slug eller tittel.', 400)
   if (!data.publishedAt && data._status === 'published') data.publishedAt = new Date().toISOString()

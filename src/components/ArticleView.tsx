@@ -1,9 +1,10 @@
 import { ArticleFeedComponent } from '@/blocks/components'
 import { Img } from '@/components/Img'
 import { RichText } from '@/components/RichText'
-import { formatDate, t } from '@/lib/i18n'
+import { t } from '@/lib/i18n'
 import { SITES, type Locale, type SiteKey } from '@/lib/sites'
 import type { Article, Media } from '@/payload-types'
+import { formatDate } from '@/lib/locales'
 
 /** Kunngjøring/fagbloggartikkel: tittel, ingress, hovedbilde, brødtekst og relaterte artikler. */
 export function ArticleView({ article, site, locale }: { article: Article; site: SiteKey; locale: Locale }) {
