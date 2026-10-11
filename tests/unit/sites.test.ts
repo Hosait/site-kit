@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { DEFAULT_SITE, SINGLE_SITE, siteFromHost, siteHref, siteOrigin } from '../../src/lib/sites'
+import { DEFAULT_SITE, SINGLE_SITE, SITES, siteFromHost, siteHref, siteOrigin } from '../../src/lib/sites'
+
+// Hosts and origin come from site/config.ts, so these tests hold for the demo and for a customer's domain.
+const { hosts, origin } = SITES[DEFAULT_SITE]
 
 test('the demo is one site called main', () => {
   assert.equal(DEFAULT_SITE, 'main')
@@ -9,9 +12,9 @@ test('the demo is one site called main', () => {
 })
 
 test('production hosts map to the site, unknown hosts to null', () => {
-  assert.equal(siteFromHost('www.example.com'), 'main')
-  assert.equal(siteFromHost('EXAMPLE.com:443'), 'main')
-  assert.equal(siteFromHost('other.no'), null)
+  for (const host of hosts) assert.equal(siteFromHost(host), DEFAULT_SITE, host)
+  assert.equal(siteFromHost(`${hosts[0].toUpperCase()}:443`), DEFAULT_SITE)
+  assert.equal(siteFromHost('unknown.invalid'), null)
 })
 
 test('staging: the default site lives on the staging host itself', () => {
@@ -26,6 +29,6 @@ test('staging: the default site lives on the staging host itself', () => {
 
 test('production origins come from the config', () => {
   process.env.SITE_ORIGINS = 'production'
-  assert.equal(siteOrigin('main'), 'https://www.example.com')
+  assert.equal(siteOrigin(DEFAULT_SITE), origin)
   delete process.env.SITE_ORIGINS
 })
