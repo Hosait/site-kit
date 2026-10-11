@@ -1,0 +1,83 @@
+// One GET at a time, safely: never follows redirects (the caller decides), never reads more than
+// maxBytes, and by default refuses hosts that resolve to private addresses. The address is
+// checked in the lookup used to connect, so a second DNS answer cannot point elsewhere.
+import dns from 'node:dns'
+import http from 'node:http'
+import https from 'node:https'
+import net from 'node:net'
+import zlib from 'node:zlib'
+
+export const USER_AGENT = 'HosaitSiteBuilder/0.1 (+https://hosait.com)'
+
+/** @param {string} ip */
+export function isPublicAddress(ip) {
+  if (net.isIPv4(ip)) {
+    const [a, b] = ip.split('.').map(Number)
+    if (a === 0 || a === 10 || a === 127 || a >= 224) return false
+    if (a === 100 && b >= 64 && b <= 127) return false
+    if (a === 169 && b === 254) return false
+    if (a === 172 && b >= 16 && b <= 31) return false
+    if (a === 192 && (b === 168 || b === 0)) return false
+    if (a === 198 && (b === 18 || b === 19)) return false
+    return true
+  }
+  if (net.isIPv6(ip)) {
+    const v = ip.toLowerCase()
+    if (v === '::' || v === '::1') return false
+    const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(v)
+    if (mapped) return isPublicAddress(mapped[1])
+    if (/^f[cd]/.test(v) || /^fe[89ab]/.test(v) || /^ff/.test(v)) return false
+    return true
+  }
+  return false
+}
+
+export function publicOnlyLookup(hostname, options, callback) {
+  dns.lookup(hostname, { all: true }, (err, addresses) => {
+    if (err) return callback(err)
+    if (!addresses.length || addresses.some((a) => !isPublicAddress(a.address))) {
+      return callback(Object.assign(new Error(`${hostname} resolves to a private address`), { code: 'EPRIVATE' }))
+    }
+    if (options && options.all) return callback(null, addresses)
+    callback(null, addresses[0].address, addresses[0].family)
+  })
+}
+
+/**
+ * @param {string} url
+ * @param {{ maxBytes?: number, timeoutMs?: number, allowPrivate?: boolean, accept?: string }} [opts]
+ * @returns {Promise<{ status: number, headers: import('node:http').IncomingHttpHeaders, body: Buffer, truncated: boolean }>}
+ */
+export function get(url, { maxBytes = 2 * 1024 * 1024, timeoutMs = 15000, allowPrivate = false, accept = '*/*' } = {}) {
+  let u
+  try { u = new URL(url) } catch { return Promise.reject(new Error(`${url}: not a URL`)) }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') return Promise.reject(new Error(`${url}: only http and https`))
+  if (!allowPrivate && u.port && u.port !== (u.protocol === 'https:' ? '443' : '80')) return Promise.reject(new Error(`${url}: only standard ports`))
+  const mod = u.protocol === 'https:' ? https : http
+  return new Promise((resolve, reject) => {
+    const options = { headers: { 'User-Agent': USER_AGENT, Accept: accept, 'Accept-Encoding': 'gzip, br' }, timeout: timeoutMs }
+    if (!allowPrivate) options.lookup = publicOnlyLookup
+    const req = mod.get(u, options, (res) => {
+      const enc = String(res.headers['content-encoding'] || '')
+      const stream = enc.includes('br') ? res.pipe(zlib.createBrotliDecompress()) : enc.includes('gzip') ? res.pipe(zlib.createGunzip()) : res
+      const chunks = []
+      let size = 0
+      let truncated = false
+      const finish = () => resolve({ status: res.statusCode || 0, headers: res.headers, body: Buffer.concat(chunks), truncated })
+      stream.on('data', (c) => {
+        if (truncated) return
+        size += c.length
+        if (size > maxBytes) {
+          truncated = true
+          chunks.push(c.subarray(0, c.length - (size - maxBytes)))
+          res.destroy()
+          finish()
+        } else chunks.push(c)
+      })
+      stream.on('end', finish)
+      stream.on('error', (e) => (truncated ? finish() : reject(e)))
+    })
+    req.on('timeout', () => req.destroy(new Error(`${url}: timed out`)))
+    req.on('error', reject)
+  })
+}
