@@ -67,8 +67,7 @@ export const FormBlock: React.FC<
         }, 1000)
 
         try {
-          // Hvor skjemaet ble sendt fra (siden og produktgruppen; ikke besøkshistorikken).
-          const main = document.getElementById('innhold')?.dataset
+          // Hvor skjemaet ble sendt fra (siden, ikke besøkshistorikken).
           const req = await fetch(`${getClientSideURL()}/api/form-submissions`, {
             body: JSON.stringify({
               form: formID,
@@ -76,7 +75,6 @@ export const FormBlock: React.FC<
               site: document.documentElement.dataset.site,
               locale: document.documentElement.lang === 'en' ? 'en' : 'no',
               pagePath: window.location.pathname,
-              productGroup: main?.aGroup || undefined,
             }),
             headers: {
               'Content-Type': 'application/json',
@@ -128,17 +126,17 @@ export const FormBlock: React.FC<
   return (
     <div className="wrap-text py-10 md:py-16">
       {enableIntro && introContent && !hasSubmitted && (
-        <ConvertRichText className="prose-spilka mb-8 lg:mb-12" data={introContent} />
+        <ConvertRichText className="prose-site mb-8 lg:mb-12" data={introContent} />
       )}
-      <div className="rounded-2xl bg-mist p-5 md:p-8">
+      <div className="rounded-2xl bg-muted p-5 md:p-8">
         <FormStringsContext.Provider value={strings}>
         <FormProvider {...formMethods}>
           {!isLoading && hasSubmitted && confirmationType === 'message' && (
-            <ConvertRichText className="prose-spilka" data={confirmationMessage} />
+            <ConvertRichText className="prose-site" data={confirmationMessage} />
           )}
           {isLoading && !hasSubmitted && <p role="status">{strings.sending}</p>}
           {error && (
-            <p role="alert" className="mb-4 text-pink">
+            <p role="alert" className="mb-4 text-highlight">
               {strings.error}
             </p>
           )}

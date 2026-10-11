@@ -65,7 +65,7 @@ const dump = execFileSync(
 
 const quoted = tables.map((t) => `public."${t}"`).join(', ')
 const sql = [
-  '-- Spilka-innhold eksportert ' + new Date().toISOString(),
+  '-- Innhold eksportert ' + new Date().toISOString(),
   'BEGIN;',
   `TRUNCATE ${quoted} RESTART IDENTITY CASCADE;`,
   // Bilder og dokumenter ligger i S3 under public/ på Hosait.

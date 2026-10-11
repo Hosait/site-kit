@@ -3,12 +3,11 @@ import { createHash } from 'node:crypto'
 import { sql } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
 
-import { isLocale, isSiteKey, SITE_KEYS, SITES, type SiteKey } from '@/lib/sites'
+import { DEFAULT_LOCALE, isLocale, isSiteKey, SITE_CONFIG, SITE_KEYS, type SiteKey, SITES } from '@/lib/sites'
 import { cleanPath, deviceFrom, hostOf, isBot, sourceFrom, type Source } from './classify'
 import { CONSENT_COOKIE, isVisitorId, parseConsent, randomId, readCookie, VISITOR_COOKIE } from './consent'
 import { pruneDaily, rollup } from './aggregate'
 import { countryOf } from './geo'
-import { isProductGroup } from './productGroups'
 
 /**
  * Tar imot hendelser fra sporingsskriptet (src/components/analytics/Tracker.tsx) og lagrer dem.
@@ -26,7 +25,6 @@ export type IncomingEvent = {
   q?: string // spørrestreng på landingssiden (UTM)
   k?: string // sidetype
   i?: number // side-ID
-  g?: string // produktgruppe
   h?: string // lenke (nedlasting, utgående)
   b?: string // etikett (knappetekst, søkeord, skjema)
   v?: number // verdi (ms på siden, antall treff)
@@ -38,7 +36,7 @@ const db = (payload: Payload) => (payload.db as unknown as { drizzle: { execute:
 
 const SESSION_GAP = "interval '30 minutes'"
 const hash = (v: string) => createHash('sha256').update(v).digest('base64url').slice(0, 24)
-const osloDay = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' })
+const osloDay = () => new Date().toLocaleDateString('sv-SE', { timeZone: SITE_CONFIG.timezone })
 const str = (v: unknown, max: number) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null)
 const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.round(Math.min(v, 2_147_483_647)) : null)
 
@@ -55,7 +53,7 @@ export async function analyticsSettings(payload: Payload): Promise<Settings> {
   if (settingsCache && Date.now() - settingsCache.at < 60_000) return settingsCache.value
   const g = (await payload.findGlobal({ slug: 'analytics-settings', depth: 0, overrideAccess: true }).catch(() => null)) as Partial<Settings> | null
   const value = {
-    basicWithoutConsent: g?.basicWithoutConsent !== false,
+    basicWithoutConsent: g?.basicWithoutConsent === true,
     retentionDays: g?.retentionDays || 395,
     aggregateDays: g?.aggregateDays || 760,
     consentLogDays: g?.consentLogDays || 1095,
@@ -143,16 +141,14 @@ export async function ingest(payload: Payload, headers: Headers, e: IncomingEven
     }
   }
 
-  // Nedlasting: finn dokumentet (og produktgruppen) fra filnavnet i lenken.
+  // Nedlasting: finn dokumentet fra filnavnet i lenken.
   let docId: number | null = null
-  let productGroup = isProductGroup(e.g) ? e.g : null
   let label = str(e.b, 200)
   if (type === 'download' && e.h) {
     const filename = decodeURIComponent(e.h.split('?')[0].split('/').pop() ?? '')
-    const doc = (await db(payload).execute(sql`select d.id, d.product_group, l.title from documents d left join documents_locales l on l._parent_id = d.id and l._locale = 'no' where d.filename = ${filename} limit 1`)).rows[0]
+    const doc = (await db(payload).execute(sql`select d.id, l.title from documents d left join documents_locales l on l._parent_id = d.id and l._locale = ${DEFAULT_LOCALE} where d.filename = ${filename} limit 1`)).rows[0]
     if (doc) {
       docId = Number(doc.id)
-      productGroup = productGroup ?? (isProductGroup(doc.product_group) ? doc.product_group : null)
       // Dokumentets tittel fra CMS-et (lenketeksten har ofte «PDF 3,4 MB Last ned» i seg).
       label = (doc.title as string | null) ?? label
     } else {
@@ -163,10 +159,10 @@ export async function ingest(payload: Payload, headers: Headers, e: IncomingEven
 
   await db(payload).execute(sql`
     insert into analytics_events
-      (site, locale, type, path, page_kind, page_id, product_group, doc_id, label, value, visitor, session, consent, is_new,
+      (site, locale, type, path, page_kind, page_id, doc_id, label, value, visitor, session, consent, is_new,
        channel, source, medium, campaign, country, device)
     values
-      (${site}, ${isLocale(e.l) ? e.l : null}, ${type}, ${path}, ${str(e.k, 20)}, ${num(e.i)}, ${productGroup}, ${docId}, ${label},
+      (${site}, ${isLocale(e.l) ? e.l : null}, ${type}, ${path}, ${str(e.k, 20)}, ${num(e.i)}, ${docId}, ${label},
        ${num(e.v)}, ${visitor}, ${session}, ${consented}, ${isNew}, ${source.channel}, ${source.source}, ${source.medium},
        ${source.campaign}, ${countryOf(ip)}, ${deviceFrom(ua, headers.get('sec-ch-ua-mobile'))})`)
 

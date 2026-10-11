@@ -4,8 +4,8 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 import { Highlight } from '@/components/search/Highlight'
-import { SEARCH_SEGMENT, type Strings } from '@/lib/i18n'
-import { SITES, type Locale, type SiteKey } from '@/lib/sites'
+import type { Strings } from '@/lib/i18n'
+import { type Locale, LOCALE_CONFIG, type SiteKey, SITES } from '@/lib/sites'
 
 type Suggestion = { kind: 'page' | 'article' | 'document' | 'person'; site: SiteKey; title: string; snippet: string; href: string | null }
 
@@ -24,7 +24,7 @@ export function SearchBox({ site, locale, strings }: { site: SiteKey; locale: Lo
   const buttonRef = useRef<HTMLAnchorElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const action = `/${locale}/${SEARCH_SEGMENT[locale]}`
+  const action = `/${locale}/${LOCALE_CONFIG[locale].searchSegment}`
 
   // Lukk ved navigasjon (juster under rendring, som i HeaderClient).
   const [lastPathname, setLastPathname] = useState(pathname)
@@ -105,7 +105,7 @@ export function SearchBox({ site, locale, strings }: { site: SiteKey; locale: Lo
         aria-expanded={open}
         aria-controls="site-search"
         aria-label={strings.openSearch}
-        className="inline-flex size-11 items-center justify-center rounded-full text-night hover:bg-mist hover:text-blue-text"
+        className="inline-flex size-11 items-center justify-center rounded-full text-ink hover:bg-muted hover:text-brand-text"
         onClick={(e) => {
           e.preventDefault()
           setOpen((v) => !v)
@@ -122,7 +122,7 @@ export function SearchBox({ site, locale, strings }: { site: SiteKey; locale: Lo
         id="site-search"
         data-no-track
         hidden={!open}
-        className="absolute inset-x-0 top-full max-h-[calc(100dvh-4rem)] overflow-y-auto border-b border-night/10 bg-white shadow-xl"
+        className="absolute inset-x-0 top-full max-h-[calc(100dvh-4rem)] overflow-y-auto border-b border-ink/10 bg-white shadow-xl"
       >
         <div className="wrap-wide py-4 md:py-6">
           <form role="search" action={action} method="get" className="flex gap-2">
@@ -141,7 +141,7 @@ export function SearchBox({ site, locale, strings }: { site: SiteKey; locale: Lo
               autoComplete="off"
               enterKeyHint="search"
               maxLength={100}
-              className="min-h-12 min-w-0 flex-1 rounded-full border border-night/20 bg-white px-5 text-base focus:border-blue"
+              className="min-h-12 min-w-0 flex-1 rounded-full border border-ink/20 bg-white px-5 text-base focus:border-brand"
             />
             <button type="submit" className="btn btn-primary">
               {strings.search}
@@ -154,21 +154,21 @@ export function SearchBox({ site, locale, strings }: { site: SiteKey; locale: Lo
                 {total} {total === 1 ? strings.oneResultFor : strings.resultsFor} «{term}»
               </p>
               {items.length > 0 ? (
-                <ul className="divide-y divide-night/10">
+                <ul className="divide-y divide-ink/10">
                   {items.map((it, i) => (
                     <li key={i}>
                       <a
                         data-suggestion
                         href={it.href ?? `${action}?q=${encodeURIComponent(term)}&kind=person`}
                         onKeyDown={moveFocus}
-                        className="block rounded-lg px-2 py-3 text-night no-underline hover:bg-mist focus:bg-mist"
+                        className="block rounded-lg px-2 py-3 text-ink no-underline hover:bg-muted focus:bg-muted"
                       >
                         <span className="block font-medium">{it.title}</span>
-                        <span className="t-small block text-night/70">
+                        <span className="t-small block text-ink/70">
                           {SITES[it.site].name} · {strings[`one_${it.kind}`]}
                         </span>
                         {it.snippet && (
-                          <span className="t-small mt-0.5 line-clamp-1 text-night/80">
+                          <span className="t-small mt-0.5 line-clamp-1 text-ink/80">
                             <Highlight text={it.snippet} />
                           </span>
                         )}
@@ -177,7 +177,7 @@ export function SearchBox({ site, locale, strings }: { site: SiteKey; locale: Lo
                   ))}
                 </ul>
               ) : (
-                <p className="t-small px-2 py-3 text-night/70">
+                <p className="t-small px-2 py-3 text-ink/70">
                   {strings.noResults} «{term}»
                 </p>
               )}

@@ -3,7 +3,8 @@
  *
  *   seed/content.sql.gz   – innholdet i den lokale databasen som INSERT-setninger (ingen brukere,
  *                           innlogginger, preferanser eller migreringslogg)
- *   seed/sources.json     – for hvert bilde/dokument: offentlig original-URL på dagens Craft-nettsted
+ *   seed/sources.json     – kilde-URL per bilde/dokument når de hentes fra et gammelt nettsted (ellers tom)
+ *   seed/files/           – lokale opplastinger, kopieres av Hosait (hosait.json seed.files)
  *
  *   node scripts/deploy/export-seed.mjs
  *
@@ -84,22 +85,21 @@ const outDir = path.resolve('seed')
 fs.mkdirSync(outDir, { recursive: true })
 fs.writeFileSync(path.join(outDir, 'content.sql.gz'), zlib.gzipSync(sql, { level: 9 }))
 
-// Bilde/dokument-id → original-URL (fra skraperens manifest og importens id-kart).
-const manifest = JSON.parse(fs.readFileSync(path.resolve('import-data/assets/manifest.json'), 'utf8'))
-const idMap = JSON.parse(fs.readFileSync(path.resolve('import-data/id-map.json'), 'utf8'))
-const bySha = {}
-for (const v of Object.values(manifest)) if (v.sha1 && !bySha[v.sha1]) bySha[v.sha1] = v
-const sources = { media: {}, documents: {} }
-for (const [key, id] of Object.entries(idMap)) {
-  const [type, sha] = key.split(':')
-  const m = bySha[sha]
-  if (!m) continue
-  const url = m.resolvedUrl || m.url
-  if (type === 'media') sources.media[id] = url
-  if (type === 'doc') sources.documents[id] = url
-}
+// Kilde-URL per bilde/dokument for seed-stegets «media» (fra en import som henter fra et gammelt nettsted).
+// Uten import-data/sources.json er lista tom: filene ligger da i seed/files og kopieres av Hosait.
+const sourcesFile = path.resolve('import-data/sources.json')
+const sources = fs.existsSync(sourcesFile) ? JSON.parse(fs.readFileSync(sourcesFile, 'utf8')) : { media: {}, documents: {} }
 fs.writeFileSync(path.join(outDir, 'sources.json'), JSON.stringify(sources, null, 1))
+
+// Lokale opplastinger (originaler og WebP-størrelser) → seed/files, som hosait.json «seed.files»
+// kopierer inn i prosjektets bøtte under public/ ved første publisering.
+for (const sub of ['media', 'documents']) {
+  const from = path.resolve('uploads', sub)
+  const to = path.resolve('seed/files', sub)
+  fs.rmSync(to, { recursive: true, force: true })
+  if (fs.existsSync(from)) fs.cpSync(from, to, { recursive: true })
+}
 
 const size = (f) => (fs.statSync(path.join(outDir, f)).size / 1e6).toFixed(2) + ' MB'
 console.log(`${tables.length} tabeller → seed/content.sql.gz (${size('content.sql.gz')})`)
-console.log(`${Object.keys(sources.media).length} bilder, ${Object.keys(sources.documents).length} dokumenter → seed/sources.json`)
+console.log(`${Object.keys(sources.media).length} bilde- og ${Object.keys(sources.documents).length} dokumentkilder → seed/sources.json; filer → seed/files`)

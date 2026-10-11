@@ -7,19 +7,19 @@ import { s3Storage } from '@payloadcms/storage-s3'
 import type { Plugin } from 'payload'
 
 import { revalidateRedirects } from '@/hooks/revalidateRedirects'
-import { isSiteKey, localePath, SITES, siteOrigin } from '@/lib/sites'
+import { DEFAULT_LOCALE, DEFAULT_SITE, isLocale, isSiteKey, localePath, siteOrigin, SITES } from '@/lib/sites'
 import { SITE_OPTIONS } from '@/lib/sites'
 
 const generateTitle: GenerateTitle = ({ doc }) => {
   const key: unknown = doc?.site
-  const site = isSiteKey(key) ? SITES[key] : SITES.industri
+  const site = isSiteKey(key) ? SITES[key] : SITES[DEFAULT_SITE]
   return doc?.title ? `${doc.title} | ${site.name}` : site.name
 }
 
 const generateURL: GenerateURL = ({ doc, locale, collectionSlug }) => {
   const key: unknown = doc?.site
-  const site = isSiteKey(key) ? key : 'industri'
-  const loc = locale === 'en' ? 'en' : 'no'
+  const site = isSiteKey(key) ? key : DEFAULT_SITE
+  const loc = isLocale(locale) ? locale : DEFAULT_LOCALE
   const path =
     collectionSlug === 'articles'
       ? localePath(loc, `${SITES[site].articleBase[loc]}/${doc?.slug ?? ''}`)
@@ -115,14 +115,13 @@ export const plugins: Plugin[] = [
     },
     formSubmissionOverrides: {
       labels: { singular: 'Innsending', plural: 'Innsendinger' },
-      admin: { group: 'Skjema', defaultColumns: ['form', 'site', 'pagePath', 'productGroup', 'createdAt'] },
-      // Hvor skjemaet ble sendt fra (siden, ikke besøket): til besøksanalysen og senere Spilka360.
+      admin: { group: 'Skjema', defaultColumns: ['form', 'site', 'pagePath', 'createdAt'] },
+      // Hvor skjemaet ble sendt fra (siden, ikke besøket): til besøksanalysen.
       fields: ({ defaultFields }) => [
         ...defaultFields,
         { name: 'site', type: 'text', label: 'Nettsted', admin: { readOnly: true, position: 'sidebar' } },
         { name: 'locale', type: 'text', label: 'Språk', admin: { readOnly: true, position: 'sidebar' } },
         { name: 'pagePath', type: 'text', label: 'Side', admin: { readOnly: true, position: 'sidebar' } },
-        { name: 'productGroup', type: 'text', label: 'Produktgruppe', admin: { readOnly: true, position: 'sidebar' } },
       ],
     },
   }),

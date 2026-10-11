@@ -10,8 +10,9 @@ import { RenderBlocks } from '@/blocks/RenderBlocks'
 import { getAllRoutes, getAlternatePaths, getArticle, getPage, getRedirects } from '@/lib/data'
 import { docPath, resolveLink } from '@/lib/links'
 import { buildMetadata, jsonLdFor } from '@/lib/seo'
-import { isLocale, isSiteKey, localePath, LOCALES, SITE_KEYS, SITES, type Locale, type SiteKey } from '@/lib/sites'
+import { DEFAULT_LOCALE, isLocale, isSiteKey, type Locale, localePath, SITE_KEYS, type SiteKey, SITES } from '@/lib/sites'
 import type { Article, Page as PageDoc } from '@/payload-types'
+import { otherLocale } from '@/lib/locales'
 
 type Params = Promise<{ site: string; locale: string; path?: string[] }>
 
@@ -54,8 +55,8 @@ async function resolve(site: SiteKey, locale: string, segments: string[], draft:
     }
   }
 
-  // Omdirigeringer fra gamle Craft-adresser (administreres i CMS-et).
-  const redirects = await getRedirects(isLocale(locale) ? locale : 'no')
+  // Omdirigeringer fra gamle adresser (administreres i CMS-et).
+  const redirects = await getRedirects(isLocale(locale) ? locale : DEFAULT_LOCALE)
   const match = redirects.find(
     (r) => (!r.site || r.site === site) && r.from.replace(/\/$/, '').normalize('NFC') === fullPath.replace(/\/$/, ''),
   )
@@ -63,7 +64,7 @@ async function resolve(site: SiteKey, locale: string, segments: string[], draft:
     const to = resolveLink(
       match.to as never,
       site,
-      isLocale(locale) ? locale : 'no',
+      isLocale(locale) ? locale : DEFAULT_LOCALE,
     )
     if (to) return { kind: 'redirect', to, permanent: (match as { permanent?: boolean }).permanent !== false }
   }
@@ -86,10 +87,10 @@ export default async function Page({ params }: { params: Params }) {
   const loc = locale as Locale
   const collection = found.kind === 'page' ? 'pages' : 'articles'
   const alternates = await getAlternatePaths(collection, found.doc.id)
-  const other = LOCALES.find((l) => l !== loc)!
-  const otherValue = alternates[other]
+  const other = otherLocale(loc)
+  const otherValue = other ? alternates[other] : undefined
   const alternateHref =
-    otherValue === undefined
+    !other || otherValue === undefined
       ? null
       : collection === 'pages'
         ? localePath(other, otherValue)
@@ -98,9 +99,7 @@ export default async function Page({ params }: { params: Params }) {
   const jsonLd = jsonLdFor({ site, locale: loc, kind: found.kind, doc: found.doc })
 
   // Brødsmuler for undersider: tittelen til hver forelder langs stien.
-  // Produktgruppe til besøksanalysen: sidens egen, ellers nærmeste overordnede sides.
   const crumbs: { title: string; href: string }[] = []
-  let productGroup = found.kind === 'page' ? (found.doc.productGroup ?? null) : null
   if (found.kind === 'page' && found.doc.path) {
     const parts = found.doc.path.split('/')
     for (let i = 1; i < parts.length; i++) {
@@ -108,16 +107,13 @@ export default async function Page({ params }: { params: Params }) {
       const ancestor = await getPage(site, loc, prefix)
       if (ancestor) crumbs.push({ title: ancestor.title, href: localePath(loc, prefix) })
     }
-    for (let i = parts.length - 1; i >= 1 && !productGroup; i--) {
-      productGroup = (await getPage(site, loc, parts.slice(0, i).join('/')))?.productGroup ?? null
-    }
   }
   // Sider uten toppseksjon får tittelen som h1 (dagens nettsted mangler h1 på flere sider).
   const firstBlock = found.kind === 'page' ? found.doc.layout?.[0]?.blockType : null
-  const needsTitle = found.kind === 'page' && firstBlock !== 'hero' && firstBlock !== 'divisionCards'
+  const needsTitle = found.kind === 'page' && firstBlock !== 'hero'
 
   return (
-    <Shell site={site} locale={loc} alternateHref={alternateHref} analytics={{ kind: found.kind, id: found.doc.id, group: productGroup }}>
+    <Shell site={site} locale={loc} alternateHref={alternateHref} analytics={{ kind: found.kind, id: found.doc.id }}>
       {draft && <LivePreviewListener />}
       {crumbs.length > 0 && <Breadcrumbs crumbs={crumbs} locale={loc} home={localePath(loc, '')} />}
       {needsTitle && (

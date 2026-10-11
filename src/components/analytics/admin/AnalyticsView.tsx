@@ -6,7 +6,6 @@ import type { AdminViewServerProps } from 'payload'
 import type { ReactNode } from 'react'
 
 import { hasAnalyticsAccess } from '@/collections/Analytics'
-import { productGroupLabel } from '@/lib/analytics/productGroups'
 import {
   behaviour,
   consentStats,
@@ -15,15 +14,15 @@ import {
   overview,
   parseFilters,
   PERIODS,
-  products,
+  downloads,
   shiftMonth,
   sources,
   type Filters,
 } from '@/lib/analytics/reports'
 import { monthlyHistory } from '@/lib/analytics/aggregate'
 import { analyticsSettings } from '@/lib/analytics/ingest'
-import { SITE_KEYS, SITES } from '@/lib/sites'
-import { Donut, GroupTrend, MonthlyChart, PrintButton, TrendChart } from './Charts'
+import { DEFAULT_LOCALE, LOCALE_CONFIG, SITE_CONFIG, SITE_KEYS, SITES } from '@/lib/sites'
+import { Donut, MonthlyChart, PrintButton, TrendChart } from './Charts'
 import styles from './analytics.module.css'
 
 /**
@@ -34,7 +33,6 @@ export const TABS = [
   { key: 'overview', label: 'Oversikt' },
   { key: 'sources', label: 'Besøkende og trafikkilder' },
   { key: 'behaviour', label: 'Sider og brukeratferd' },
-  { key: 'products', label: 'Produkter og markeder' },
   { key: 'conversions', label: 'Konverteringer' },
   { key: 'reports', label: 'Rapporter' },
   { key: 'settings', label: 'Innstillinger og cookies' },
@@ -64,7 +62,8 @@ const CONSENT_ACTION: Record<string, string> = {
 }
 const PERIOD_LABEL: Record<number, string> = { 1: 'I dag', 7: 'Siste 7 dager', 30: 'Siste 30 dager', 90: 'Siste 90 dager', 365: 'Siste 365 dager' }
 
-const nf = new Intl.NumberFormat('nb-NO')
+const localeLabel = (l: string) => (l in LOCALE_CONFIG ? LOCALE_CONFIG[l as keyof typeof LOCALE_CONFIG].label : l)
+const nf = new Intl.NumberFormat(LOCALE_CONFIG[DEFAULT_LOCALE].intl)
 const fmt = (v: number) => nf.format(v)
 const pct = (v: number) => `${nf.format(Math.round(v * 1000) / 10)} %`
 const dur = (s: number) => (s >= 60 ? `${Math.floor(s / 60)} min ${s % 60} s` : `${s} s`)
@@ -78,7 +77,7 @@ const countryName = (code: string) => {
     return code
   }
 }
-const siteName = (k: string) => (k in SITES ? SITES[k as keyof typeof SITES].name.replace('Spilka ', '') : k)
+const siteName = (k: string) => (k in SITES ? SITES[k as keyof typeof SITES].name : k)
 
 export async function AnalyticsView({ initPageResult, params, searchParams }: AdminViewServerProps) {
   const { req, permissions, visibleEntities, locale } = initPageResult
@@ -126,7 +125,7 @@ export async function AnalyticsView({ initPageResult, params, searchParams }: Ad
           <h1>Besøksanalyse</h1>
           <p className={styles.muted}>
             {tab === 'reports' ? 'Rapporter' : PERIOD_LABEL[filters.days]} · {filters.site ? SITES[filters.site].name : 'Alle nettsteder'}
-            {filters.locale ? ` · ${filters.locale === 'no' ? 'Norsk' : 'Engelsk'}` : ''}
+            {filters.locale ? ` · ${localeLabel(filters.locale)}` : ''}
           </p>
         </div>
       </div>
@@ -144,7 +143,6 @@ export async function AnalyticsView({ initPageResult, params, searchParams }: Ad
       {tab === 'overview' && <Overview filters={filters} req={req} />}
       {tab === 'sources' && <Sources filters={filters} req={req} />}
       {tab === 'behaviour' && <Behaviour filters={filters} req={req} />}
-      {tab === 'products' && <Products filters={filters} req={req} />}
       {tab === 'conversions' && <Conversions filters={filters} req={req} />}
       {tab === 'reports' && <Reports filters={filters} req={req} />}
       {tab === 'settings' && <Settings filters={filters} req={req} />}
@@ -375,9 +373,9 @@ async function Behaviour({ filters, req }: TabProps) {
     <>
       <Card title="Sider">
         <Table
-          head={[{ label: 'Side' }, { label: 'Nettsted' }, { label: 'Produktgruppe' }, { label: 'Visninger', num: true }, { label: 'Besøkende', num: true }, { label: 'Tid på siden', num: true }]}
-          rows={b.pages.map((r) => [r.path, siteName(r.site), productGroupLabel(r.productGroup), fmt(r.views), fmt(r.visitors), dur(r.avgSeconds)])}
-          barCol={3}
+          head={[{ label: 'Side' }, { label: 'Nettsted' }, { label: 'Visninger', num: true }, { label: 'Besøkende', num: true }, { label: 'Tid på siden', num: true }]}
+          rows={b.pages.map((r) => [r.path, siteName(r.site), fmt(r.views), fmt(r.visitors), dur(r.avgSeconds)])}
+          barCol={2}
         />
       </Card>
       <div className={styles.grid2}>
@@ -415,77 +413,6 @@ async function Behaviour({ filters, req }: TabProps) {
   )
 }
 
-async function Products({ filters, req }: TabProps) {
-  const p = await products(req.payload, filters)
-  const groups = p.groups.map((g) => ({ key: g.key, label: productGroupLabel(g.key) }))
-  const weeks = [...new Set(p.trend.map((t) => t.week))]
-  const trendData = weeks.map((week) => ({
-    week,
-    ...Object.fromEntries(groups.map((g) => [g.key, p.trend.find((t) => t.week === week && t.key === g.key)?.views ?? 0])),
-  }))
-  return (
-    <>
-      <Card
-        title="Produktgrupper"
-        note="Produktgruppen settes på sider og dokumenter i CMS-et (koder fra Spilka360) og arves av undersider. Henvendelser = skjema, e-post- og telefonklikk."
-      >
-        <Table
-          head={[{ label: 'Produktgruppe' }, { label: 'Visninger', num: true }, { label: 'Besøkende', num: true }, { label: 'Nedlastinger', num: true }, { label: 'Henvendelser', num: true }]}
-          rows={p.groups.map((g) => [productGroupLabel(g.key), fmt(g.views), fmt(g.visitors), fmt(g.downloads), fmt(g.inquiries)])}
-          barCol={1}
-          empty="Ingen visninger av sider med produktgruppe i perioden."
-        />
-      </Card>
-      {filters.days >= 30 && groups.length > 0 && (
-        <Card title="Utvikling i produktinteresse (visninger per uke)">
-          <GroupTrend data={trendData} groups={groups} />
-        </Card>
-      )}
-      <Card title="Interesse per land">
-        <Table
-          head={[{ label: 'Land' }, ...groups.map((g) => ({ label: g.label, num: true })), { label: 'Totalt', num: true }]}
-          rows={p.matrix.map((r) => [countryName(r.country), ...groups.map((g) => fmt(r.groups[g.key] ?? 0)), fmt(r.total)])}
-        />
-      </Card>
-      <div className={styles.grid2}>
-        <Card title="Mest besøkte produkter">
-          <Table
-            head={[{ label: 'Side' }, { label: 'Gruppe' }, { label: 'Visninger', num: true }]}
-            rows={p.topProducts.map((r) => [r.path, productGroupLabel(r.group), fmt(r.views)])}
-            barCol={2}
-          />
-        </Card>
-        <Card title="Mest besøkte produktkategorier">
-          <Table
-            head={[{ label: 'Kategori' }, { label: 'Nettsted' }, { label: 'Visninger', num: true }]}
-            rows={p.categories.map((r) => [r.key, siteName(r.site), fmt(r.views)])}
-            barCol={2}
-          />
-        </Card>
-      </div>
-      <div className={styles.grid2}>
-        <Card title="Mest nedlastede dokumenter">
-          <Table
-            head={[{ label: 'Dokument' }, { label: 'Gruppe' }, { label: 'Nedlastinger', num: true }]}
-            rows={p.documents.map((r) => [r.key, productGroupLabel(r.group), fmt(r.value)])}
-            barCol={2}
-          />
-        </Card>
-        <Card title="Interesse per språkversjon">
-          <Table
-            head={[{ label: 'Produktgruppe' }, { label: 'Norsk', num: true }, { label: 'Engelsk', num: true }]}
-            rows={groups.map((g) => [
-              g.label,
-              fmt(p.byLocale.find((r) => r.key === g.key && r.locale === 'no')?.views ?? 0),
-              fmt(p.byLocale.find((r) => r.key === g.key && r.locale === 'en')?.views ?? 0),
-            ])}
-          />
-        </Card>
-      </div>
-    </>
-  )
-}
-
 async function Conversions({ filters, req }: TabProps) {
   const c = await conversions(req.payload, filters)
   return (
@@ -504,13 +431,6 @@ async function Conversions({ filters, req }: TabProps) {
         </Card>
       </div>
       <div className={styles.grid2}>
-        <Card title="Per produktgruppe">
-          <Table
-            head={[{ label: 'Produktgruppe' }, { label: 'Henvendelser', num: true }, { label: 'Nedlastinger', num: true }]}
-            rows={c.byGroup.map((r) => [r.key === '(ingen)' ? '(ingen)' : productGroupLabel(r.key), fmt(r.inquiries), fmt(r.downloads)])}
-            barCol={1}
-          />
-        </Card>
         <Card title="Per land">
           <Table head={[{ label: 'Land' }, { label: 'Antall', num: true }]} rows={c.byCountry.map((r) => [countryName(r.key), fmt(r.value)])} barCol={1} />
         </Card>
@@ -528,18 +448,16 @@ const REPORTS: { key: string; label: string }[] = [
   { key: 'kilder', label: 'Kanaler' },
   { key: 'henvisninger', label: 'Søkemotorer, sosiale medier og henvisninger' },
   { key: 'kampanjer', label: 'Kampanjer (UTM)' },
-  { key: 'produktgrupper', label: 'Produktgrupper' },
-  { key: 'produkter', label: 'Produkter' },
-  { key: 'land', label: 'Land × produktgruppe' },
   { key: 'dokumenter', label: 'Nedlastede dokumenter' },
-  { key: 'konverteringer', label: 'Konverteringer per produktgruppe' },
+  { key: 'konverteringer', label: 'Konverteringer per type' },
+  { key: 'konverteringer-land', label: 'Konverteringer per land' },
   { key: 'sok', label: 'Søkeord' },
   { key: 'maaneder', label: 'Utvikling per måned (25 mnd)' },
 ]
 
-const osloToday = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' })
+const osloToday = () => new Date().toLocaleDateString('sv-SE', { timeZone: SITE_CONFIG.timezone })
 const monthName = (ym: string) =>
-  new Date(`${ym}-15T12:00:00Z`).toLocaleDateString('nb-NO', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+  new Date(`${ym}-15T12:00:00Z`).toLocaleDateString(LOCALE_CONFIG[DEFAULT_LOCALE].intl, { month: 'long', year: 'numeric', timeZone: 'UTC' })
 
 async function Reports({ filters, req }: TabProps) {
   const current = osloToday().slice(0, 7)
@@ -617,13 +535,13 @@ const change = (a: number, b: number) => (b > 0 ? `${a >= b ? '+' : '−'}${pct(
 async function MonthlyReport({ filters, req }: TabProps) {
   const p = req.payload
   const month = filters.month!
-  const [cur, prev, lastYear, src, beh, prod, conv] = await Promise.all([
+  const [cur, prev, lastYear, src, beh, docs, conv] = await Promise.all([
     kpis(p, filters),
     kpis(p, filters, 1),
     kpis(p, filters, 12),
     sources(p, filters),
     behaviour(p, filters),
-    products(p, filters),
+    downloads(p, filters),
     conversions(p, filters),
   ])
   const rows: [string, number, number, number][] = [
@@ -639,7 +557,7 @@ async function MonthlyReport({ filters, req }: TabProps) {
       <div className={styles.reportHead}>
         <h2>
           Månedsrapport {monthName(month)} – {filters.site ? SITES[filters.site].name : 'alle nettsteder'}
-          {filters.locale ? ` (${filters.locale === 'no' ? 'norsk' : 'engelsk'})` : ''}
+          {filters.locale ? ` (${localeLabel(filters.locale).toLowerCase()})` : ''}
         </h2>
         <div className={styles.noPrint}>
           <PrintButton />
@@ -666,12 +584,8 @@ async function MonthlyReport({ filters, req }: TabProps) {
             barCol={1}
           />
         </Card>
-        <Card title="Produktgrupper">
-          <Table
-            head={[{ label: 'Produktgruppe' }, { label: 'Visninger', num: true }, { label: 'Henvendelser', num: true }]}
-            rows={prod.groups.map((g) => [productGroupLabel(g.key), fmt(g.views), fmt(g.inquiries)])}
-            barCol={1}
-          />
+        <Card title="Konverteringer">
+          <Table head={[{ label: 'Type' }, { label: 'Antall', num: true }]} rows={conv.byType.map((r) => [CONVERSION[r.key] ?? r.key, fmt(r.value)])} barCol={1} />
         </Card>
       </div>
       <div className={styles.grid2}>
@@ -682,26 +596,23 @@ async function MonthlyReport({ filters, req }: TabProps) {
             barCol={2}
           />
         </Card>
-        <Card title="Interesse per land (produktsider)">
+        <Card title="Konverteringer per land">
           <Table
-            head={[{ label: 'Land' }, { label: 'Visninger', num: true }]}
-            rows={prod.matrix.slice(0, 10).map((r) => [countryName(r.country), fmt(r.total)])}
+            head={[{ label: 'Land' }, { label: 'Antall', num: true }]}
+            rows={conv.byCountry.slice(0, 10).map((r) => [countryName(r.key), fmt(r.value)])}
             barCol={1}
-            empty="Ingen visninger av produktsider i perioden."
+            empty="Ingen konverteringer i perioden."
           />
         </Card>
       </div>
       <div className={styles.grid2}>
-        <Card title="Konverteringer">
-          <Table head={[{ label: 'Type' }, { label: 'Antall', num: true }]} rows={conv.byType.map((r) => [CONVERSION[r.key] ?? r.key, fmt(r.value)])} barCol={1} />
-        </Card>
         <Card title="Mest nedlastede dokumenter">
-          <Table head={[{ label: 'Dokument' }, { label: 'Antall', num: true }]} rows={prod.documents.slice(0, 10).map((r) => [r.key, fmt(r.value)])} barCol={1} />
+          <Table head={[{ label: 'Dokument' }, { label: 'Antall', num: true }]} rows={docs.slice(0, 10).map((r) => [r.key, fmt(r.value)])} barCol={1} />
+        </Card>
+        <Card title="Søk uten treff">
+          <Table head={[{ label: 'Søkeord' }, { label: 'Søk', num: true }]} rows={beh.emptySearches.slice(0, 10).map((r) => [r.key, fmt(r.value)])} barCol={1} />
         </Card>
       </div>
-      <Card title="Søk uten treff">
-        <Table head={[{ label: 'Søkeord' }, { label: 'Søk', num: true }]} rows={beh.emptySearches.slice(0, 10).map((r) => [r.key, fmt(r.value)])} barCol={1} />
-      </Card>
     </section>
   )
 }
@@ -743,7 +654,7 @@ async function Settings({ filters, req }: TabProps) {
       <Card title="Slik fungerer det">
         <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.6 }}>
           <li>Uten samtykke: besøk telles anonymt per døgn (ingen informasjonskapsler, ingen IP-adresser lagres).</li>
-          <li>Med samtykke til statistikk: en anonym ID (spilka-vid) gjør det mulig å se tilbakevendende besøkende.</li>
+          <li>Med samtykke til statistikk: en anonym ID gjør det mulig å se tilbakevendende besøkende.</li>
           <li>Innloggede redaktører og kjente roboter telles ikke.</li>
           <li>Hendelser eldre enn lagringstiden slettes automatisk.</li>
         </ul>

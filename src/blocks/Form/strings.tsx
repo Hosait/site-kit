@@ -2,10 +2,13 @@
 
 import { createContext, useContext } from 'react'
 
+import { DEFAULT_LOCALE, isLocale } from '@/lib/sites'
+import type { STRING_LOCALES } from '@/lib/string-locales'
+
 /** Faste tekster i skjemaet på sidens språk (settes av FormBlock fra RenderBlocks). */
 export type FormStrings = { required: string; requiredError: string; invalidEmail: string; sending: string; error: string }
 
-const STRINGS: Record<'no' | 'en', FormStrings> = {
+const STRINGS: Record<(typeof STRING_LOCALES)[number], FormStrings> = {
   no: {
     required: '(må fylles ut)',
     requiredError: 'Dette feltet må fylles ut.',
@@ -22,8 +25,8 @@ const STRINGS: Record<'no' | 'en', FormStrings> = {
   },
 }
 
-export const formStrings = (locale: string | undefined) => STRINGS[locale === 'en' ? 'en' : 'no']
-export const FormStringsContext = createContext<FormStrings>(STRINGS.no)
+export const formStrings = (locale: string | undefined) => STRINGS[isLocale(locale) ? locale : DEFAULT_LOCALE]
+export const FormStringsContext = createContext<FormStrings>(STRINGS[DEFAULT_LOCALE])
 export const useFormStrings = () => useContext(FormStringsContext)
 
 export function RequiredText() {

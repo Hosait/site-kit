@@ -1,15 +1,18 @@
 import { expect, test, type Page } from '@playwright/test'
 
-/**
- * Cookie-banner, samtykke og besøksregistrering. Sjekker at ingen samtykkepliktig
- * informasjonskapsel settes før valg, at avvisning og tilbaketrekking virker, at hver side
- * telles én gang, og at analysen i admin er tilgangsbeskyttet.
- * (Playwright har «HeadlessChrome» i User-Agent, så serveren lagrer ikke disse hendelsene.)
- */
+import { SITE_CONFIG } from '../../src/lib/sites'
 
+/**
+ * Cookie banner, consent and visit counting. Nothing optional is sent or stored before the visitor
+ * chooses (statistics without consent is off by default); rejecting and withdrawing work; each page
+ * counts once; the landing page counts when the visitor accepts; the admin reports are protected.
+ * (Playwright's user agent says HeadlessChrome, so the server does not store these events.)
+ */
+const VID = `${SITE_CONFIG.cookiePrefix}-vid`
+const CONSENT = `${SITE_CONFIG.cookiePrefix}-consent`
 const cookieNames = async (page: Page) => (await page.context().cookies()).map((c) => c.name)
 
-/** Hendelsene sporingsskriptet sender til /next/a (avskjæres; når ikke serveren). */
+/** Events the tracker sends to /next/a (intercepted; they never reach the server). */
 async function collectEvents(page: Page) {
   const events: Record<string, unknown>[] = []
   await page.route('**/next/a', async (route) => {
@@ -21,31 +24,53 @@ async function collectEvents(page: Page) {
   return events
 }
 
-test('banneret vises før valg, og ingen statistikk-informasjonskapsel settes', async ({ page }) => {
-  await page.goto('/no?site=dws')
-  const banner = page.getByRole('region', { name: 'Informasjonskapsler' })
-  await expect(banner).toBeVisible()
-  await expect(banner.getByRole('button', { name: 'Godta alle' })).toBeVisible()
-  await expect(banner.getByRole('button', { name: 'Avvis valgfrie' })).toBeVisible()
-  expect(await cookieNames(page)).not.toContain('spilka-vid')
+test('before consent: no other hosts, no visitor cookie, no beacon', async ({ page, baseURL }) => {
+  const own = new URL(baseURL!).host
+  const foreign: string[] = []
+  const events = await collectEvents(page)
+  page.on('request', (r) => {
+    const u = new URL(r.url())
+    if (u.protocol.startsWith('http') && u.host !== own && !u.host.endsWith('s3.hosait.com')) foreign.push(r.url())
+  })
+  await page.goto('/no')
+  await page.waitForLoadState('networkidle')
+  await expect(page.getByRole('region', { name: 'Informasjonskapsler' })).toBeVisible()
+  expect(foreign).toEqual([])
+  expect(await cookieNames(page)).not.toContain(VID)
+  expect(events).toEqual([])
 })
 
-test('«Avvis valgfrie» husker valget uten besøks-ID', async ({ page }) => {
-  await page.goto('/no?site=dws')
+test('accepting counts the landing page with its campaign, and later pages once each', async ({ page }) => {
+  const events = await collectEvents(page)
+  await page.goto('/no?utm_campaign=autumn')
+  await page.getByRole('button', { name: 'Godta alle' }).click()
+  expect(await cookieNames(page)).toContain(VID)
+  await expect.poll(() => events.filter((e) => e.t === 'pageview').length).toBe(1)
+  const landing = events.find((e) => e.t === 'pageview')!
+  expect(landing).toMatchObject({ t: 'pageview', l: 'no', p: '/no' })
+  expect(String(landing.q ?? '')).toContain('utm_campaign=autumn')
+  await page.goto('/no/om-oss')
+  await expect.poll(() => events.filter((e) => e.t === 'pageview').length).toBe(2)
+  expect(events.filter((e) => e.t === 'pageview')[1]).toMatchObject({ p: '/no/om-oss', k: 'page' })
+})
+
+test('«Avvis valgfrie» remembers the choice without a visitor id and sends nothing', async ({ page }) => {
+  const events = await collectEvents(page)
+  await page.goto('/no')
   await page.getByRole('button', { name: 'Avvis valgfrie' }).click()
   await expect(page.getByRole('region', { name: 'Informasjonskapsler' })).toBeHidden()
   const cookies = await page.context().cookies()
-  expect(cookies.find((c) => c.name === 'spilka-consent')?.value).toMatch(/^v1\.0\./)
-  expect(cookies.map((c) => c.name)).not.toContain('spilka-vid')
+  expect(cookies.find((c) => c.name === CONSENT)?.value).toMatch(/^v1\.0\./)
+  expect(cookies.map((c) => c.name)).not.toContain(VID)
   await page.reload()
   await expect(page.getByRole('region', { name: 'Informasjonskapsler' })).toBeHidden()
+  expect(events).toEqual([])
 })
 
-test('«Godta alle» setter besøks-ID, og samtykket kan trekkes tilbake fra bunnteksten', async ({ page }) => {
-  await page.goto('/en?site=sbs')
+test('consent can be withdrawn from the footer', async ({ page }) => {
+  await page.goto('/en')
   await page.getByRole('button', { name: 'Accept all' }).click()
-  expect(await cookieNames(page)).toContain('spilka-vid')
-
+  expect(await cookieNames(page)).toContain(VID)
   await page.getByRole('button', { name: 'Cookie settings' }).click()
   const banner = page.getByRole('region', { name: 'Cookies' })
   await expect(banner).toBeVisible()
@@ -54,44 +79,28 @@ test('«Godta alle» setter besøks-ID, og samtykket kan trekkes tilbake fra bun
   await stats.uncheck()
   await banner.getByRole('button', { name: 'Save choices' }).click()
   await expect(banner).toBeHidden()
-  expect(await cookieNames(page)).not.toContain('spilka-vid')
-  expect((await page.context().cookies()).find((c) => c.name === 'spilka-consent')?.value).toMatch(/^v1\.0\./)
+  expect(await cookieNames(page)).not.toContain(VID)
 })
 
-test('hver side telles én gang, med side-ID og produktgruppe', async ({ page }) => {
+test('downloads are recorded with the link to the file', async ({ page }) => {
   const events = await collectEvents(page)
-  await page.goto('/no?site=dws')
-  await expect.poll(() => events.filter((e) => e.t === 'pageview').length).toBe(1)
-  expect(events[0]).toMatchObject({ t: 'pageview', s: 'dws', l: 'no', p: '/no', k: 'page' })
-
-  await page.getByRole('button', { name: 'Avvis valgfrie' }).click()
-  await page.goto('/no/katalog/opus?site=dws')
-  await expect.poll(() => events.filter((e) => e.t === 'pageview').length).toBe(2)
-  const opus = events.filter((e) => e.t === 'pageview')[1]
-  expect(opus).toMatchObject({ p: '/no/katalog/opus', k: 'page', g: 'Opus' })
-  // Ingen søkeord eller andre parametre fra adressen sendes, bare kampanjeparametre.
-  expect(String(opus.q ?? '')).not.toContain('site=')
-})
-
-test('nedlastinger registreres med lenken til fila', async ({ page }) => {
-  const events = await collectEvents(page)
-  await page.goto('/no/baerekraft?site=sbs')
-  await page.getByRole('button', { name: 'Avvis valgfrie' }).click()
-  const link = page.locator('a[href*="/api/documents/file/"]').first()
-  // Hindrer selve nedlastingen; registreringen skjer før navigasjon.
+  await page.goto('/no/kontakt')
+  await page.getByRole('button', { name: 'Godta alle' }).click()
+  const link = page.locator('a[href*="/documents/"]').first()
+  // Stop the download itself; recording happens before navigation.
   await link.evaluate((a) => a.addEventListener('click', (e) => e.preventDefault(), { once: true }))
   await link.click()
-  await expect.poll(() => events.some((e) => e.t === 'download' && String(e.h).includes('/api/documents/file/'))).toBe(true)
+  await expect.poll(() => events.some((e) => e.t === 'download' && String(e.h).includes('/documents/'))).toBe(true)
 })
 
-test('besøksanalysen i admin og CSV-eksporten krever innlogging', async ({ page, request }) => {
+test('the admin analytics and the CSV export need a sign-in', async ({ page, request }) => {
   await page.goto('/admin/analytics')
   await expect(page.getByText('Akkurat nå')).toHaveCount(0)
   expect((await request.get('/next/analytics/export?report=sider&days=7')).status()).toBe(403)
 })
 
-test('mottaket svarer 204 og godtar ikke hendelser fra andre nettsteder', async ({ request }) => {
-  const body = JSON.stringify({ t: 'pageview', s: 'dws', p: '/no' })
+test('the beacon endpoint answers 204, also to other origins (which it ignores)', async ({ request }) => {
+  const body = JSON.stringify({ t: 'pageview', s: 'main', p: '/no' })
   expect((await request.post('/next/a', { data: body, headers: { 'Content-Type': 'text/plain' } })).status()).toBe(204)
   expect((await request.post('/next/a', { data: body, headers: { 'Content-Type': 'text/plain', Origin: 'https://evil.example' } })).status()).toBe(204)
 })

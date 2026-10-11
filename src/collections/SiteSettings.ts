@@ -5,6 +5,7 @@ import { adminOnly, editorOfSite } from '@/access/siteAccess'
 import { link } from '@/fields/link'
 import { siteField } from '@/fields/site'
 import { revalidateDoc } from '@/lib/revalidate'
+import { SITE_CONFIG } from '@/lib/sites'
 
 /**
  * Meny, bunntekst og organisasjonsdata – ett dokument per nettsted.
@@ -79,7 +80,7 @@ export const SiteSettings: CollectionConfig = {
           label: 'Organisasjon',
           description: 'Brukes i strukturerte data (Google) og kontaktinfo.',
           fields: [
-            { name: 'legalName', type: 'text', label: 'Juridisk navn', defaultValue: 'AS Spilka Industri' },
+            { name: 'legalName', type: 'text', label: 'Juridisk navn', defaultValue: SITE_CONFIG.brand.legalName },
             { name: 'orgNumber', type: 'text', label: 'Organisasjonsnummer' },
             { name: 'phone', type: 'text', label: 'Telefon' },
             { name: 'email', type: 'email', label: 'E-post' },
@@ -91,7 +92,7 @@ export const SiteSettings: CollectionConfig = {
                 { name: 'street', type: 'text', label: 'Gate' },
                 { name: 'postalCode', type: 'text', label: 'Postnr.' },
                 { name: 'city', type: 'text', label: 'Sted' },
-                { name: 'country', type: 'text', label: 'Land', defaultValue: 'NO' },
+                { name: 'country', type: 'text', label: 'Land', defaultValue: SITE_CONFIG.brand.country },
               ],
             },
             {
@@ -107,17 +108,6 @@ export const SiteSettings: CollectionConfig = {
                 },
                 { name: 'url', type: 'text', required: true },
               ],
-            },
-          ],
-        },
-        {
-          label: 'Analyse',
-          fields: [
-            {
-              name: 'fathomSiteId',
-              type: 'text',
-              label: 'Fathom site-ID',
-              admin: { description: 'Personvernvennlig analyse uten cookies (samme som i dag).' },
             },
           ],
         },

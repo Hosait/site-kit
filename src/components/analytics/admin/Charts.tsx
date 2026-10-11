@@ -1,9 +1,13 @@
 'use client'
 
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import themeJson from '@site/theme.json'
 
-/** Grafer i Besøksanalyse (Recharts, samme som Spilka360). Farger fra Spilkas palett. */
-export const PALETTE = ['#008cd2', '#00567e', '#00cfb4', '#ffc658', '#c40050', '#63223d', '#7fb8d6', '#5d6469']
+import { validateTheme } from '@/lib/theme'
+
+/** Grafer i Besøksanalyse (Recharts). Farger fra site/theme.json. */
+const c = validateTheme(themeJson).colors
+export const PALETTE = [c.brand, c.brandDark, c.highlight, c.tint, c.ink]
 
 const axis = { stroke: 'var(--theme-elevation-500)', fontSize: 12 }
 const tooltipStyle = {
@@ -51,34 +55,6 @@ export function Donut({ data, label }: { data: { key: string; label: string; val
 }
 
 /** Produktinteresse per uke, én linje per produktgruppe. */
-export function GroupTrend({ data, groups }: { data: Record<string, string | number>[]; groups: { key: string; label: string }[] }) {
-  return (
-    <div style={{ width: '100%', height: 300 }} role="img" aria-label="Sidevisninger per produktgruppe per uke">
-      <ResponsiveContainer>
-        <AreaChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-          <CartesianGrid stroke="var(--theme-elevation-100)" vertical={false} />
-          <XAxis dataKey="week" tickFormatter={shortDay} {...axis} minTickGap={24} />
-          <YAxis {...axis} allowDecimals={false} width={40} />
-          <Tooltip contentStyle={tooltipStyle} labelFormatter={(d) => `Uke fra ${d}`} />
-          <Legend />
-          {groups.map((g, i) => (
-            <Area
-              key={g.key}
-              type="monotone"
-              dataKey={g.key}
-              name={g.label}
-              stackId="1"
-              stroke={PALETTE[i % PALETTE.length]}
-              fill={PALETTE[i % PALETTE.length]}
-              fillOpacity={0.35}
-            />
-          ))}
-        </AreaChart>
-      </ResponsiveContainer>
-    </div>
-  )
-}
-
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des']
 const monthLabel = (ym: string) => `${MONTHS[Number(ym.slice(5, 7)) - 1]} ${ym.slice(2, 4)}`
 

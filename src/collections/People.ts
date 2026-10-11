@@ -2,7 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { anyone } from '@/access/anyone'
 import { canCreateContent, editorOfSite } from '@/access/siteAccess'
-import { SITE_OPTIONS } from '@/lib/sites'
+import { DEFAULT_SITE, SITE_OPTIONS } from '@/lib/sites'
 import { revalidateDoc, revalidateDocDelete } from '@/lib/revalidate'
 import { indexDoc, unindexDoc } from '@/lib/search/indexer'
 
@@ -34,7 +34,7 @@ export const People: CollectionConfig = {
       label: 'Hovednettsted',
       options: SITE_OPTIONS,
       required: true,
-      defaultValue: 'industri',
+      defaultValue: DEFAULT_SITE,
       admin: { position: 'sidebar' },
     },
     {

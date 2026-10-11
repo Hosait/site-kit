@@ -8,23 +8,27 @@ import { siteField } from '@/fields/site'
 import { slugify } from '@/lib/slugify'
 import { revalidateDoc, revalidateDocDelete } from '@/lib/revalidate'
 import { indexDoc, unindexDoc } from '@/lib/search/indexer'
-import { productGroupField } from '@/lib/analytics/productGroups'
 import { previewUrl } from '@/lib/preview'
 import type { Page } from '@/payload-types'
+import { DEFAULT_LOCALE } from '@/lib/sites'
 
 /**
- * Sider er hierarkiske: `path` (f.eks. `om-spilka/kontakt`) bygges av forelderens sti + egen slug,
+ * Sider er hierarkiske: `path` (f.eks. `om-oss/kontakt`) bygges av forelderens sti + egen slug,
  * per språk. Forsiden har `isHome` og tom sti. Stien er unik per nettsted og språk.
  */
 const computePath: CollectionBeforeChangeHook<Page> = async ({ data, req, originalDoc }) => {
-  const locale = req.locale && req.locale !== 'all' ? req.locale : 'no'
+  const locale = req.locale && req.locale !== 'all' ? req.locale : DEFAULT_LOCALE
   const site = data.site ?? originalDoc?.site
   if (data.isHome) {
     data.slug = ''
     data.path = ''
   } else {
     const slug = data.slug ? slugify(data.slug) : slugify(data.title || '', { transliterate: true })
-    if (!slug) throw new APIError('Siden må ha en slug eller tittel.', 400)
+    if (!slug) {
+      // Autosave stores an empty draft as soon as «create» opens; only publishing needs an address.
+      if (data._status !== 'published') return data
+      throw new APIError('Siden må ha en slug eller tittel.', 400)
+    }
     data.slug = slug
 
     let parentPath = ''
@@ -42,7 +46,7 @@ const computePath: CollectionBeforeChangeHook<Page> = async ({ data, req, origin
       if (parent.site !== site) throw new APIError('Forelder må høre til samme nettsted.', 400)
       parentPath = parent.path ?? ''
     }
-    // «Fast adresse» vinner, slik at gamle Craft-adresser kan beholdes uendret.
+    // «Fast adresse» vinner, slik at adresser fra et gammelt nettsted kan beholdes uendret.
     const override = data.pathOverride?.trim().replace(/^\/+|\/+$/g, '')
     data.path = override || (parentPath ? `${parentPath}/${slug}` : slug)
   }
@@ -71,7 +75,7 @@ const computePath: CollectionBeforeChangeHook<Page> = async ({ data, req, origin
 /** Når en side flytter eller får ny slug, må undersidenes stier bygges på nytt. */
 const resaveChildren: CollectionAfterChangeHook<Page> = async ({ doc, previousDoc, req }) => {
   if (doc.path === previousDoc?.path || req.context.skipResaveChildren) return doc
-  const locale = req.locale && req.locale !== 'all' ? req.locale : 'no'
+  const locale = req.locale && req.locale !== 'all' ? req.locale : DEFAULT_LOCALE
   const children = await req.payload.find({
     collection: 'pages',
     where: { parent: { equals: doc.id } },
@@ -177,7 +181,7 @@ export const Pages: CollectionConfig<'pages'> = {
       localized: true,
       admin: {
         position: 'sidebar',
-        description: 'Overstyrer adressen, f.eks. for å beholde en gammel Craft-adresse. Uten / foran.',
+        description: 'Overstyrer adressen, f.eks. for å beholde en adresse fra det gamle nettstedet. Uten / foran.',
         condition: (data) => !data?.isHome,
       },
     },
@@ -201,7 +205,6 @@ export const Pages: CollectionConfig<'pages'> = {
       localized: true,
       admin: { position: 'sidebar' },
     },
-    productGroupField,
     {
       name: 'hideFromNav',
       type: 'checkbox',

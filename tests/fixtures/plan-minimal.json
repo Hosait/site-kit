@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "source": { "url": "https://www.example.com" },
+  "media": [{ "ref": "hero", "source": "media/hero.jpg", "alt": { "no": "Fjord", "en": "Fjord" } }],
+  "pages": [
+    {
+      "ref": "home",
+      "isHome": true,
+      "title": { "no": "Forside", "en": "Home" },
+      "layout": {
+        "no": [{ "blockType": "hero", "variant": "image", "heading": "Velkommen", "media": { "$media": "hero" } }],
+        "en": [{ "blockType": "hero", "variant": "image", "heading": "Welcome", "media": { "$media": "hero" } }]
+      }
+    }
+  ],
+  "settings": { "nav": { "no": [{ "label": "Forside", "page": "home" }], "en": [{ "label": "Home", "page": "home" }] } }
+}

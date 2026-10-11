@@ -1,7 +1,8 @@
-import type { Locale } from './sites'
+import { LOCALES, SITE_CONFIG, type Locale } from './sites'
+import type { STRING_LOCALES } from './string-locales'
 
 /** Faste tekster i grensesnittet. Alt redaktørene skal kunne endre, ligger i CMS-et. */
-const STRINGS = {
+export const STRINGS = {
   no: {
     menu: 'Meny',
     close: 'Lukk',
@@ -19,7 +20,7 @@ const STRINGS = {
     otherLanguage: 'English',
     switchLanguage: 'Switch to English',
     languageName: 'Norsk',
-    divisions: 'Spilka-divisjoner',
+    divisions: 'Nettsteder',
     breadcrumbs: 'Brødsmulesti',
     home: 'Forside',
     download: 'Last ned',
@@ -30,7 +31,7 @@ const STRINGS = {
     search: 'Søk',
     related: 'Fikk du med deg disse?',
     searchTitle: 'Søk',
-    searchLabel: 'Søk på alle Spilka-nettstedene',
+    searchLabel: 'Søk på nettstedet',
     searchPlaceholder: 'Hva leter du etter?',
     openSearch: 'Åpne søk',
     resultsFor: 'treff for',
@@ -38,7 +39,7 @@ const STRINGS = {
     noResults: 'Ingen treff for',
     noResultsHelp: 'Prøv færre eller andre ord, eller sjekk stavemåten.',
     fuzzyNote: 'Ingen eksakte treff. Viser titler som ligner.',
-    searchHint: 'Søk i sider, artikler, dokumenter og personer på alle Spilka-nettstedene.',
+    searchHint: 'Søk i sider, artikler, dokumenter og personer.',
     seeAllResults: 'Vis alle treff',
     filterSite: 'Nettsted',
     filterKind: 'Type',
@@ -67,10 +68,16 @@ const STRINGS = {
     consentNecessary: 'Nødvendige',
     consentNecessaryText: 'Husker valget ditt og holder nettstedet sikkert.',
     consentStatistics: 'Statistikk',
-    consentStatisticsText: 'En anonym ID (spilka-vid) i 13 måneder, så vi kan se tilbakevendende besøk. Lagres bare hos oss.',
+    consentStatisticsText: 'En anonym ID i 13 måneder, så vi kan se tilbakevendende besøk. Lagres bare hos oss.',
     consentAlwaysOn: 'Alltid på',
     consentReadMore: 'Les mer om informasjonskapsler',
     cookieSettings: 'Cookie-innstillinger',
+    langBannerPrefix: 'Foretrekker du ',
+    langBannerName: 'norsk',
+    embedMapNote: 'Kartet lastes fra Google når du klikker.',
+    embedNote: 'Innholdet lastes fra en ekstern tjeneste når du klikker.',
+    embedShowMap: 'Vis kart',
+    embedShow: 'Vis innhold',
   },
   en: {
     menu: 'Menu',
@@ -89,7 +96,7 @@ const STRINGS = {
     otherLanguage: 'norsk',
     switchLanguage: 'Bytt til norsk',
     languageName: 'English',
-    divisions: 'Spilka divisions',
+    divisions: 'Websites',
     breadcrumbs: 'Breadcrumbs',
     home: 'Home',
     download: 'Download',
@@ -100,7 +107,7 @@ const STRINGS = {
     search: 'Search',
     related: 'Did you catch these?',
     searchTitle: 'Search',
-    searchLabel: 'Search all Spilka websites',
+    searchLabel: 'Search the website',
     searchPlaceholder: 'What are you looking for?',
     openSearch: 'Open search',
     resultsFor: 'results for',
@@ -108,7 +115,7 @@ const STRINGS = {
     noResults: 'No results for',
     noResultsHelp: 'Try fewer or different words, or check the spelling.',
     fuzzyNote: 'No exact matches. Showing similar titles.',
-    searchHint: 'Search pages, articles, documents and people on all Spilka websites.',
+    searchHint: 'Search pages, articles, documents and people.',
     seeAllResults: 'Show all results',
     filterSite: 'Website',
     filterKind: 'Type',
@@ -137,60 +144,25 @@ const STRINGS = {
     consentNecessary: 'Necessary',
     consentNecessaryText: 'Remembers your choice and keeps the website secure.',
     consentStatistics: 'Statistics',
-    consentStatisticsText: 'An anonymous ID (spilka-vid) for 13 months, so we can see returning visits. Stored only by us.',
+    consentStatisticsText: 'An anonymous ID for 13 months, so we can see returning visits. Stored only by us.',
     consentAlwaysOn: 'Always on',
     consentReadMore: 'Read more about cookies',
     cookieSettings: 'Cookie settings',
+    langBannerPrefix: 'Do you prefer ',
+    langBannerName: 'English',
+    embedMapNote: 'The map loads from Google when you click.',
+    embedNote: 'The content loads from an external service when you click.',
+    embedShowMap: 'Show map',
+    embedShow: 'Show content',
   },
-} satisfies Record<Locale, Record<string, string>>
+} satisfies Record<(typeof STRING_LOCALES)[number], Record<string, string>>
 
 export type Strings = (typeof STRINGS)['no']
 
-/** Siden om informasjonskapsler (ligger på Spilka Industri; lenkes fra banneret på alle nettsteder). */
-export const COOKIE_POLICY_PATH: Record<Locale, string> = { no: '/no/informasjonskapsler', en: '/en/cookies' }
 
-/** Søkesiden: /no/sok og /en/search. */
-export const SEARCH_SEGMENT: Record<Locale, string> = { no: 'sok', en: 'search' }
 
 /** Dokumenttyper (feltet docType i dokumentbanken). */
-export const DOC_TYPES: Record<Locale, Record<string, string>> = {
-  no: {
-    datasheet: 'Produktblad',
-    epd: 'Miljødeklarasjon (EPD)',
-    fdv: 'FDV',
-    installation: 'Monteringsanvisning',
-    drawing: 'Tegning/CAD/BIM',
-    certificate: 'Sertifikat/testrapport',
-    brochure: 'Brosjyre',
-    report: 'Rapport',
-    other: 'Dokument',
-  },
-  en: {
-    datasheet: 'Product data sheet',
-    epd: 'Environmental declaration (EPD)',
-    fdv: 'Maintenance documentation',
-    installation: 'Installation guide',
-    drawing: 'Drawing/CAD/BIM',
-    certificate: 'Certificate/test report',
-    brochure: 'Brochure',
-    report: 'Report',
-    other: 'Document',
-  },
-}
+export const DOC_TYPES = Object.fromEntries(
+  LOCALES.map((l) => [l, Object.fromEntries(Object.entries(SITE_CONFIG.documentTypes).map(([k, v]) => [k, (v as Record<string, string>)[l]]))]),
+) as Record<Locale, Record<string, string>>
 export const t = (locale: Locale): Strings => STRINGS[locale] ?? STRINGS.no
-
-const MONTHS: Record<Locale, string[]> = {
-  no: ['jan.', 'feb.', 'mars', 'apr.', 'mai', 'juni', 'juli', 'aug.', 'sep.', 'okt.', 'nov.', 'des.'],
-  en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-}
-
-/** «17. apr. 2026» / «17 Apr 2026» – uten avhengighet til serverens ICU-data. */
-export function formatDate(iso: string | null | undefined, locale: Locale): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  const day = d.getUTCDate()
-  const month = MONTHS[locale][d.getUTCMonth()]
-  const year = d.getUTCFullYear()
-  return locale === 'no' ? `${day}. ${month} ${year}` : `${day} ${month} ${year}`
-}

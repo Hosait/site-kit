@@ -1,7 +1,7 @@
 import { sql } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
 
-import { isLocale, isSiteKey, type Locale, type SiteKey } from '@/lib/sites'
+import { isLocale, isSiteKey, type Locale, SITE_CONFIG, type SiteKey } from '@/lib/sites'
 import { monthlyHistory } from './aggregate'
 
 /**
@@ -47,7 +47,7 @@ type SQL = ReturnType<typeof sql>
 const run = async (payload: Payload, q: SQL): Promise<Row[]> =>
   (await (payload.db as unknown as { drizzle: { execute: (q: SQL) => Promise<{ rows: Row[] }> } }).drizzle.execute(q)).rows
 
-const TZ = `'Europe/Oslo'`
+const TZ = `'${SITE_CONFIG.timezone}'`
 const dayStart = (daysBack: number) =>
   sql.raw(`((date_trunc('day', now() at time zone ${TZ}) - interval '${Math.trunc(daysBack)} days') at time zone ${TZ})`)
 const localMidnight = (date: string) => sql.raw(`('${date}'::timestamp at time zone ${TZ})`)
@@ -149,7 +149,7 @@ export async function overview(payload: Payload, f: Filters) {
 function fillDays(rows: Row[], f: Filters): Row[] {
   const byDay = new Map(rows.map((r) => [String(r.day), r]))
   const out: Row[] = []
-  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' })
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: SITE_CONFIG.timezone })
   if (f.month) {
     const end = monthStart(f.month, 1)
     for (let d = new Date(`${monthStart(f.month)}T12:00:00Z`); d.toISOString().slice(0, 10) < end; d = new Date(d.getTime() + 86_400_000)) {
@@ -171,7 +171,7 @@ export async function topPages(payload: Payload, f: Filters, limit = 50) {
   const rows = await run(
     payload,
     sql`
-    select site, path, max(product_group) as product_group,
+    select site, path,
       count(*) filter (where type = 'pageview') as views,
       count(distinct visitor) filter (where type = 'pageview') as visitors,
       coalesce(avg(value) filter (where type = 'leave'), 0) as avg_ms
@@ -182,7 +182,6 @@ export async function topPages(payload: Payload, f: Filters, limit = 50) {
   return rows.map((r) => ({
     site: String(r.site),
     path: String(r.path),
-    productGroup: (r.product_group as string | null) ?? null,
     views: n(r.views),
     visitors: n(r.visitors),
     avgSeconds: Math.round(n(r.avg_ms) / 1000),
@@ -268,84 +267,21 @@ export async function behaviour(payload: Payload, f: Filters) {
 }
 
 /** Produktkategori: de to første delene av stien etter språket, f.eks. «katalog/opus». */
-const CATEGORY = sql.raw(`nullif(split_part(path, '/', 3) || coalesce('/' || nullif(split_part(path, '/', 4), ''), ''), '')`)
-
-export async function products(payload: Payload, f: Filters) {
-  const w = where(f)
-  const [groups, trend, byCountry, byLocale, topProducts, categories, documents] = await Promise.all([
-    run(
-      payload,
-      sql`select product_group as key,
-            count(*) filter (where type = 'pageview') as views,
-            count(distinct visitor) filter (where type = 'pageview') as visitors,
-            count(*) filter (where type = 'download') as downloads,
-            count(*) filter (where type in ('form', 'email', 'phone')) as inquiries
-          from analytics_events where ${w} and product_group is not null group by 1 order by 2 desc`,
-    ),
-    run(
-      payload,
-      sql`select to_char(date_trunc('week', created_at at time zone ${sql.raw(TZ)}), 'YYYY-MM-DD') as week, product_group as key, count(*) as views
-          from analytics_events where ${w} and type = 'pageview' and product_group is not null group by 1, 2 order by 1`,
-    ),
-    run(
-      payload,
-      sql`select coalesce(country, '–') as country, product_group as key, count(*) as views
-          from analytics_events where ${w} and type = 'pageview' and product_group is not null group by 1, 2`,
-    ),
-    run(
-      payload,
-      sql`select coalesce(locale, '–') as locale, product_group as key, count(*) as views
-          from analytics_events where ${w} and type = 'pageview' and product_group is not null group by 1, 2`,
-    ),
-    run(
-      payload,
-      sql`select site, path, product_group, count(*) as views, count(distinct visitor) as visitors
-          from analytics_events where ${w} and type = 'pageview' and product_group is not null and page_kind = 'page'
-          group by 1, 2, 3 order by 4 desc limit 25`,
-    ),
-    run(
-      payload,
-      sql`select site, ${CATEGORY} as key, count(*) as views from analytics_events
-          where ${w} and type = 'pageview' and page_kind = 'page' and product_group is not null and ${CATEGORY} is not null
-          group by 1, 2 order by 3 desc limit 20`,
-    ),
-    run(
-      payload,
-      sql`select coalesce(label, '(ukjent)') as key, max(product_group) as product_group, count(*) as n
-          from analytics_events where ${w} and type = 'download' group by 1 order by 3 desc limit 25`,
-    ),
-  ])
-  // Land × produktgruppe som tabell (topp 12 land).
-  const countryTotals = new Map<string, number>()
-  for (const r of byCountry) countryTotals.set(String(r.country), (countryTotals.get(String(r.country)) ?? 0) + n(r.views))
-  const topCountries = [...countryTotals.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([c]) => c)
-  const matrix = topCountries.map((country) => ({
-    country,
-    total: countryTotals.get(country) ?? 0,
-    groups: Object.fromEntries(byCountry.filter((r) => r.country === country).map((r) => [String(r.key), n(r.views)])),
-  }))
-  return {
-    groups: groups.map((r) => ({ key: String(r.key), views: n(r.views), visitors: n(r.visitors), downloads: n(r.downloads), inquiries: n(r.inquiries) })),
-    trend: trend.map((r) => ({ week: String(r.week), key: String(r.key), views: n(r.views) })),
-    matrix,
-    byLocale: byLocale.map((r) => ({ locale: String(r.locale), key: String(r.key), views: n(r.views) })),
-    topProducts: topProducts.map((r) => ({ site: String(r.site), path: String(r.path), group: String(r.product_group), views: n(r.views), visitors: n(r.visitors) })),
-    categories: categories.map((r) => ({ site: String(r.site), key: String(r.key), views: n(r.views) })),
-    documents: documents.map((r) => ({ key: String(r.key), group: (r.product_group as string | null) ?? null, value: n(r.n) })),
-  }
+/** Most downloaded documents (label = the document's title when the tracker knew it). */
+export async function downloads(payload: Payload, f: Filters) {
+  const rows = await run(
+    payload,
+    sql`select coalesce(label, '(ukjent)') as key, count(*) as n
+        from analytics_events where ${where(f)} and type = 'download' group by 1 order by 2 desc limit 25`,
+  )
+  return rows.map((r) => ({ key: String(r.key), value: n(r.n) }))
 }
 
 export async function conversions(payload: Payload, f: Filters) {
   const w = where(f)
-  const [byType, byChannel, byGroup, byCountry, rate, forms] = await Promise.all([
+  const [byType, byChannel, byCountry, rate, forms] = await Promise.all([
     run(payload, sql`select type as key, count(*) as n from analytics_events where ${w} and type in ${CONVERSIONS} group by 1 order by 2 desc`),
     run(payload, sql`select coalesce(channel, 'direct') as key, count(*) as n from analytics_events where ${w} and type in ${CONVERSIONS} group by 1 order by 2 desc`),
-    run(
-      payload,
-      sql`select coalesce(product_group, '(ingen)') as key, count(*) filter (where type = 'download') as downloads,
-            count(*) filter (where type in ('form', 'email', 'phone')) as inquiries
-          from analytics_events where ${w} and type in ${CONVERSIONS} group by 1 order by 3 desc, 2 desc`,
-    ),
     run(payload, sql`select coalesce(country, '–') as key, count(*) as n from analytics_events where ${w} and type in ${CONVERSIONS} group by 1 order by 2 desc limit 15`),
     run(
       payload,
@@ -361,7 +297,6 @@ export async function conversions(payload: Payload, f: Filters) {
   return {
     byType: kv(byType),
     byChannel: kv(byChannel),
-    byGroup: byGroup.map((r) => ({ key: String(r.key), downloads: n(r.downloads), inquiries: n(r.inquiries) })),
     byCountry: kv(byCountry),
     sessions: n(rate[0]?.sessions),
     converting: n(rate[0]?.converting),
@@ -384,12 +319,9 @@ export const EXPORTS = {
   kilder: async (p: Payload, f: Filters) => (await sources(p, f)).channels,
   henvisninger: async (p: Payload, f: Filters) => (await sources(p, f)).referrers,
   kampanjer: async (p: Payload, f: Filters) => (await sources(p, f)).campaigns,
-  produktgrupper: async (p: Payload, f: Filters) => (await products(p, f)).groups,
-  produkter: async (p: Payload, f: Filters) => (await products(p, f)).topProducts,
-  land: async (p: Payload, f: Filters) =>
-    (await products(p, f)).matrix.map((r) => ({ country: r.country, total: r.total, ...r.groups })),
-  dokumenter: async (p: Payload, f: Filters) => (await products(p, f)).documents,
-  konverteringer: async (p: Payload, f: Filters) => (await conversions(p, f)).byGroup,
+  dokumenter: async (p: Payload, f: Filters) => downloads(p, f),
+  konverteringer: async (p: Payload, f: Filters) => (await conversions(p, f)).byType,
+  'konverteringer-land': async (p: Payload, f: Filters) => (await conversions(p, f)).byCountry,
   sok: async (p: Payload, f: Filters) => (await behaviour(p, f)).searches,
   maaneder: async (p: Payload, f: Filters) => (await monthlyHistory(p, f)).map(({ key: _key, ...r }) => r),
 } as const

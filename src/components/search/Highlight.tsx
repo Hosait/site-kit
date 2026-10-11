@@ -14,7 +14,7 @@ export function Highlight({ text }: { text: string }) {
     <>
       {parts.map((p, i) =>
         p.hit ? (
-          <mark key={i} className="rounded-sm bg-aero px-0.5 text-night">
+          <mark key={i} className="rounded-sm bg-tint px-0.5 text-ink">
             {p.text}
           </mark>
         ) : (

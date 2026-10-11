@@ -5,6 +5,9 @@ import { useState } from 'react'
 import { Img } from '@/components/Img'
 import type { Strings } from '@/lib/i18n'
 import type { Media, VideoBlock } from '@/payload-types'
+import { cn } from '@/utilities/ui'
+
+import { hasSectionBg, sectionBg } from './variants'
 
 /** youtube.com/watch?v=…, youtu.be/…, vimeo.com/… → innebygd adresse uten sporing der det går. */
 function embedUrl(url: string): string | null {
@@ -23,10 +26,10 @@ export function VideoComponent({ block, strings }: { block: VideoBlock; strings:
   const src = block.url ? embedUrl(block.url) : null
 
   return (
-    <section className="py-10 md:py-16">
+    <section className={cn(hasSectionBg(block.background) ? 'py-16 md:py-24' : 'py-10 md:py-16', sectionBg(block.background))}>
       <div className="wrap">
         {block.heading && <h2 className="t-h3 mb-6">{block.heading}</h2>}
-        <div className="relative aspect-video overflow-hidden rounded-sm bg-night">
+        <div className="relative aspect-video overflow-hidden rounded-sm bg-ink">
           {file?.url ? (
             <video controls preload="none" poster={poster?.sizes?.lg?.url ?? poster?.url ?? undefined} className="size-full">
               <source src={file.url} type={file.mimeType ?? 'video/mp4'} />
@@ -47,7 +50,7 @@ export function VideoComponent({ block, strings }: { block: VideoBlock; strings:
               aria-label={`${strings.playVideo}${block.heading ? `: ${block.heading}` : ''}`}
             >
               {poster && <Img media={poster} cover sizes="(min-width: 72rem) 72rem, 100vw" className="absolute inset-0 opacity-80" />}
-              <span className="relative flex size-20 items-center justify-center rounded-full bg-blue text-white shadow-lg transition-transform group-hover:scale-110">
+              <span className="relative flex size-20 items-center justify-center rounded-full bg-brand text-white shadow-lg transition-transform group-hover:scale-110">
                 <svg aria-hidden viewBox="0 0 24 24" className="ml-1 size-8" fill="currentColor">
                   <path d="M8 5v14l11-7z" />
                 </svg>

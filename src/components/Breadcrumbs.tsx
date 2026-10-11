@@ -8,16 +8,16 @@ export function Breadcrumbs({ crumbs, locale, home }: { crumbs: { title: string;
   const s = t(locale)
   return (
     <nav aria-label={s.breadcrumbs} className="wrap-wide pt-5">
-      <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-night/70">
+      <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink/70">
         <li>
-          <Link href={home} className="text-night/70 no-underline hover:text-blue">
+          <Link href={home} className="text-ink/70 no-underline hover:text-brand">
             {s.home}
           </Link>
         </li>
         {crumbs.map((c) => (
           <li key={c.href} className="flex items-center gap-2">
             <span aria-hidden>›</span>
-            <Link href={c.href} className="text-night/70 no-underline hover:text-blue">
+            <Link href={c.href} className="text-ink/70 no-underline hover:text-brand">
               {c.title}
             </Link>
           </li>

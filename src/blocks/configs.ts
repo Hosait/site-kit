@@ -2,26 +2,29 @@ import type { Block, Field } from 'payload'
 
 import { link, linkArray } from '@/fields/link'
 import { richTextEditor } from '@/fields/richText'
-import { SITE_OPTIONS } from '@/lib/sites'
+import { DEFAULT_LOCALE, SINGLE_SITE, SITE_CONFIG, SITE_OPTIONS } from '@/lib/sites'
+import { customBlocks } from '@site/blocks/custom/configs'
+
 import { FormBlock } from './Form/config'
+import { align, assertUniqueSlugs } from './variants'
 
 /**
  * Alle blokker redaktører kan bygge sider med. Hver blokk har en React-komponent
  * med samme navn i src/blocks/components/ og registreres i RenderBlocks.tsx.
  */
 
-/** Bakgrunnsfarge for en seksjon, fra Spilkas palett. */
+/** Bakgrunnsfarge for en seksjon; fargene kommer fra site/theme.json. */
 const background: Field = {
   name: 'background',
   type: 'select',
   label: 'Bakgrunn',
   defaultValue: 'none',
   options: [
-    { label: 'Ingen (hvit)', value: 'none' },
-    { label: 'Mist (lys grå)', value: 'mist' },
-    { label: 'Sky (lys blå)', value: 'sky' },
-    { label: 'Night (mørk)', value: 'night' },
-    { label: 'Sapphire (mørk blå)', value: 'sapphire' },
+    { label: 'Ingen', value: 'none' },
+    { label: 'Lys grå', value: 'muted' },
+    { label: 'Lys merkefarge', value: 'tint' },
+    { label: 'Mørk', value: 'dark' },
+    { label: 'Merkefarge', value: 'brand' },
   ],
 }
 
@@ -69,36 +72,7 @@ export const Hero: Block = {
       admin: { condition: (_, s) => s?.variant !== 'text' },
     },
     linkArray('links', 2),
-  ],
-}
-
-export const DivisionCards: Block = {
-  slug: 'divisionCards',
-  labels: { singular: 'Divisjonskort', plural: 'Divisjonskort' },
-  interfaceName: 'DivisionCardsBlock',
-  fields: [
-    eyebrow,
-    eyebrowHighlight,
-    {
-      name: 'items',
-      type: 'array',
-      label: 'Kort',
-      minRows: 1,
-      maxRows: 4,
-      fields: [
-        { name: 'title', type: 'text', label: 'Tittel', required: true },
-        { name: 'image', type: 'upload', relationTo: 'media', label: 'Bilde', required: true },
-        {
-          name: 'site',
-          type: 'select',
-          label: 'Lenker til nettsted',
-          options: SITE_OPTIONS,
-          admin: { description: 'Tomt = bruk URL under.' },
-        },
-        { name: 'url', type: 'text', label: 'URL (eksternt)', admin: { condition: (_, s) => !s?.site } },
-        { name: 'linkLabel', type: 'text', label: 'Knappetekst' },
-      ],
-    },
+    align,
   ],
 }
 
@@ -214,6 +188,7 @@ export const ImageGrid: Block = {
         { name: 'caption', type: 'text', label: 'Bildetekst' },
       ],
     },
+    background,
   ],
 }
 
@@ -237,6 +212,7 @@ export const Cards: Block = {
       ],
     },
     background,
+    align,
   ],
 }
 
@@ -244,7 +220,7 @@ export const CallToAction: Block = {
   slug: 'cta',
   labels: { singular: 'Handlingsoppfordring', plural: 'Handlingsoppfordringer' },
   interfaceName: 'CallToActionBlock',
-  fields: [heading, { name: 'text', type: 'textarea', label: 'Tekst' }, linkArray('links', 2), background],
+  fields: [heading, { name: 'text', type: 'textarea', label: 'Tekst' }, linkArray('links', 2), background, { ...align, defaultValue: 'center' } as Field],
 }
 
 export const Quote: Block = {
@@ -257,6 +233,7 @@ export const Quote: Block = {
     { name: 'role', type: 'text', label: 'Tittel' },
     { name: 'image', type: 'upload', relationTo: 'media', label: 'Portrett' },
     background,
+    align,
   ],
 }
 
@@ -289,6 +266,7 @@ export const Stats: Block = {
       ],
     },
     background,
+    align,
   ],
 }
 
@@ -326,7 +304,7 @@ export const ArticleFeed: Block = {
       label: 'Hent fra nettsteder',
       hasMany: true,
       options: SITE_OPTIONS,
-      admin: { description: 'Tomt = alle nettsteder (felles nyhetsstrøm).' },
+      admin: { description: 'Tomt = alle nettsteder (felles nyhetsstrøm).', condition: () => !SINGLE_SITE },
     },
     {
       name: 'kind',
@@ -335,12 +313,12 @@ export const ArticleFeed: Block = {
       defaultValue: 'all',
       options: [
         { label: 'Alle', value: 'all' },
-        { label: 'Kunngjøringer', value: 'announcement' },
-        { label: 'Fagblogg', value: 'blog' },
+        ...Object.entries(SITE_CONFIG.articleKinds).map(([value, l]) => ({ value, label: (l as Record<string, string>)[DEFAULT_LOCALE] })),
       ],
     },
     { name: 'limit', type: 'number', label: 'Antall', defaultValue: 3, min: 1, max: 48 },
     { name: 'paginate', type: 'checkbox', label: 'Vis alle med «Vis flere»', defaultValue: false },
+    background,
   ],
 }
 
@@ -361,6 +339,7 @@ export const People: Block = {
         { label: 'Kompakt liste', value: 'list' },
       ],
     },
+    background,
   ],
 }
 
@@ -371,6 +350,7 @@ export const Documents: Block = {
   fields: [
     heading,
     { name: 'documents', type: 'relationship', relationTo: 'documents', hasMany: true, label: 'Dokumenter' },
+    background,
   ],
 }
 
@@ -391,6 +371,7 @@ export const Timeline: Block = {
         { name: 'image', type: 'upload', relationTo: 'media', label: 'Bilde' },
       ],
     },
+    background,
   ],
 }
 
@@ -409,6 +390,7 @@ export const Accordion: Block = {
         { name: 'content', type: 'richText', editor: richTextEditor, label: 'Innhold' },
       ],
     },
+    background,
   ],
 }
 
@@ -426,6 +408,7 @@ export const Video: Block = {
     },
     { name: 'file', type: 'upload', relationTo: 'media', label: 'Eller videofil' },
     { name: 'poster', type: 'upload', relationTo: 'media', label: 'Forhåndsbilde' },
+    background,
   ],
 }
 
@@ -454,47 +437,7 @@ export const ChildPages: Block = {
       ],
     },
     columns,
-  ],
-}
-
-export const FrameWeight: Block = {
-  slug: 'frameWeight',
-  labels: { singular: 'Rammevektskalkulator', plural: 'Rammevektskalkulatorer' },
-  interfaceName: 'FrameWeightBlock',
-  fields: [
-    {
-      name: 'systems',
-      type: 'select',
-      label: 'Hengselsystem',
-      hasMany: true,
-      required: true,
-      defaultValue: ['Classic'],
-      options: [
-        { label: 'Spilka Classic™', value: 'Classic' },
-        { label: 'Spilka Opus™', value: 'Opus' },
-      ],
-      admin: { description: 'Formler og modultabeller ligger i koden (src/lib/frameWeight.ts).' },
-    },
-  ],
-}
-
-export const ImageSequenceBlockConfig: Block = {
-  slug: 'imageSequence',
-  labels: { singular: 'Bildesekvens (animasjon)', plural: 'Bildesekvenser' },
-  interfaceName: 'ImageSequenceBlock',
-  fields: [
-    heading,
-    { name: 'intro', type: 'textarea', label: 'Ingress' },
-    {
-      name: 'sequence',
-      type: 'select',
-      label: 'Sekvens',
-      required: true,
-      options: [{ label: 'Classic – vindu som åpnes (sort)', value: 'classic-black' }],
-      admin: { description: 'Nye sekvenser legges i public/sequences/ og registreres i ImageSequence.tsx.' },
-    },
-    { name: 'startLabel', type: 'text', label: 'Tekst ved start', admin: { placeholder: 'Lukket' } },
-    { name: 'endLabel', type: 'text', label: 'Tekst ved slutt', admin: { placeholder: 'Åpent' } },
+    background,
   ],
 }
 
@@ -519,10 +462,11 @@ export const Facts: Block = {
         },
       ],
     },
+    background,
   ],
 }
 
-export const pageBlocks: Block[] = [
+const kitBlocks: Block[] = [
   Hero,
   Content,
   TextImage,
@@ -530,7 +474,6 @@ export const pageBlocks: Block[] = [
   ImageGrid,
   Cards,
   ChildPages,
-  DivisionCards,
   CallToAction,
   Quote,
   Stats,
@@ -542,7 +485,7 @@ export const pageBlocks: Block[] = [
   Accordion,
   Video,
   Embed,
-  FrameWeight,
-  ImageSequenceBlockConfig,
   FormBlock,
 ]
+
+export const pageBlocks = assertUniqueSlugs([...kitBlocks, ...customBlocks])

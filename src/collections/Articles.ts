@@ -10,12 +10,17 @@ import { revalidateDoc, revalidateDocDelete } from '@/lib/revalidate'
 import { indexDoc, unindexDoc } from '@/lib/search/indexer'
 import { slugify } from '@/lib/slugify'
 import type { Article } from '@/payload-types'
+import { DEFAULT_LOCALE, SITE_CONFIG } from '@/lib/sites'
 
-/** Kunngjøringer (spilka.com) og fagblogg (SBS/DWS). Adresse: /{språk}/{articleBase}/{slug}. */
+/** Artikler (nyheter, fagblogg …; typene står i site/config.ts). Adresse: /{språk}/{articleBase}/{slug}. */
 const normalizeSlug: CollectionBeforeChangeHook<Article> = async ({ data, req, originalDoc }) => {
-  const locale = req.locale && req.locale !== 'all' ? req.locale : 'no'
+  const locale = req.locale && req.locale !== 'all' ? req.locale : DEFAULT_LOCALE
   data.slug = data.slug ? slugify(data.slug) : slugify(data.title || '', { transliterate: true })
-  if (!data.slug) throw new APIError('Artikkelen må ha en slug eller tittel.', 400)
+  if (!data.slug) {
+    // Autosave stores an empty draft as soon as «create» opens; only publishing needs an address.
+    if (data._status !== 'published') return data
+    throw new APIError('Artikkelen må ha en slug eller tittel.', 400)
+  }
   if (!data.publishedAt && data._status === 'published') data.publishedAt = new Date().toISOString()
 
   const site = data.site ?? originalDoc?.site
@@ -78,11 +83,11 @@ export const Articles: CollectionConfig<'articles'> = {
       type: 'select',
       label: 'Type',
       required: true,
-      defaultValue: 'announcement',
-      options: [
-        { label: 'Kunngjøring', value: 'announcement' },
-        { label: 'Fagblogg', value: 'blog' },
-      ],
+      defaultValue: Object.keys(SITE_CONFIG.articleKinds)[0],
+      options: Object.entries(SITE_CONFIG.articleKinds).map(([value, l]) => {
+        const labels = l as Record<string, string>
+        return { value, label: { nb: labels[DEFAULT_LOCALE], en: labels.en ?? labels[DEFAULT_LOCALE] } }
+      }),
       admin: { position: 'sidebar' },
     },
     {

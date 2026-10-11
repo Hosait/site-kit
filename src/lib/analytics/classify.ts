@@ -50,7 +50,7 @@ export type Source = { channel: Channel; source: string | null; medium: string |
 
 /**
  * Trafikkilde for første side i et besøk. UTM-parametre vinner; ellers avgjør henvisningen.
- * Henvisninger fra egne domener (inkl. de andre Spilka-nettstedene) regnes som direkte.
+ * Henvisninger fra egne domener (inkl. installasjonens andre nettsteder) regnes som direkte.
  */
 export function sourceFrom(referrer: string | null | undefined, landing: URLSearchParams, ownHosts: string[]): Source {
   const utmSource = clean(landing.get('utm_source'))

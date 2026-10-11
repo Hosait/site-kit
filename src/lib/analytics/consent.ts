@@ -1,15 +1,19 @@
 /**
  * Samtykke til informasjonskapsler. Deles av banneret, sporingsskriptet og serveren.
  *
- * - `spilka-consent`: valget (nødvendig for å huske det; ingen sporing). `v1.<statistikk 0/1>.<id>.<tid>`
- * - `spilka-vid`: anonym besøks-ID, settes bare med samtykke til statistikk. Gjør det mulig å se
+ * - `<cookiePrefix>-consent`: valget (nødvendig for å huske det; ingen sporing). `v1.<statistikk 0/1>.<id>.<tid>`
+ * - `<cookiePrefix>-vid`: anonym besøks-ID, settes bare med samtykke til statistikk. Gjør det mulig å se
  *   tilbakevendende besøkende og besøk over flere dager.
  *
  * Øk CONSENT_VERSION når kategoriene eller teksten endres vesentlig: alle blir spurt på nytt.
  */
+import { SITE_CONFIG } from '@/lib/sites'
+
 export const CONSENT_VERSION = 1
-export const CONSENT_COOKIE = 'spilka-consent'
-export const VISITOR_COOKIE = 'spilka-vid'
+/** Fired by the banner when the visitor allows statistics (the tracker then sends the held-back pageview). */
+export const CONSENT_GIVEN_EVENT = `${SITE_CONFIG.cookiePrefix}:consent-given`
+export const CONSENT_COOKIE = `${SITE_CONFIG.cookiePrefix}-consent`
+export const VISITOR_COOKIE = `${SITE_CONFIG.cookiePrefix}-vid`
 /** Samtykket huskes i 12 måneder; deretter spørres det på nytt. */
 export const CONSENT_MAX_AGE = 60 * 60 * 24 * 365
 export const VISITOR_MAX_AGE = 60 * 60 * 24 * 395

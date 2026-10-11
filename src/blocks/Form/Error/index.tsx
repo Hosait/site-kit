@@ -12,7 +12,7 @@ export const Error = ({ name }: { name: string }) => {
   const strings = useFormStrings()
   const type = errors[name]?.type
   return (
-    <div className="mt-2 text-sm text-pink" role="alert">
+    <div className="mt-2 text-sm text-highlight" role="alert">
       {(errors[name]?.message as string) || (type === 'pattern' ? strings.invalidEmail : strings.requiredError)}
     </div>
   )

@@ -21,6 +21,7 @@ import { Users } from './collections/Users'
 import { richTextEditor } from './fields/richText'
 import { plugins } from './plugins'
 import { getServerSideURL } from './utilities/getURL'
+import { DEFAULT_LOCALE, FEATURES, LOCALE_CONFIG, LOCALES, SITE_CONFIG } from './lib/sites'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -29,14 +30,16 @@ export default buildConfig({
   admin: {
     importMap: { baseDir: path.resolve(dirname) },
     user: Users.slug,
+    // Feature switches in site/config.ts decide which admin panels exist.
     components: {
-      beforeDashboard: ['/components/admin/SeedPanel#SeedPanel', '/components/admin/SearchPanel#SearchPanel'],
-      afterNavLinks: ['/components/analytics/admin/AnalyticsNav#AnalyticsNav'],
-      views: {
-        analytics: { Component: '/components/analytics/admin/AnalyticsView#AnalyticsView', path: '/analytics' },
-      },
+      beforeDashboard: ['/components/admin/SeedPanel#SeedPanel', ...(FEATURES.search ? ['/components/admin/SearchPanel#SearchPanel'] : [])],
+      afterNavLinks: FEATURES.analytics === 'builtin' ? ['/components/analytics/admin/AnalyticsNav#AnalyticsNav'] : [],
+      views:
+        FEATURES.analytics === 'builtin'
+          ? { analytics: { Component: '/components/analytics/admin/AnalyticsView#AnalyticsView', path: '/analytics' } }
+          : {},
     },
-    meta: { titleSuffix: ' – Spilka CMS' },
+    meta: { titleSuffix: SITE_CONFIG.admin.titleSuffix },
     livePreview: {
       breakpoints: [
         { label: 'Mobil', name: 'mobile', width: 375, height: 812 },
@@ -45,13 +48,10 @@ export default buildConfig({
       ],
     },
   },
-  i18n: { supportedLanguages: { nb, en }, fallbackLanguage: 'nb' },
+  i18n: { supportedLanguages: { nb, en }, fallbackLanguage: SITE_CONFIG.admin.language },
   localization: {
-    locales: [
-      { code: 'no', label: 'Norsk' },
-      { code: 'en', label: 'English' },
-    ],
-    defaultLocale: 'no',
+    locales: LOCALES.map((code) => ({ code, label: LOCALE_CONFIG[code].label })),
+    defaultLocale: DEFAULT_LOCALE,
     fallback: false,
   },
   editor: richTextEditor,
@@ -69,8 +69,8 @@ export default buildConfig({
   // E-post (kvitteringer fra kontaktskjema) når SMTP er satt opp; ellers skrives e-post til loggen.
   email: process.env.SMTP_HOST
     ? nodemailerAdapter({
-        defaultFromAddress: process.env.SMTP_FROM || 'nettsted@spilka.com',
-        defaultFromName: 'Spilka',
+        defaultFromAddress: process.env.SMTP_FROM || SITE_CONFIG.email.fromAddress,
+        defaultFromName: SITE_CONFIG.email.fromName,
         transportOptions: {
           host: process.env.SMTP_HOST,
           port: Number(process.env.SMTP_PORT || 587),

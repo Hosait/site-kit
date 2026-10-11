@@ -1,6 +1,6 @@
 import { getRedirects } from '@/lib/data'
 import { resolveLink } from '@/lib/links'
-import { isLocale, isSiteKey, type SiteKey } from '@/lib/sites'
+import { DEFAULT_LOCALE, DEFAULT_SITE, isLocale, isSiteKey, LOCALES, type SiteKey } from '@/lib/sites'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,13 +10,13 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET() {
   const out: { from: string; to: string; site: SiteKey | null; permanent: boolean }[] = []
-  for (const locale of ['no', 'en'] as const) {
+  for (const locale of LOCALES) {
     for (const r of await getRedirects(locale)) {
       const from = r.from.replace(/\/$/, '').normalize('NFC')
       const first = from.split('/')[1]
-      if ((isLocale(first) ? first : 'no') !== locale) continue
+      if ((isLocale(first) ? first : DEFAULT_LOCALE) !== locale) continue
       const site = isSiteKey(r.site) ? r.site : null
-      const to = resolveLink(r.to as never, site ?? 'industri', locale)
+      const to = resolveLink(r.to as never, site ?? DEFAULT_SITE, locale)
       if (to) out.push({ from, to, site, permanent: (r as { permanent?: boolean | null }).permanent !== false })
     }
   }

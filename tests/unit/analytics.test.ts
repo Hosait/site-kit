@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import { cleanPath, deviceFrom, isBot, sourceFrom } from '../../src/lib/analytics/classify'
 import { CONSENT_VERSION, isVisitorId, parseConsent, readCookie, serializeConsent } from '../../src/lib/analytics/consent'
 
-const own = ['spilka.com', 'spilka-sbs.com', 'spilka-dws.com', 'spilka.hosait.com']
+const own = ['example.com', 'example-two.com', 'example-three.com', 'kit-demo.hosait.com']
 const none = new URLSearchParams()
 
 test('enhetstype fra User-Agent', () => {
@@ -29,16 +29,16 @@ test('trafikkilde: søk, sosiale medier, henvisning, direkte og egne domener', (
   assert.equal(sourceFrom('https://www.linkedin.com/feed/', none, own).source, 'LinkedIn')
   assert.equal(sourceFrom('https://lnkd.in/abc', none, own).channel, 'social')
   assert.equal(sourceFrom('https://m.facebook.com/', none, own).source, 'Facebook')
-  assert.deepEqual(sourceFrom('https://www.byggeindustrien.no/artikkel', none, own), {
+  assert.deepEqual(sourceFrom('https://www.fagbladet.no/artikkel', none, own), {
     channel: 'referral',
-    source: 'byggeindustrien.no',
+    source: 'fagbladet.no',
     medium: null,
     campaign: null,
   })
   assert.equal(sourceFrom('', none, own).channel, 'direct')
-  // De andre Spilka-nettstedene og staging regnes ikke som kilde.
-  assert.equal(sourceFrom('https://www.spilka-sbs.com/no', none, own).channel, 'direct')
-  assert.equal(sourceFrom('https://dws.spilka.hosait.com/no', none, own).channel, 'direct')
+  // Installasjonens andre nettsteder og staging regnes ikke som kilde.
+  assert.equal(sourceFrom('https://www.example-two.com/no', none, own).channel, 'direct')
+  assert.equal(sourceFrom('https://two.kit-demo.hosait.com/no', none, own).channel, 'direct')
 })
 
 test('trafikkilde: UTM-parametre vinner over henvisningen', () => {
@@ -60,7 +60,7 @@ test('samtykke-informasjonskapsel: lese, skrive, gammel versjon avvises', () => 
   assert.equal(parseConsent(raw.replace(/^v\d+/, 'v0')), null)
   assert.equal(parseConsent('v1.2.x.1'), null)
   assert.equal(parseConsent(null), null)
-  assert.equal(readCookie(`a=1; spilka-consent=${encodeURIComponent(raw)}; b=2`, 'spilka-consent'), raw)
+  assert.equal(readCookie(`a=1; site-consent=${encodeURIComponent(raw)}; b=2`, 'site-consent'), raw)
   assert.ok(isVisitorId('HWNeB6-KTsFvFjsFx9Z1qw'))
   assert.ok(!isVisitorId('kort'))
   assert.ok(!isVisitorId('<script>alert(1)</script>xxxxxxxx'))

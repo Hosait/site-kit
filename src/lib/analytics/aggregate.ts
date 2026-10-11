@@ -1,5 +1,6 @@
 import { sql } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
+import { SITE_CONFIG } from '@/lib/sites'
 
 /**
  * Daglige summer (analytics_daily) for langtidsutvikling: beholdes i 25 måneder, lenge etter at
@@ -11,10 +12,10 @@ type SQL = ReturnType<typeof sql>
 const run = async (payload: Payload, q: SQL): Promise<Row[]> =>
   (await (payload.db as unknown as { drizzle: { execute: (q: SQL) => Promise<{ rows: Row[] }> } }).drizzle.execute(q)).rows
 
-const TZ = `'Europe/Oslo'`
+const TZ = `'${SITE_CONFIG.timezone}'`
 const midnight = (date: string) => sql.raw(`('${date}'::timestamp at time zone ${TZ})`)
 const CONVERSIONS = sql.raw(`('download', 'email', 'phone', 'form')`)
-const osloDate = (d: Date) => d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' })
+const osloDate = (d: Date) => d.toLocaleDateString('sv-SE', { timeZone: SITE_CONFIG.timezone })
 const nextDate = (date: string) => new Date(new Date(`${date}T12:00:00Z`).getTime() + 86_400_000).toISOString().slice(0, 10)
 
 /** Summerer én dag (erstatter eventuelle rader for dagen). */
@@ -30,9 +31,6 @@ async function rollupDay(payload: Payload, day: string) {
     sql`insert into analytics_daily (day, site, locale, dimension, key, visitors, sessions, pageviews, conversions)
       select ${day}, site, coalesce(locale, ''), 'total', '', ${metrics}
         from analytics_events where ${range} group by site, coalesce(locale, '')
-      union all
-      select ${day}, site, coalesce(locale, ''), 'group', product_group, ${metrics}
-        from analytics_events where ${range} and product_group is not null group by site, coalesce(locale, ''), product_group
       union all
       select ${day}, site, coalesce(locale, ''), 'channel', coalesce(channel, 'direct'), ${metrics}
         from analytics_events where ${range} group by site, coalesce(locale, ''), coalesce(channel, 'direct')
@@ -82,7 +80,7 @@ export type MonthRow = { month: string; visitors: number; sessions: number; page
 export async function monthlyHistory(
   payload: Payload,
   f: { site: string | null; locale: string | null },
-  dimension: 'total' | 'group' = 'total',
+  dimension: 'total' = 'total',
 ): Promise<(MonthRow & { key: string })[]> {
   await rollup(payload)
   const filters: SQL[] = [sql`dimension = ${dimension}`]

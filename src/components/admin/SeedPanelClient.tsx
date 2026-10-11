@@ -38,7 +38,7 @@ export function SeedPanelClient() {
     if (!window.confirm('Dette erstatter alt innhold (sider, artikler, personer, dokumenter, bilder) med testinnholdet. Brukere berøres ikke. Fortsette?')) return
     setBusy(true)
     setMessage('Legger inn innhold …')
-    const body = await call('db', 'POST')
+    const body = await call('db?replace=1', 'POST')
     setBusy(false)
     setMessage(
       body.ok
@@ -61,7 +61,7 @@ export function SeedPanelClient() {
   return (
     <div style={{ border: '1px solid var(--theme-elevation-150)', borderRadius: 4, padding: 'var(--base)', marginBottom: 'calc(var(--base) * 2)' }}>
       <h3 style={{ marginTop: 0 }}>Testinnhold</h3>
-      <p>Fyller denne testinstallasjonen med innholdet fra dagens nettsteder. Kjør steg 1, deretter steg 2.</p>
+      <p>Fyller denne installasjonen med innholdet i seed/ (erstatter alt innhold; brukere berøres ikke). Steg 2 henter bilder og dokumenter fra kildene i seed/sources.json.</p>
       <div style={{ display: 'flex', gap: 'var(--base)', flexWrap: 'wrap' }}>
         <Button buttonStyle="secondary" disabled={busy || media?.running} onClick={seedDb}>
           1. Legg inn innhold

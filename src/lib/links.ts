@@ -1,5 +1,6 @@
 import type { Article, Page } from '@/payload-types'
 import { isSiteKey, localePath, SITES, siteHref, type Locale, type SiteKey } from './sites'
+import { DEFAULT_SITE } from '@/lib/sites'
 
 export type LinkValue = {
   type?: 'reference' | 'custom' | null
@@ -15,7 +16,7 @@ export type LinkValue = {
 
 /** Offentlig sti for en side eller artikkel, uten domene. */
 export function docPath(collection: 'pages' | 'articles', doc: Partial<Page & Article>, locale: Locale): string | null {
-  const site: SiteKey = isSiteKey(doc.site) ? doc.site : 'industri'
+  const site: SiteKey = isSiteKey(doc.site) ? doc.site : DEFAULT_SITE
   if (collection === 'pages') {
     if (doc.path === undefined || doc.path === null) return null
     return localePath(locale, doc.path)

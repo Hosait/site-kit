@@ -1,18 +1,19 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
-import { DEFAULT_LOCALE, isLocale, isSiteKey, siteFromHost, type SiteKey } from '@/lib/sites'
+import { DEFAULT_SITE, FEATURES, isLocale, isSiteKey, SITE_CONFIG, siteFromHost, type SiteKey } from '@/lib/sites'
+import { negotiateLocale, searchRewrite } from '@/lib/locales'
 
 /**
  * Host → nettsted. Offentlige stier skrives internt om til /{site}/{locale}/...
  * slik at hvert nettsted kan genereres statisk for seg.
  *
  * Ukjent vert (staging på *.hosait.com, localhost): nettstedet velges med `?site=sbs`
- * og huskes i en cookie. Standard er industri.
+ * og huskes i en cookie. Standard er DEFAULT_SITE fra site/config.ts.
  *
  * Omdirigeringer fra CMS-et utføres her, før siden rendres (raskere, og unngår at Next
  * sender dobbel Location-header når en ISR-side omdirigerer).
  */
-const SITE_COOKIE = 'spilka-site'
+const SITE_COOKIE = `${SITE_CONFIG.cookiePrefix}-site`
 
 type Redirect = { from: string; to: string; site: SiteKey | null; permanent: boolean }
 let redirectCache: { at: number; list: Redirect[] } | null = null
@@ -58,7 +59,7 @@ export async function proxy(req: NextRequest) {
     } else if (isSiteKey(fromCookie)) {
       site = fromCookie
     } else {
-      site = 'industri'
+      site = DEFAULT_SITE
     }
   }
 
@@ -72,9 +73,7 @@ export async function proxy(req: NextRequest) {
   }
 
   if (pathname === '/') {
-    const accept = req.headers.get('accept-language') || ''
-    const prefersNorwegian = /\b(nb|no|nn)\b/i.test(accept.split(',')[0] || '')
-    const locale = accept ? (prefersNorwegian ? 'no' : 'en') : DEFAULT_LOCALE
+    const locale = negotiateLocale(req.headers.get('accept-language'))
     return withCookie(NextResponse.redirect(publicUrl(req, `/${locale}${req.nextUrl.search}`), 302))
   }
 
@@ -87,6 +86,13 @@ export async function proxy(req: NextRequest) {
   if (hit) {
     const target = /^https?:\/\//.test(hit.to) ? new URL(hit.to) : publicUrl(req, hit.to)
     return withCookie(NextResponse.redirect(target, hit.permanent ? 308 : 307))
+  }
+
+  const search = FEATURES.search ? searchRewrite(pathname) : null
+  if (search) {
+    const url = new URL(`/${site}/${search.locale}/site-search`, req.url)
+    url.search = req.nextUrl.search
+    return withCookie(NextResponse.rewrite(url))
   }
 
   const [first] = pathname.split('/').filter(Boolean)

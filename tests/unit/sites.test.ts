@@ -1,35 +1,31 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { siteFromHost, siteHref, siteOrigin } from '../../src/lib/sites'
+import { DEFAULT_SITE, SINGLE_SITE, siteFromHost, siteHref, siteOrigin } from '../../src/lib/sites'
 
-test('produksjonsdomener', () => {
-  assert.equal(siteFromHost('www.spilka.com'), 'industri')
-  assert.equal(siteFromHost('spilka-sbs.com'), 'sbs')
-  assert.equal(siteFromHost('www.spilka-dws.com:443'), 'dws')
-  assert.equal(siteFromHost('ukjent.no'), null)
+test('the demo is one site called main', () => {
+  assert.equal(DEFAULT_SITE, 'main')
+  assert.equal(SINGLE_SITE, true)
 })
 
-test('underdomener av test-adressen (STAGING_HOST)', () => {
-  process.env.STAGING_HOST = 'spilka.hosait.com'
-  assert.equal(siteFromHost('sbs.spilka.hosait.com'), 'sbs')
-  assert.equal(siteFromHost('dws.spilka.hosait.com'), 'dws')
-  assert.equal(siteFromHost('spilka.hosait.com'), null) // standard = industri i proxy
-  assert.equal(siteFromHost('evil.spilka.hosait.com'), null)
-  assert.equal(siteHref('sbs', 'industri', '/no'), 'https://sbs.spilka.hosait.com/no')
-  assert.equal(siteHref('industri', 'dws', '/en'), 'https://spilka.hosait.com/en')
-  delete process.env.STAGING_HOST
-  assert.equal(siteHref('sbs', 'industri', '/no'), '/no?site=sbs')
+test('production hosts map to the site, unknown hosts to null', () => {
+  assert.equal(siteFromHost('www.example.com'), 'main')
+  assert.equal(siteFromHost('EXAMPLE.com:443'), 'main')
+  assert.equal(siteFromHost('other.no'), null)
 })
 
-test('siteOrigin på staging bruker eget underdomene (canonical, hreflang, sitemap)', () => {
-  process.env.STAGING_HOST = 'spilka.hosait.com'
-  process.env.NEXT_PUBLIC_SERVER_URL = 'https://spilka.hosait.com'
-  assert.equal(siteOrigin('industri'), 'https://spilka.hosait.com')
-  assert.equal(siteOrigin('sbs'), 'https://sbs.spilka.hosait.com')
-  assert.equal(siteOrigin('dws'), 'https://dws.spilka.hosait.com')
+test('staging: the default site lives on the staging host itself', () => {
+  process.env.STAGING_HOST = 'kit-demo.hosait.com'
+  process.env.NEXT_PUBLIC_SERVER_URL = 'https://kit-demo.hosait.com'
+  assert.equal(siteOrigin('main'), 'https://kit-demo.hosait.com')
+  assert.equal(siteFromHost('main.kit-demo.hosait.com'), null)
+  assert.equal(siteHref('main', 'main', '/no'), '/no')
   delete process.env.STAGING_HOST
-  process.env.NEXT_PUBLIC_SERVER_URL = 'http://localhost:3100'
-  assert.equal(siteOrigin('sbs'), 'http://localhost:3100')
   Reflect.deleteProperty(process.env, 'NEXT_PUBLIC_SERVER_URL')
+})
+
+test('production origins come from the config', () => {
+  process.env.SITE_ORIGINS = 'production'
+  assert.equal(siteOrigin('main'), 'https://www.example.com')
+  delete process.env.SITE_ORIGINS
 })

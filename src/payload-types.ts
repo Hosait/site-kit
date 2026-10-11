@@ -179,7 +179,6 @@ export interface Page {
         | ImageGridBlock
         | CardsBlock
         | ChildPagesBlock
-        | DivisionCardsBlock
         | CallToActionBlock
         | QuoteBlock
         | StatsBlock
@@ -191,8 +190,6 @@ export interface Page {
         | AccordionBlock
         | VideoBlock
         | EmbedBlock
-        | FrameWeightBlock
-        | ImageSequenceBlock
         | FormBlock
       )[]
     | null;
@@ -205,7 +202,7 @@ export interface Page {
     description?: string | null;
     noindex?: boolean | null;
   };
-  site: 'industri' | 'sbs' | 'dws';
+  site: 'main';
   isHome?: boolean | null;
   parent?: (number | null) | Page;
   /**
@@ -214,7 +211,7 @@ export interface Page {
   slug?: string | null;
   path?: string | null;
   /**
-   * Overstyrer adressen, f.eks. for å beholde en gammel Craft-adresse. Uten / foran.
+   * Overstyrer adressen, f.eks. for å beholde en adresse fra det gamle nettstedet. Uten / foran.
    */
   pathOverride?: string | null;
   /**
@@ -226,11 +223,6 @@ export interface Page {
    */
   cardImage?: (number | null) | Media;
   summary?: string | null;
-  /**
-   * Brukes i besøksanalysen (koder fra Spilka360). Tomt på en side = arves fra overordnet side.
-   */
-  productGroup?:
-    ('Classic' | 'Opus' | 'Swing' | 'SideHinged' | 'TopHinged' | 'Tango' | 'BalconyDoor' | 'FixedFrame') | null;
   hideFromNav?: boolean | null;
   updatedAt: string;
   createdAt: string;
@@ -271,6 +263,7 @@ export interface HeroBlock {
         id?: string | null;
       }[]
     | null;
+  align?: ('left' | 'center') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'hero';
@@ -388,15 +381,10 @@ export interface FolderInterface {
 export interface Document {
   id: number;
   title: string;
-  docType: 'datasheet' | 'epd' | 'fdv' | 'installation' | 'drawing' | 'certificate' | 'brochure' | 'report' | 'other';
+  docType: 'brochure' | 'datasheet' | 'manual' | 'certificate' | 'other';
   language?: ('no' | 'en' | 'multi') | null;
-  sites?: ('industri' | 'sbs' | 'dws')[] | null;
+  sites?: 'main'[] | null;
   description?: string | null;
-  /**
-   * Brukes i besøksanalysen (koder fra Spilka360). Tomt på en side = arves fra overordnet side.
-   */
-  productGroup?:
-    ('Classic' | 'Opus' | 'Swing' | 'SideHinged' | 'TopHinged' | 'Tango' | 'BalconyDoor' | 'FixedFrame') | null;
   prefix?: string | null;
   _objectKey?: string | null;
   folder?: (number | null) | FolderInterface;
@@ -445,8 +433,8 @@ export interface Article {
     description?: string | null;
     noindex?: boolean | null;
   };
-  site: 'industri' | 'sbs' | 'dws';
-  kind: 'announcement' | 'blog';
+  site: 'main';
+  kind: 'news' | 'blog';
   publishedAt?: string | null;
   /**
    * Lages fra tittelen hvis tom.
@@ -463,7 +451,7 @@ export interface Article {
 export interface ContentBlock {
   width?: ('text' | 'wide') | null;
   align?: ('left' | 'center') | null;
-  background?: ('none' | 'mist' | 'sky' | 'night' | 'sapphire') | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   richText?: {
     root: {
       type: string;
@@ -508,7 +496,7 @@ export interface TextImageBlock {
   image: number | Media;
   imagePosition?: ('left' | 'right') | null;
   layout?: ('split' | 'feature') | null;
-  background?: ('none' | 'mist' | 'sky' | 'night' | 'sapphire') | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   links?:
     | {
         link?: {
@@ -560,6 +548,7 @@ export interface ImageGridBlock {
         id?: string | null;
       }[]
     | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'imageGrid';
@@ -595,7 +584,8 @@ export interface CardsBlock {
         id?: string | null;
       }[]
     | null;
-  background?: ('none' | 'mist' | 'sky' | 'night' | 'sapphire') | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
+  align?: ('left' | 'center') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'cards';
@@ -613,36 +603,10 @@ export interface ChildPagesBlock {
   parent?: (number | null) | Page;
   depth?: ('1' | '2') | null;
   columns?: ('2' | '3' | '4') | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'childPages';
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "DivisionCardsBlock".
- */
-export interface DivisionCardsBlock {
-  eyebrow?: string | null;
-  /**
-   * Vises i blått, f.eks. «WE BUILD A BRIGHTER».
-   */
-  eyebrowHighlight?: string | null;
-  items?:
-    | {
-        title: string;
-        image: number | Media;
-        /**
-         * Tomt = bruk URL under.
-         */
-        site?: ('industri' | 'sbs' | 'dws') | null;
-        url?: string | null;
-        linkLabel?: string | null;
-        id?: string | null;
-      }[]
-    | null;
-  id?: string | null;
-  blockName?: string | null;
-  blockType: 'divisionCards';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -672,7 +636,8 @@ export interface CallToActionBlock {
         id?: string | null;
       }[]
     | null;
-  background?: ('none' | 'mist' | 'sky' | 'night' | 'sapphire') | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
+  align?: ('left' | 'center') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'cta';
@@ -686,7 +651,8 @@ export interface QuoteBlock {
   author?: string | null;
   role?: string | null;
   image?: (number | null) | Media;
-  background?: ('none' | 'mist' | 'sky' | 'night' | 'sapphire') | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
+  align?: ('left' | 'center') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'quote';
@@ -715,7 +681,8 @@ export interface StatsBlock {
         id?: string | null;
       }[]
     | null;
-  background?: ('none' | 'mist' | 'sky' | 'night' | 'sapphire') | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
+  align?: ('left' | 'center') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'stats';
@@ -733,6 +700,7 @@ export interface FactsBlock {
         id?: string | null;
       }[]
     | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'facts';
@@ -746,10 +714,11 @@ export interface ArticleFeedBlock {
   /**
    * Tomt = alle nettsteder (felles nyhetsstrøm).
    */
-  sites?: ('industri' | 'sbs' | 'dws')[] | null;
-  kind?: ('all' | 'announcement' | 'blog') | null;
+  sites?: 'main'[] | null;
+  kind?: ('all' | 'news' | 'blog') | null;
   limit?: number | null;
   paginate?: boolean | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'articleFeed';
@@ -762,6 +731,7 @@ export interface PeopleBlock {
   heading?: string | null;
   people?: (number | Person)[] | null;
   layout?: ('grid' | 'list') | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'people';
@@ -778,7 +748,7 @@ export interface Person {
   phone?: string | null;
   image?: (number | null) | Media;
   bio?: string | null;
-  site: 'industri' | 'sbs' | 'dws';
+  site: 'main';
   /**
    * Vises ikke i søket på nettstedene.
    */
@@ -793,6 +763,7 @@ export interface Person {
 export interface DocumentsBlock {
   heading?: string | null;
   documents?: (number | Document)[] | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'documents';
@@ -812,6 +783,7 @@ export interface TimelineBlock {
         id?: string | null;
       }[]
     | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'timeline';
@@ -843,6 +815,7 @@ export interface AccordionBlock {
         id?: string | null;
       }[]
     | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'accordion';
@@ -859,6 +832,7 @@ export interface VideoBlock {
   url?: string | null;
   file?: (number | null) | Media;
   poster?: (number | null) | Media;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   id?: string | null;
   blockName?: string | null;
   blockType: 'video';
@@ -876,36 +850,6 @@ export interface EmbedBlock {
   id?: string | null;
   blockName?: string | null;
   blockType: 'embed';
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "FrameWeightBlock".
- */
-export interface FrameWeightBlock {
-  /**
-   * Formler og modultabeller ligger i koden (src/lib/frameWeight.ts).
-   */
-  systems: ('Classic' | 'Opus')[];
-  id?: string | null;
-  blockName?: string | null;
-  blockType: 'frameWeight';
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ImageSequenceBlock".
- */
-export interface ImageSequenceBlock {
-  heading?: string | null;
-  intro?: string | null;
-  /**
-   * Nye sekvenser legges i public/sequences/ og registreres i ImageSequence.tsx.
-   */
-  sequence: 'classic-black';
-  startLabel?: string | null;
-  endLabel?: string | null;
-  id?: string | null;
-  blockName?: string | null;
-  blockType: 'imageSequence';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1095,7 +1039,7 @@ export interface Form {
  */
 export interface SiteSetting {
   id: number;
-  site: 'industri' | 'sbs' | 'dws';
+  site: 'main';
   nav?:
     | {
         link?: {
@@ -1216,10 +1160,6 @@ export interface SiteSetting {
         id?: string | null;
       }[]
     | null;
-  /**
-   * Personvernvennlig analyse uten cookies (samme som i dag).
-   */
-  fathomSiteId?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1231,7 +1171,7 @@ export interface User {
   id: number;
   name?: string | null;
   role: 'admin' | 'editor';
-  sites?: ('industri' | 'sbs' | 'dws')[] | null;
+  sites?: 'main'[] | null;
   /**
    * Administratorer har alltid tilgang.
    */
@@ -1299,7 +1239,6 @@ export interface AnalyticsEvent {
   path?: string | null;
   pageKind?: string | null;
   pageId?: number | null;
-  productGroup?: string | null;
   docId?: number | null;
   label?: string | null;
   value?: number | null;
@@ -1393,7 +1332,7 @@ export interface Redirect {
   /**
    * Tomt = gjelder alle nettsteder.
    */
-  site?: ('industri' | 'sbs' | 'dws') | null;
+  site?: 'main' | null;
   /**
    * Gammel sti, f.eks. /en/career/test
    */
@@ -1432,7 +1371,6 @@ export interface FormSubmission {
   site?: string | null;
   locale?: string | null;
   pagePath?: string | null;
-  productGroup?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1678,7 +1616,6 @@ export interface PagesSelect<T extends boolean = true> {
         imageGrid?: T | ImageGridBlockSelect<T>;
         cards?: T | CardsBlockSelect<T>;
         childPages?: T | ChildPagesBlockSelect<T>;
-        divisionCards?: T | DivisionCardsBlockSelect<T>;
         cta?: T | CallToActionBlockSelect<T>;
         quote?: T | QuoteBlockSelect<T>;
         stats?: T | StatsBlockSelect<T>;
@@ -1690,8 +1627,6 @@ export interface PagesSelect<T extends boolean = true> {
         accordion?: T | AccordionBlockSelect<T>;
         video?: T | VideoBlockSelect<T>;
         embed?: T | EmbedBlockSelect<T>;
-        frameWeight?: T | FrameWeightBlockSelect<T>;
-        imageSequence?: T | ImageSequenceBlockSelect<T>;
         formBlock?: T | FormBlockSelect<T>;
       };
   meta?:
@@ -1711,7 +1646,6 @@ export interface PagesSelect<T extends boolean = true> {
   order?: T;
   cardImage?: T;
   summary?: T;
-  productGroup?: T;
   hideFromNav?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -1743,6 +1677,7 @@ export interface HeroBlockSelect<T extends boolean = true> {
             };
         id?: T;
       };
+  align?: T;
   id?: T;
   blockName?: T;
 }
@@ -1813,6 +1748,7 @@ export interface ImageGridBlockSelect<T extends boolean = true> {
         caption?: T;
         id?: T;
       };
+  background?: T;
   id?: T;
   blockName?: T;
 }
@@ -1842,6 +1778,7 @@ export interface CardsBlockSelect<T extends boolean = true> {
         id?: T;
       };
   background?: T;
+  align?: T;
   id?: T;
   blockName?: T;
 }
@@ -1855,26 +1792,7 @@ export interface ChildPagesBlockSelect<T extends boolean = true> {
   parent?: T;
   depth?: T;
   columns?: T;
-  id?: T;
-  blockName?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "DivisionCardsBlock_select".
- */
-export interface DivisionCardsBlockSelect<T extends boolean = true> {
-  eyebrow?: T;
-  eyebrowHighlight?: T;
-  items?:
-    | T
-    | {
-        title?: T;
-        image?: T;
-        site?: T;
-        url?: T;
-        linkLabel?: T;
-        id?: T;
-      };
+  background?: T;
   id?: T;
   blockName?: T;
 }
@@ -1901,6 +1819,7 @@ export interface CallToActionBlockSelect<T extends boolean = true> {
         id?: T;
       };
   background?: T;
+  align?: T;
   id?: T;
   blockName?: T;
 }
@@ -1914,6 +1833,7 @@ export interface QuoteBlockSelect<T extends boolean = true> {
   role?: T;
   image?: T;
   background?: T;
+  align?: T;
   id?: T;
   blockName?: T;
 }
@@ -1939,6 +1859,7 @@ export interface StatsBlockSelect<T extends boolean = true> {
         id?: T;
       };
   background?: T;
+  align?: T;
   id?: T;
   blockName?: T;
 }
@@ -1955,6 +1876,7 @@ export interface FactsBlockSelect<T extends boolean = true> {
         value?: T;
         id?: T;
       };
+  background?: T;
   id?: T;
   blockName?: T;
 }
@@ -1968,6 +1890,7 @@ export interface ArticleFeedBlockSelect<T extends boolean = true> {
   kind?: T;
   limit?: T;
   paginate?: T;
+  background?: T;
   id?: T;
   blockName?: T;
 }
@@ -1979,6 +1902,7 @@ export interface PeopleBlockSelect<T extends boolean = true> {
   heading?: T;
   people?: T;
   layout?: T;
+  background?: T;
   id?: T;
   blockName?: T;
 }
@@ -1989,6 +1913,7 @@ export interface PeopleBlockSelect<T extends boolean = true> {
 export interface DocumentsBlockSelect<T extends boolean = true> {
   heading?: T;
   documents?: T;
+  background?: T;
   id?: T;
   blockName?: T;
 }
@@ -2007,6 +1932,7 @@ export interface TimelineBlockSelect<T extends boolean = true> {
         image?: T;
         id?: T;
       };
+  background?: T;
   id?: T;
   blockName?: T;
 }
@@ -2023,6 +1949,7 @@ export interface AccordionBlockSelect<T extends boolean = true> {
         content?: T;
         id?: T;
       };
+  background?: T;
   id?: T;
   blockName?: T;
 }
@@ -2035,6 +1962,7 @@ export interface VideoBlockSelect<T extends boolean = true> {
   url?: T;
   file?: T;
   poster?: T;
+  background?: T;
   id?: T;
   blockName?: T;
 }
@@ -2048,28 +1976,6 @@ export interface EmbedBlockSelect<T extends boolean = true> {
   url?: T;
   title?: T;
   height?: T;
-  id?: T;
-  blockName?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "FrameWeightBlock_select".
- */
-export interface FrameWeightBlockSelect<T extends boolean = true> {
-  systems?: T;
-  id?: T;
-  blockName?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ImageSequenceBlock_select".
- */
-export interface ImageSequenceBlockSelect<T extends boolean = true> {
-  heading?: T;
-  intro?: T;
-  sequence?: T;
-  startLabel?: T;
-  endLabel?: T;
   id?: T;
   blockName?: T;
 }
@@ -2135,7 +2041,6 @@ export interface DocumentsSelect<T extends boolean = true> {
   language?: T;
   sites?: T;
   description?: T;
-  productGroup?: T;
   prefix?: T;
   _objectKey?: T;
   folder?: T;
@@ -2335,7 +2240,6 @@ export interface SiteSettingsSelect<T extends boolean = true> {
         url?: T;
         id?: T;
       };
-  fathomSiteId?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -2399,7 +2303,6 @@ export interface AnalyticsEventsSelect<T extends boolean = true> {
   path?: T;
   pageKind?: T;
   pageId?: T;
-  productGroup?: T;
   docId?: T;
   label?: T;
   value?: T;
@@ -2625,7 +2528,6 @@ export interface FormSubmissionsSelect<T extends boolean = true> {
   site?: T;
   locale?: T;
   pagePath?: T;
-  productGroup?: T;
   updatedAt?: T;
   createdAt?: T;
 }
