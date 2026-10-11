@@ -53,7 +53,7 @@ export async function analyticsSettings(payload: Payload): Promise<Settings> {
   if (settingsCache && Date.now() - settingsCache.at < 60_000) return settingsCache.value
   const g = (await payload.findGlobal({ slug: 'analytics-settings', depth: 0, overrideAccess: true }).catch(() => null)) as Partial<Settings> | null
   const value = {
-    basicWithoutConsent: g?.basicWithoutConsent !== false,
+    basicWithoutConsent: g?.basicWithoutConsent === true,
     retentionDays: g?.retentionDays || 395,
     aggregateDays: g?.aggregateDays || 760,
     consentLogDays: g?.consentLogDays || 1095,

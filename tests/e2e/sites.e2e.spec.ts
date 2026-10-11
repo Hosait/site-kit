@@ -1,33 +1,35 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 
-/**
- * Grunnleggende kvalitetskrav for alle tre nettsteder: forsiden svarer, har én h1,
- * meny som virker på mobil, hreflang/canonical, og ingen WCAG 2.1 AA-feil (axe).
- */
-const SITES = ['industri', 'sbs', 'dws'] as const
-const LOCALES = ['no', 'en'] as const
+import { t } from '../../src/lib/i18n'
+import { HREFLANG, LOCALES, SINGLE_SITE, SITE_KEYS } from '../../src/lib/sites'
 
-for (const site of SITES) {
+/**
+ * Basic quality for every site and locale: the home page answers, has one h1, a working menu,
+ * canonical and lang, and no serious WCAG 2.1 AA violations (axe).
+ */
+const q = (site: string) => (SINGLE_SITE ? '' : `?site=${site}`)
+
+for (const site of SITE_KEYS) {
   for (const locale of LOCALES) {
     test.describe(`${site} /${locale}`, () => {
-      test('forsiden virker og er tilgjengelig', async ({ page }) => {
-        const res = await page.goto(`/${locale}?site=${site}`)
+      test('home page works and is accessible', async ({ page }) => {
+        const res = await page.goto(`/${locale}${q(site)}`)
         expect(res?.status()).toBe(200)
         await expect(page.locator('h1')).toHaveCount(1)
         await expect(page.locator('link[rel="canonical"]')).toHaveCount(1)
-        await expect(page.locator('html')).toHaveAttribute('lang', locale === 'no' ? 'nb' : 'en')
-
+        await expect(page.locator('html')).toHaveAttribute('lang', HREFLANG[locale])
         const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
         const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')
         expect(serious.map((v) => `${v.id}: ${v.nodes.length} – ${v.help}`)).toEqual([])
       })
 
-      test('menyen åpner og lukker', async ({ page, isMobile }) => {
-        await page.goto(`/${locale}?site=${site}`)
+      test('menu opens and closes', async ({ page, isMobile }) => {
+        await page.goto(`/${locale}${q(site)}`)
+        const s = t(locale)
         if (isMobile) {
-          const open = page.getByRole('button', { name: locale === 'no' ? 'Meny' : 'Menu' })
-          // Klikk før React har koblet på knappen (treg dev-server under last) gjør ingenting; prøv igjen.
+          const open = page.getByRole('button', { name: s.menu })
+          // A click before React has hydrated does nothing on a slow dev server; try again.
           await expect(async () => {
             await open.click()
             await expect(page.locator('#mobile-menu')).toBeVisible({ timeout: 1000 })
@@ -35,19 +37,24 @@ for (const site of SITES) {
           await page.keyboard.press('Escape')
           await expect(page.locator('#mobile-menu')).toBeHidden()
         } else {
-          await expect(page.getByRole('navigation', { name: locale === 'no' ? 'Hovedmeny' : 'Main menu' }).first()).toBeVisible()
+          await expect(page.getByRole('navigation', { name: s.mainNav }).first()).toBeVisible()
         }
       })
     })
   }
 }
 
-test('sitemap og robots per domene', async ({ request }) => {
-  for (const site of SITES) {
-    const sitemap = await request.get(`/sitemap.xml?site=${site}`)
+test('sitemap and robots per site', async ({ request }) => {
+  for (const site of SITE_KEYS) {
+    const sitemap = await request.get(`/sitemap.xml${q(site)}`)
     expect(sitemap.status()).toBe(200)
     expect(await sitemap.text()).toContain('<urlset')
-    const robots = await request.get(`/robots.txt?site=${site}`)
-    expect(robots.status()).toBe(200)
+    expect((await request.get(`/robots.txt${q(site)}`)).status()).toBe(200)
   }
+})
+
+test('an old address redirects to its new page', async ({ request }) => {
+  const res = await request.get('/gammel-side', { maxRedirects: 0 })
+  expect([301, 308]).toContain(res.status())
+  expect(res.headers().location).toMatch(/\/no\/om-oss$/)
 })

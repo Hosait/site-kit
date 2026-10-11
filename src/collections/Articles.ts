@@ -16,7 +16,11 @@ import { DEFAULT_LOCALE, SITE_CONFIG } from '@/lib/sites'
 const normalizeSlug: CollectionBeforeChangeHook<Article> = async ({ data, req, originalDoc }) => {
   const locale = req.locale && req.locale !== 'all' ? req.locale : DEFAULT_LOCALE
   data.slug = data.slug ? slugify(data.slug) : slugify(data.title || '', { transliterate: true })
-  if (!data.slug) throw new APIError('Artikkelen må ha en slug eller tittel.', 400)
+  if (!data.slug) {
+    // Autosave stores an empty draft as soon as «create» opens; only publishing needs an address.
+    if (data._status !== 'published') return data
+    throw new APIError('Artikkelen må ha en slug eller tittel.', 400)
+  }
   if (!data.publishedAt && data._status === 'published') data.publishedAt = new Date().toISOString()
 
   const site = data.site ?? originalDoc?.site

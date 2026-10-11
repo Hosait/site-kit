@@ -148,7 +148,7 @@ export const AnalyticsSettings: GlobalConfig = {
       name: 'basicWithoutConsent',
       type: 'checkbox',
       label: 'Enkel statistikk uten samtykke',
-      defaultValue: true,
+      defaultValue: false,
       admin: {
         description:
           'Teller besøk uten informasjonskapsler og uten å lagre noe på enheten (døgnbasert, anonym). ' +

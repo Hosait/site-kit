@@ -1,14 +1,16 @@
 /**
  * Skriver ut alvorlige WCAG-brudd (axe) for en liste sider.
- *   pnpm tsx scripts/qa/axe-report.ts [BASE_URL] [sti?site=x ...]
+ *   pnpm tsx scripts/qa/axe-report.ts [BASE_URL] [path ...]   (default: the demo's main pages in every locale)
  */
 import AxeBuilder from '@axe-core/playwright'
 import { chromium } from '@playwright/test'
 
+import { LOCALE_CONFIG, LOCALES } from '../../src/lib/sites'
+
 const base = process.argv[2] || 'http://localhost:3100'
 const paths = process.argv.slice(3).length
   ? process.argv.slice(3)
-  : ['/no?site=industri', '/en?site=industri', '/no?site=sbs', '/no?site=dws', '/en?site=dws']
+  : LOCALES.flatMap((l) => [`/${l}`, `/${l}/${l === 'no' ? 'om-oss' : 'about'}`, `/${l}/${LOCALE_CONFIG[l].searchSegment}?q=nordlys`])
 
 const browser = await chromium.launch()
 const page = await (await browser.newContext()).newPage()

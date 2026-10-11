@@ -3,10 +3,13 @@ import { Suspense, type ReactNode } from 'react'
 
 import { ConsentBanner } from '@/components/analytics/ConsentBanner'
 import { Tracker } from '@/components/analytics/Tracker'
+import { analyticsSettings } from '@/lib/analytics/ingest'
 import { t } from '@/lib/i18n'
-import { DEFAULT_SITE, FEATURES, HREFLANG, isLocale, isSiteKey, LOCALE_CONFIG, localePath, LOCALES, SITE_KEYS, siteHref, siteOrigin, SITES } from '@/lib/sites'
+import { DEFAULT_LOCALE, DEFAULT_SITE, FEATURES, HREFLANG, isLocale, isSiteKey, LOCALE_CONFIG, localePath, LOCALES, SITE_KEYS, siteHref, siteOrigin, SITES } from '@/lib/sites'
 
+import configPromise from '@payload-config'
 import themeJson from '@site/theme.json'
+import { getPayload } from 'payload'
 import { siteFont } from '@site/fonts'
 import { themeToCss, validateTheme } from '@/lib/theme'
 
@@ -38,7 +41,8 @@ export const viewport: Viewport = { themeColor: THEME.colors.background, width: 
 export default async function SiteLayout({ children, params }: { children: ReactNode; params: Params }) {
   const { site, locale } = await params
   const key = isSiteKey(site) ? site : DEFAULT_SITE
-  const loc = isLocale(locale) ? locale : 'no'
+  const loc = isLocale(locale) ? locale : DEFAULT_LOCALE
+  const stats = await analyticsSettings(await getPayload({ config: configPromise }))
 
   return (
     <html lang={HREFLANG[loc]} className={siteFont.variable} data-site={key}>
@@ -52,7 +56,7 @@ export default async function SiteLayout({ children, params }: { children: React
         {FEATURES.analytics === 'builtin' && (
           <>
             <Suspense fallback={null}>
-              <Tracker site={key} locale={loc} />
+              <Tracker site={key} locale={loc} withoutConsent={stats.basicWithoutConsent} />
             </Suspense>
             <ConsentBanner site={key} locale={loc} strings={t(loc)} policyHref={siteHref(DEFAULT_SITE, key, localePath(loc, LOCALE_CONFIG[loc].cookiePolicyPath))} />
           </>

@@ -1,5 +1,6 @@
 /**
- * URL-paritet: hver adresse som finnes på dagens Craft-nettsteder (import-data/urls.json)
+ * URL-paritet: hver adresse som fantes på det gamle nettstedet (import-data/urls.json, skrevet av
+ * Phase 2-crawleren i formen {site: {locale: [{url, status}]}})
  * skal gi 200 – eller 301/308 til en side som gir 200 – i den nye løsningen.
  *
  *   pnpm tsx scripts/qa/url-parity.ts [BASE_URL]

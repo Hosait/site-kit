@@ -24,7 +24,11 @@ const computePath: CollectionBeforeChangeHook<Page> = async ({ data, req, origin
     data.path = ''
   } else {
     const slug = data.slug ? slugify(data.slug) : slugify(data.title || '', { transliterate: true })
-    if (!slug) throw new APIError('Siden må ha en slug eller tittel.', 400)
+    if (!slug) {
+      // Autosave stores an empty draft as soon as «create» opens; only publishing needs an address.
+      if (data._status !== 'published') return data
+      throw new APIError('Siden må ha en slug eller tittel.', 400)
+    }
     data.slug = slug
 
     let parentPath = ''

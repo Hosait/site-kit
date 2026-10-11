@@ -3,6 +3,7 @@
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 
+import { CONSENT_COOKIE, parseConsent, readCookie } from '@/lib/analytics/consent'
 import { SITE_KEYS, SITES, type Locale, type SiteKey } from '@/lib/sites'
 
 /** Hosts of this install's own sites: links between them are navigation, not outbound clicks. */
@@ -23,7 +24,12 @@ const DOWNLOAD = /\/api\/documents\/file\/|\.(pdf|zip|dwg|dxf|ifc|rvt|docx?|xlsx
 
 type Payload = Record<string, string | number | undefined>
 
+/** Set by <Tracker>: whether the site counts basic statistics without consent (analytics settings). */
+let sendWithoutConsent = false
+
 function send(data: Payload) {
+  // Without consent nothing leaves the browser, unless the site has turned on statistics without consent.
+  if (!sendWithoutConsent && parseConsent(readCookie(document.cookie, CONSENT_COOKIE))?.statistics !== true) return
   const body = JSON.stringify(data)
   try {
     if (navigator.sendBeacon?.('/next/a', new Blob([body], { type: 'text/plain' }))) return
@@ -43,7 +49,8 @@ function pageInfo() {
   }
 }
 
-export function Tracker({ site, locale }: { site: SiteKey; locale: Locale }) {
+export function Tracker({ site, locale, withoutConsent }: { site: SiteKey; locale: Locale; withoutConsent: boolean }) {
+  sendWithoutConsent = withoutConsent
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const query = searchParams.toString()
