@@ -8,6 +8,7 @@ import { getPayload } from 'payload'
 
 import { seedDbDecision } from '@/lib/seed-guard'
 import { reindexAll } from '@/lib/search/indexer'
+import { loadSeedPlan, runPlanSeed, seedSource, type PlanSeedProgress } from '@/lib/site-plan/seed-plan'
 import { SITE_KEYS } from '@/lib/sites'
 
 export const dynamic = 'force-dynamic'
@@ -25,6 +26,7 @@ export const maxDuration = 900
  *
  * - db:    tømmer innholdstabellene og legger inn seed/content.sql.gz (brukere berøres ikke).
  *          Bare på en tom installasjon, eller med ?replace=1 (panelet sender det).
+ *          seed/site-plan.json wins when present: it is imported in the background (see status).
  * - media: henter originalbildene/-dokumentene fra kildene i seed/sources.json
  *          og laster dem opp via Payload, som lager størrelser og lagrer i S3. Går i bakgrunnen.
  * Sperret i produksjon (SITE_ORIGINS=production).
@@ -32,7 +34,7 @@ export const maxDuration = 900
 const SEED_DIR = path.join(process.cwd(), 'seed')
 
 type Progress = { running: boolean; total: number; done: number; failed: string[]; startedAt?: string; finishedAt?: string }
-const g = globalThis as unknown as { __seedMedia?: Progress }
+const g = globalThis as unknown as { __seedMedia?: Progress; __seedPlan?: PlanSeedProgress }
 
 // Samme navn brukes i src/components/admin/SeedPanelClient.tsx.
 const SEED_HEADER = 'x-site-seed'
@@ -147,23 +149,44 @@ async function seedMedia(only: string | null) {
   return { ok: true, started: true, total: jobs.length }
 }
 
+/** Imports seed/site-plan.json in the background: media come one by one, which can take minutes. */
+async function seedPlan(replace: boolean) {
+  const loaded = loadSeedPlan(SEED_DIR)
+  if (!loaded.ok) return { ok: false, error: loaded.error }
+  const payload = await getPayload({ config: configPromise })
+  const progress: PlanSeedProgress = { running: true, done: 0, total: 0, startedAt: new Date().toISOString() }
+  g.__seedPlan = progress
+  void runPlanSeed(payload, loaded.plan, SEED_DIR, progress, {
+    reset: replace,
+    after: async () => {
+      flushCache()
+      await reindexAll(payload)
+    },
+  })
+  return { ok: true, started: true, mode: 'plan' }
+}
+
 async function handle(req: Request, step: string) {
   if (!(await authorized(req))) return new Response('Forbidden', { status: 403 })
   if (process.env.SITE_ORIGINS === 'production') {
     return Response.json({ ok: false, error: 'Seed er sperret i produksjon' }, { status: 409 })
   }
-  if (step === 'status') return Response.json({ media: g.__seedMedia ?? null })
+  if (step === 'status') return Response.json({ media: g.__seedMedia ?? null, plan: g.__seedPlan ?? null })
   if (req.method !== 'POST') return Response.json({ ok: false, error: 'Bruk POST' }, { status: 405 })
   if (step === 'db') {
+    // A retry (Hosait's seed.run, or the panel clicked twice) must not start a second import.
+    if (g.__seedPlan?.running) return Response.json({ ok: true, alreadyRunning: true, progress: g.__seedPlan })
     const payload = await getPayload({ config: configPromise })
+    const replace = new URL(req.url).searchParams.get('replace') === '1'
     const decision = seedDbDecision({
       pages: (await payload.count({ collection: 'pages' })).totalDocs,
-      replace: new URL(req.url).searchParams.get('replace') === '1',
+      replace,
       production: process.env.SITE_ORIGINS === 'production',
     })
     if (decision === 'refuse_existing') {
       return Response.json({ ok: false, error: 'Nettstedet har allerede sider. Bruk ?replace=1 for å erstatte alt innhold.' }, { status: 409 })
     }
+    if (seedSource(SEED_DIR) === 'plan') return Response.json(await seedPlan(replace))
     return Response.json(await seedDb())
   }
   if (step === 'media') return Response.json(await seedMedia(new URL(req.url).searchParams.get('only')))

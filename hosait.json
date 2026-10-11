@@ -5,7 +5,6 @@
   "web": { "service": "web", "port": 3000 },
   "storage": { "public": "public/" },
   "seed": {
-    "files": "seed/files",
     "run": "wget -qO- --post-data= --header \"Authorization: Bearer $CRON_SECRET\" http://web:3000/next/seed/db"
   },
   "env": [
