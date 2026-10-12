@@ -38,8 +38,13 @@ the fonts in `site/fonts.ts`, and run `pnpm kit:theme-check` (every pair needs 4
 Write `seed/site-plan.json` against `schema/site-plan.schema.json`; the blocks and their fields
 are in `schema/blocks.schema.json`. Map each template once, then fill every page of it. Put
 images and PDFs in `seed/media/` (or use public https URLs). Link with `$media`, `$page`,
-`$pageLink`, `$person`, `$document`; rich text is `$html`. Add `redirects` for every old URL that
-moves, and `gaps` for anything no block matches. Check it locally:
+`$pageLink`, `$person`, `$document`, `$form`; rich text is `$html`. Forms go in `forms`: their
+fields, the button text, the message shown after sending, and `retention` (days, or `"keep"`)
+from the intake answer; left out, the site default in `site/config.ts` applies. A `formBlock`
+points at one with `{ "$form": "<ref>" }`. Submissions are read in the admin and deleted each
+night once older than the period. Add `redirects` for every old URL that moves, and `gaps` for
+anything no block matches (a form that must send e-mail or take payment is still a gap). Check
+it locally:
 
     pnpm kit:import seed/site-plan.json --reset
     pnpm dev
