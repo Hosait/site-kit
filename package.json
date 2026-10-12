@@ -2,7 +2,7 @@
   "name": "site-kit",
   "version": "1.0.0",
   "description": "Hosait Site Kit: Next.js + Payload CMS website template",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "build": "cross-env NODE_OPTIONS=--no-deprecation next build",
