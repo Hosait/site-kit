@@ -98,6 +98,7 @@ test('a plan with a form is valid', () => {
 })
 
 test('a broken form is refused with its path', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each case edits a plan copy
   const cases: [string, (p: any) => void, string][] = [
     ['unknown field type', (p) => (p.forms[0].fields[0].type = 'radio'), '/forms/0/fields/0/type'],
     ['select without options', (p) => delete p.forms[0].fields[1].options, '/forms/0/fields/1'],
