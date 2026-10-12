@@ -40,3 +40,18 @@ jobs:
             echo "::error::The schema changed without a migration. Run: pnpm payload migrate:create <name>"
             exit 1
           fi
+      # Every rebuild sets its own brand, so no brand value may end up as a database default.
+      - name: A brand change in site/config.ts needs no migration
+        run: |
+          perl -pi -e "s/legalName: '[^']*'/legalName: 'Drift Check AS'/; s/country: '[^']*'/country: 'SE'/" site/config.ts
+          if git diff --quiet site/config.ts; then
+            echo "::error::Could not change brand.legalName and brand.country in site/config.ts"
+            exit 1
+          fi
+          pnpm payload migrate:create brand-check --skip-empty
+          git checkout site/config.ts
+          if [ -n "$(git status --porcelain src/migrations)" ]; then
+            cat src/migrations/*_brand_check.ts || true
+            echo "::error::A brand value from site/config.ts is a database default. Use a function as defaultValue instead."
+            exit 1
+          fi
