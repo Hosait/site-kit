@@ -139,8 +139,14 @@ export async function importPlan(payload: Payload, plan: SitePlan, opts: ImportO
         throw new Error(`form "${f.ref}": ${e instanceof Error ? e.message : String(e)}`)
       }
       ids.forms.set(f.ref, doc.id)
-      for (const l of others)
-        if (hasLocale(f, l)) await payload.update({ collection: 'forms', id: doc.id, locale: l, data: (await formData(f, l, html, doc.fields)) as never, context: ctx })
+      for (const l of others) {
+        if (!hasLocale(f, l)) continue
+        try {
+          await payload.update({ collection: 'forms', id: doc.id, locale: l, data: (await formData(f, l, html, doc.fields)) as never, context: ctx })
+        } catch (e) {
+          throw new Error(`form "${f.ref}" (${l}): ${e instanceof Error ? e.message : String(e)}`)
+        }
+      }
       tick()
     }
     // Pages link to each other (and may link both ways), so create them all first, then fill in layouts.

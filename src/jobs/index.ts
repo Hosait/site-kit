@@ -1,7 +1,7 @@
 /**
- * Payload jobs. Payload's autoRun starts a timer wherever Payload loads, so it is limited to
- * the running web server: kit scripts (kit:import) and tests would otherwise never exit, and
- * next build would start it too.
+ * Payload jobs. autoRun's timer starts only where Payload is loaded with `cron: true`: the
+ * health route (src/app/(payload)/api/health) and Payload's own REST and admin requests. Kit
+ * scripts and tests load it without, and Payload skips it during next build, so they exit.
  */
 import type { Config } from 'payload'
 
@@ -9,10 +9,6 @@ import { FORMS } from '../lib/sites'
 import { pruneFormSubmissions } from './pruneFormSubmissions'
 
 export const PRUNE_TASK = 'prune-form-submissions'
-
-export function shouldRunJobs(env: Record<string, string | undefined> = process.env): boolean {
-  return env.NEXT_RUNTIME === 'nodejs' && env.NEXT_PHASE !== 'phase-production-build'
-}
 
 export const jobs: NonNullable<Config['jobs']> = {
   tasks: [
@@ -28,5 +24,4 @@ export const jobs: NonNullable<Config['jobs']> = {
     },
   ],
   autoRun: [{ cron: '0 */5 * * * *', queue: 'nightly' }],
-  shouldAutoRun: () => shouldRunJobs(),
 }

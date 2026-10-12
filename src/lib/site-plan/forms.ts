@@ -3,10 +3,17 @@
  * info texts are localized in the plugin; the field rows are not, so a second language must
  * fill the rows the first one created (by id), or it would replace them.
  */
-import type { Locale } from '../sites'
-import type { PlanForm, PlanFormField } from './types'
+import { DEFAULT_LOCALE, type Locale } from '../sites'
+import type { Localized, PlanForm, PlanFormField } from './types'
 
 export type FormRow = { id?: string; options?: { id?: string }[] }
+
+/**
+ * A text the plugin requires in every language (the confirmation, a choice's label): this
+ * language's, else the default language's, else the first given. Without it the database
+ * refuses the form, after the media are already written.
+ */
+const required = (t: Localized<string>, locale: Locale) => t[locale] ?? t[DEFAULT_LOCALE] ?? Object.values(t)[0]
 
 const ESC: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ESC[c])
@@ -28,13 +35,13 @@ async function field(f: PlanFormField, locale: Locale, html: (h: string) => Prom
     required: f.required ?? false,
     width: f.width ?? 100,
     ...(f.type === 'checkbox' && f.default !== undefined ? { defaultValue: f.default } : {}),
-    ...(f.options ? { options: f.options.map((o, j) => ({ id: row?.options?.[j]?.id, value: o.value, label: o.label[locale] })) } : {}),
+    ...(f.options ? { options: f.options.map((o, j) => ({ id: row?.options?.[j]?.id, value: o.value, label: required(o.label, locale) })) } : {}),
   }
 }
 
 /** The form's localized data for one locale. `rows` are the created form's fields (ids kept). */
 export async function formData(form: PlanForm, locale: Locale, html: (h: string) => Promise<unknown>, rows?: FormRow[]) {
-  const confirmation = form.confirmation[locale]
+  const confirmation = required(form.confirmation, locale)
   return {
     fields: await Promise.all(form.fields.map((f, i) => field(f, locale, html, rows?.[i]))),
     submitButtonLabel: form.submitLabel?.[locale],

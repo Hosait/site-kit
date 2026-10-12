@@ -26,9 +26,11 @@ Two details changed while checking the code, both within the approved design:
 
 - Payload's schedule takes a cron and no time zone, so the job runs on **server time** (UTC on
   Hosait): **02:15 UTC**, which is 03:15 or 04:15 in Norway.
-- `autoRun` starts with every Payload instance, including the kit's scripts (`kit:import`,
-  `kit:export-seed`) and tests, which would then never exit. So **only the web server runs it**
-  (`jobs.shouldAutoRun`, see below).
+- `autoRun`'s timer starts only where Payload is loaded with `cron: true` (its own REST and
+  admin requests) and never during `next build`, so the kit's scripts and tests exit as before.
+  To start it from boot, **the health route loads Payload with `cron: true`**; the image's
+  `HEALTHCHECK` calls it every 30 seconds. (An earlier draft gated it on `NEXT_RUNTIME`, which
+  the standalone `node server.js` never sets: the job would never have run.)
 
 ## 1. Forms in the site plan
 
@@ -143,11 +145,8 @@ keep, or the site default (which may itself be `null`). Tested on its own.
     (02:15:00 UTC every day).
   - `jobs.autoRun: [{ cron: '0 */5 * * * *', queue: 'nightly' }]`: the web server checks the
     queue every 5 minutes, so a scheduled run starts within minutes of 02:15.
-  - `jobs.shouldAutoRun`: true only in the running web server: Next's Node runtime
-    (`NEXT_RUNTIME === 'nodejs'`) and not during `next build` (`NEXT_PHASE` is
-    `phase-production-build` then). Scripts and tests never start the timer.
-- Payload starts the timer when it first loads. After a deploy that is the first request (the
-  seed-status check or the first visitor), within seconds on a live site.
+  - No `shouldAutoRun`: `/api/health` loads Payload with `cron: true`, so the timer runs from
+    the first health check after a deploy (within about 30 seconds).
 - A shortened period applies to existing submissions at the next run.
 
 ### Migration
@@ -181,8 +180,8 @@ Written first, each seen failing:
   "keep" form is untouched; at most 1,000 per form per run; one failing form does not stop the
   others.
 - **Site config:** `forms.retentionDays` accepts 1–3650 and `null`, refuses 0, 3651, 1.5, "90".
-- **`shouldAutoRun`** is false in scripts and tests (no `NEXT_RUNTIME`) and during `next build`,
-  true in the running server.
+- **The job is not gated** on the environment the standalone server lacks, and the health route
+  loads Payload with `cron: true`.
 - **One run against a local database** (not in CI): import a plan with a form, submit it twice,
   backdate one submission past its period, run the task, and see that one deleted and the newer
   one kept.

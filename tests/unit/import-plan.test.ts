@@ -242,3 +242,30 @@ test('reset clears submissions and forms after the pages that use them', () => {
   const c: string[] = [...CONTENT_COLLECTIONS]
   assert.ok(c.indexOf('pages') < c.indexOf('form-submissions') && c.indexOf('form-submissions') < c.indexOf('forms'))
 })
+
+test('required texts missing in a language fall back, so the database accepts the form (review: focus 3)', async () => {
+  const p = plan()
+  const f: any = contactForm()
+  f.confirmation = { en: 'Thanks!' } // only the second language: the default-language create needs one
+  f.fields[1].options[0].label = { no: 'Pris' } // only the first language: the second-language update needs one
+  p.forms = [f]
+  const payload = fakePayload()
+  await importPlan(payload, p, { baseDir: 'tests/fixtures', toLexical })
+  const created = payload.calls.find((c) => c.op === 'create' && c.collection === 'forms')!.data as any
+  assert.deepEqual(created.confirmationMessage, { html: '<p>Thanks!</p>' })
+  const en = payload.calls.find((c) => c.op === 'update' && c.collection === 'forms' && c.locale === 'en')!.data as any
+  assert.deepEqual(en.confirmationMessage, { html: '<p>Thanks!</p>' })
+  assert.equal(en.fields[1].options[0].label, 'Pris')
+})
+
+test('a second-language update the database refuses also names the form', async () => {
+  const p = plan()
+  p.forms = [contactForm()]
+  const payload = fakePayload()
+  const update = payload.update.bind(payload)
+  ;(payload as any).update = async (a: any) => {
+    if (a.collection === 'forms') throw new Error('The following field is invalid: confirmationMessage')
+    return update(a)
+  }
+  await assert.rejects(importPlan(payload, p, { baseDir: 'tests/fixtures', toLexical }), /form "contact" \(en\): The following field is invalid/)
+})
