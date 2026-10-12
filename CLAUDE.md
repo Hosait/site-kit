@@ -19,7 +19,6 @@ Each customer site is generated from it.
 - Norwegian in editor-facing admin UI; visitor texts in `src/lib/i18n.ts` (no/en). Code comments in new files: English.
 - Mobile first, tap targets ≥ 44 px, WCAG 2.1 AA.
 - Nothing optional loads before the visitor consents.
-- Never deploy without an explicit OK from Steinar.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
