@@ -216,6 +216,59 @@
         }
       }
     },
+    "payload-jobs-stats": {
+      "type": "object",
+      "additionalProperties": false,
+      "title": "PayloadJobsStat",
+      "properties": {
+        "id": {
+          "type": "number"
+        },
+        "stats": {
+          "type": [
+            "object",
+            "array",
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "updatedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "createdAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "payload-jobs-stats_select": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stats": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "boolean"
+        },
+        "globalType": {
+          "type": "boolean"
+        }
+      }
+    },
     "pages": {
       "type": "object",
       "additionalProperties": false,
@@ -4697,6 +4750,21 @@
             ]
           }
         },
+        "retention": {
+          "description": "Innsendinger som er eldre, slettes hver natt.",
+          "type": "string",
+          "enum": [
+            "default",
+            "days",
+            "keep"
+          ]
+        },
+        "retentionDays": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
         "updatedAt": {
           "type": "string"
         },
@@ -4707,6 +4775,7 @@
       "required": [
         "id",
         "title",
+        "retention",
         "updatedAt",
         "createdAt"
       ]
@@ -5072,6 +5141,12 @@
             }
           ]
         },
+        "retention": {
+          "type": "boolean"
+        },
+        "retentionDays": {
+          "type": "boolean"
+        },
         "updatedAt": {
           "type": "boolean"
         },
@@ -5323,6 +5398,7 @@
                 "type": "string",
                 "enum": [
                   "inline",
+                  "prune-form-submissions",
                   "schedulePublish"
                 ]
               },
@@ -5389,6 +5465,7 @@
           ],
           "enum": [
             "inline",
+            "prune-form-submissions",
             "schedulePublish"
           ]
         },
@@ -5406,6 +5483,16 @@
         },
         "processing": {
           "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "meta": {
+          "type": [
+            "object",
+            "array",
+            "string",
+            "number",
             "boolean",
             "null"
           ]
@@ -5495,6 +5582,9 @@
           "type": "boolean"
         },
         "processing": {
+          "type": "boolean"
+        },
+        "meta": {
           "type": "boolean"
         },
         "updatedAt": {
@@ -9420,6 +9510,29 @@
         ],
         "title": "UserAuthOperations"
       }
+    },
+    "TaskPrune-form-submissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "input": {},
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "deleted": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": []
+        }
+      },
+      "required": [
+        "output"
+      ]
     },
     "TaskSchedulePublish": {
       "type": "object",
