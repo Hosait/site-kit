@@ -8,15 +8,22 @@ import type { Payload } from 'payload'
 
 import { CONTENT_COLLECTIONS, importPlan } from '../../src/lib/site-plan/import'
 
-type Call = { op: string; collection: string; data?: unknown; filePath?: string; file?: unknown; locale?: string }
+type Call = { op: string; collection: string; data?: unknown; filePath?: string; file?: unknown; locale?: string; id?: number }
 function fakePayload(existing = 0) {
   const calls: Call[] = []
   let id = 0
+  const withRowIds = (data: any) => ({
+    fields: (data?.fields ?? []).map((f: any, i: number) => ({ ...f, id: `row${i}`, options: f.options?.map((o: any, j: number) => ({ ...o, id: `opt${i}-${j}` })) })),
+  })
   const payload = {
     calls,
     count: async () => ({ totalDocs: existing }),
     delete: async ({ collection, where }: { collection: string; where?: unknown }) => { calls.push({ op: 'delete', collection, data: where }); return { docs: [], errors: [] } },
-    create: async (a: { collection: string; data: unknown; filePath?: string; file?: unknown; locale?: string }) => { calls.push({ op: 'create', ...a }); return { id: ++id } },
+    create: async (a: { collection: string; data: unknown; filePath?: string; file?: unknown; locale?: string }) => {
+      const doc = { id: ++id, ...(a.collection === 'forms' ? withRowIds(a.data) : {}) }
+      calls.push({ op: 'create', ...a, id: doc.id })
+      return doc
+    },
     update: async (a: { collection: string; data: unknown; locale?: string }) => { calls.push({ op: 'update', ...a }); return { id: 1 } },
     config: {},
   }
@@ -125,4 +132,112 @@ test('a bad local file stops a replacing import before anything is deleted', asy
   const payload = fakePayload(3)
   await assert.rejects(importPlan(payload, p, { baseDir: dir, toLexical, reset: true }), /media\/logo\.svg: SVG is not imported/)
   assert.deepEqual(payload.calls.filter((c) => c.op === 'delete' || c.op === 'create'), [])
+})
+
+const contactForm = () => ({
+  ref: 'contact',
+  title: { no: 'Kontakt', en: 'Contact' },
+  fields: [
+    { type: 'text', name: 'navn', label: { no: 'Navn', en: 'Name' }, required: true, width: 50 },
+    { type: 'select', name: 'emne', label: { no: 'Emne', en: 'Topic' }, options: [{ value: 'pris', label: { no: 'Pris', en: 'Price' } }] },
+    { type: 'checkbox', name: 'samtykke', label: { no: 'Ja', en: 'Yes' }, default: false },
+    { type: 'message', text: { no: 'Hei <du> & "deg"', en: 'Hi' } },
+  ],
+  submitLabel: { no: 'Send', en: 'Send' },
+  confirmation: { no: 'Takk!', en: 'Thanks!' },
+  retention: 30,
+})
+
+test('forms are created before pages as the plugin stores them, and the form block gets its id', async () => {
+  const p = plan()
+  p.forms = [contactForm()]
+  p.pages[0].layout.no.push({ blockType: 'formBlock', form: { $form: 'contact' } })
+  const payload = fakePayload()
+  await importPlan(payload, p, { baseDir: 'tests/fixtures', toLexical })
+  const creates = payload.calls.filter((c) => c.op === 'create').map((c) => c.collection)
+  assert.ok(creates.indexOf('forms') < creates.indexOf('pages'))
+  const form = payload.calls.find((c) => c.op === 'create' && c.collection === 'forms')!
+  const data = form.data as any
+  assert.equal(form.locale, 'no')
+  assert.equal(data.title, 'Kontakt')
+  assert.deepEqual(data.fields[0], { id: undefined, blockType: 'text', name: 'navn', label: 'Navn', required: true, width: 50 })
+  assert.deepEqual(data.fields[1].options, [{ id: undefined, value: 'pris', label: 'Pris' }])
+  assert.equal(data.fields[2].defaultValue, false)
+  assert.deepEqual(data.fields[3], { id: undefined, blockType: 'message', message: { html: '<p>Hei &lt;du&gt; &amp; &quot;deg&quot;</p>' } })
+  assert.equal(data.submitButtonLabel, 'Send')
+  assert.equal(data.confirmationType, 'message')
+  assert.deepEqual(data.confirmationMessage, { html: '<p>Takk!</p>' })
+  assert.deepEqual([data.retention, data.retentionDays], ['days', 30])
+  assert.deepEqual(data.emails, [])
+  const layout = payload.calls.find((c) => c.op === 'update' && c.collection === 'pages' && c.locale === 'no')!.data as any
+  assert.equal(layout.layout.at(-1).form, form.id)
+})
+
+test('the second language fills the same field rows, so the first language is kept', async () => {
+  const p = plan()
+  p.forms = [contactForm()]
+  const payload = fakePayload()
+  await importPlan(payload, p, { baseDir: 'tests/fixtures', toLexical })
+  const en = payload.calls.find((c) => c.op === 'update' && c.collection === 'forms' && c.locale === 'en')!.data as any
+  assert.deepEqual(en.fields.map((f: any) => f.id), ['row0', 'row1', 'row2', 'row3'])
+  assert.equal(en.fields[1].options[0].id, 'opt1-0')
+  assert.equal(en.fields[0].label, 'Name')
+  assert.equal(en.submitButtonLabel, 'Send')
+  assert.equal(en.title, undefined, 'the plugin does not localize the title')
+})
+
+test('a form written only in the second language still imports (review focus 3)', async () => {
+  const p = plan()
+  const f = contactForm()
+  f.title = { en: 'Contact' } as never
+  f.fields[0].label = { en: 'Name' } as never
+  p.forms = [f]
+  const payload = fakePayload()
+  await importPlan(payload, p, { baseDir: 'tests/fixtures', toLexical })
+  const data = payload.calls.find((c) => c.op === 'create' && c.collection === 'forms')!.data as any
+  assert.equal(data.title, 'Contact')
+})
+
+test('a form left without retention follows the site, and "keep" keeps', async () => {
+  for (const [retention, expected] of [[undefined, ['default', null]], ['keep', ['keep', null]]] as const) {
+    const p = plan()
+    p.forms = [{ ...contactForm(), retention }]
+    const payload = fakePayload()
+    await importPlan(payload, p, { baseDir: 'tests/fixtures', toLexical })
+    const data = payload.calls.find((c) => c.op === 'create' && c.collection === 'forms')!.data as any
+    assert.deepEqual([data.retention, data.retentionDays], expected)
+  }
+})
+
+test('a form the database refuses stops the import, naming the form', async () => {
+  const p = plan()
+  p.forms = [contactForm()]
+  const payload = fakePayload()
+  const create = payload.create.bind(payload)
+  ;(payload as any).create = async (a: any) => {
+    if (a.collection === 'forms') throw new Error('The following field is invalid: fields.0.name')
+    return create(a)
+  }
+  await assert.rejects(importPlan(payload, p, { baseDir: 'tests/fixtures', toLexical }), /form "contact": The following field is invalid/)
+})
+
+test('an import that fails after the forms removes the forms it created too', async () => {
+  const p = plan()
+  p.forms = [contactForm()]
+  const payload = fakePayload()
+  const create = payload.create.bind(payload)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- replace one method of the fake
+  ;(payload as any).create = async (a: any) => {
+    if (a.collection === 'pages') throw new Error('pages refused')
+    return create(a)
+  }
+  await assert.rejects(importPlan(payload, p, { baseDir: 'tests/fixtures', toLexical }), /pages refused.*removed/)
+  const formId = payload.calls.find((c) => c.op === 'create' && c.collection === 'forms')!.id
+  const deletes = payload.calls.filter((c) => c.op === 'delete').map((d) => [d.collection, d.data])
+  assert.deepEqual(deletes.find(([c]) => c === 'forms'), ['forms', { id: { in: [formId] } }])
+})
+
+test('reset clears submissions and forms after the pages that use them', () => {
+  const c: string[] = [...CONTENT_COLLECTIONS]
+  assert.ok(c.indexOf('pages') < c.indexOf('form-submissions') && c.indexOf('form-submissions') < c.indexOf('forms'))
 })
