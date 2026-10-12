@@ -10,7 +10,7 @@ const NOW = new Date('2026-10-12T02:15:00.000Z')
 const daysAgo = (d: number) => new Date(NOW.getTime() - d * 86_400_000).toISOString()
 
 type Sub = { id: number; form: number; createdAt: string; submissionData?: unknown }
-function fake(forms: object[], subs: Sub[], failFor?: number) {
+function fake(forms: object[], subs: Sub[], failFor?: number, failing: number[] = []) {
   const deleted: number[] = []
   const logs: string[] = []
   const payload = {
@@ -24,8 +24,11 @@ function fake(forms: object[], subs: Sub[], failFor?: number) {
     },
     delete: async ({ collection, where }: any) => {
       assert.equal(collection, 'form-submissions')
-      deleted.push(...where.id.in)
-      return {}
+      // Payload reports a document it could not delete in errors, without throwing.
+      const failed = where.id.in.filter((id: number) => failing.includes(id))
+      const done = where.id.in.filter((id: number) => !failing.includes(id))
+      deleted.push(...done)
+      return { docs: done.map((id: number) => ({ id })), errors: failed.map((id: number) => ({ id, message: 'locked' })) }
     },
   }
   return { payload: payload as unknown as Payload, deleted, logs }
@@ -82,4 +85,11 @@ test('logs give the form and the count, never what was submitted', async () => {
   await pruneFormSubmissions(f.payload, { siteDefault: 90, now: NOW })
   assert.ok(f.logs.some((l) => l.includes('form 1') && l.includes('Kontakt') && l.includes('1')))
   assert.ok(f.logs.every((l) => !l.includes('Kari')))
+})
+
+test('the count is what Payload actually deleted, and refused documents are logged', async () => {
+  const subs = [{ id: 11, form: 1, createdAt: daysAgo(100) }, { id: 12, form: 1, createdAt: daysAgo(100) }]
+  const f = fake([{ id: 1, title: 'Kontakt', retention: 'default' }], subs, undefined, [12])
+  assert.deepEqual(await pruneFormSubmissions(f.payload, { siteDefault: 90, now: NOW }), [{ form: 1, deleted: 1 }])
+  assert.ok(f.logs.some((l) => l.startsWith('ERROR') && l.includes('1') && l.includes('form 1')))
 })

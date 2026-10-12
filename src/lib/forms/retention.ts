@@ -7,11 +7,11 @@ export type FormRetention = { retention?: RetentionChoice | null; retentionDays?
 
 export const RETENTION_MAX_DAYS = 3650
 
-/** Days this form's submissions are kept; null keeps them. A "days" choice without a valid number follows the site. */
+/** Days this form's submissions are kept; null keeps them. A "days" choice without a valid number (1–3650) follows the site. */
 export function retentionDaysFor(form: FormRetention, siteDefault: number | null): number | null {
   if (form.retention === 'keep') return null
   const days = form.retentionDays
-  if (form.retention === 'days' && Number.isInteger(days) && (days as number) >= 1) return days as number
+  if (form.retention === 'days' && Number.isInteger(days) && (days as number) >= 1 && (days as number) <= RETENTION_MAX_DAYS) return days as number
   return siteDefault
 }
 

@@ -30,11 +30,15 @@ export async function pruneFormSubmissions(
         depth: 0,
       })
       const ids = old.docs.map((d) => d.id)
+      let deleted = 0
       if (ids.length) {
-        await payload.delete({ collection: 'form-submissions', where: { id: { in: ids } } })
-        payload.logger.info(`form submissions: deleted ${ids.length} older than ${days} days from form ${form.id} (${form.title ?? ''})`)
+        // Payload reports a document it could not delete in errors, without throwing.
+        const res = await payload.delete({ collection: 'form-submissions', where: { id: { in: ids } } })
+        deleted = res.docs.length
+        payload.logger.info(`form submissions: deleted ${deleted} older than ${days} days from form ${form.id} (${form.title ?? ''})`)
+        if (res.errors.length) payload.logger.error(`form submissions: ${res.errors.length} could not be deleted from form ${form.id} (${form.title ?? ''})`)
       }
-      out.push({ form: form.id, deleted: ids.length })
+      out.push({ form: form.id, deleted })
     } catch (e) {
       const error = e instanceof Error ? e.message : String(e)
       payload.logger.error(`form submissions: could not prune form ${form.id} (${form.title ?? ''}): ${error}`)

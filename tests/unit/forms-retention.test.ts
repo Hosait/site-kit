@@ -21,3 +21,9 @@ test("the plan's retention becomes the form's admin fields", () => {
   assert.deepEqual(retentionFromPlan('keep'), { retention: 'keep', retentionDays: null })
   assert.deepEqual(retentionFromPlan(undefined), { retention: 'default', retentionDays: null })
 })
+
+test('a number of days beyond 3650 (written outside the admin) follows the site default', () => {
+  assert.equal(retentionDaysFor({ retention: 'days', retentionDays: 3651 }, 90), 90)
+  assert.equal(retentionDaysFor({ retention: 'days', retentionDays: 1e9 }, 90), 90)
+  assert.equal(retentionDaysFor({ retention: 'days', retentionDays: 3650 }, 90), 3650)
+})
