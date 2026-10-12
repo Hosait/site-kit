@@ -16,12 +16,14 @@ const noBrowser = async () => { throw new Error('no browser in tests') }
 const pathOf = (u) => new URL(u).pathname + new URL(u).search
 const byPath = (results) => Object.fromEntries(results.map((r) => [pathOf(r.old), r]))
 
-/** A crawl folder: urls.json (from [path, status] pairs, or as given), inventory.json and, with templates, extract.json. */
-function folder(entries, { templates, urls } = {}) {
+/** A crawl folder: urls.json (from [path, status] pairs, or as given), inventory.json (with documents, when given) and, with templates, extract.json. */
+function folder(entries, { templates, urls, source = OLD, documents } = {}) {
   const out = fs.mkdtempSync(path.join(os.tmpdir(), 'compare-'))
   urls ??= { main: { en: entries.map(([p, status]) => ({ url: OLD + p, path: p.split('?')[0], status })) } }
   fs.writeFileSync(path.join(out, 'urls.json'), JSON.stringify(urls))
-  fs.writeFileSync(path.join(out, 'inventory.json'), JSON.stringify({ version: 1, source: OLD + '/', pages: [] }))
+  const inventory = { version: 1, source: source + '/', pages: [] }
+  if (documents) inventory.documents = documents.map((url) => ({ url, foundOn: [source + '/'] }))
+  fs.writeFileSync(path.join(out, 'inventory.json'), JSON.stringify(inventory))
   if (templates) fs.writeFileSync(path.join(out, 'extract.json'), JSON.stringify({ version: 1, source: OLD + '/', pages: [], templates }))
   return out
 }
@@ -164,6 +166,71 @@ test('compare.md and compare.json give the counts and one line per failure', asy
   } finally { await s.close() }
 })
 
+test('an old document that answers 200 on the old site and 301 to a 200 on the new site is OK, in documents', async () => {
+  const old = await serve({ '/files/prices.pdf': { headers: { 'content-type': 'application/pdf' }, body: '%PDF' + 'x'.repeat(100 * 1024) } })
+  const s = await serve({ '/about': { body: 'ok' }, '/files/prices.pdf': { status: 301, headers: { location: '/media/prices.pdf' } }, '/media/prices.pdf': { body: '%PDF' } })
+  try {
+    const out = folder([['/about', 200]], { source: old.url, documents: [old.url + '/files/prices.pdf', old.url + '/files/prices.pdf#p2'] })
+    const { results, documents } = await compare(out, { newBase: s.url, allowPrivate: true, launchBrowser: noBrowser })
+    assert.deepEqual(results.map((r) => [pathOf(r.old), r.ok]), [['/about', true]])
+    assert.equal(documents.length, 1, 'once per path and query')
+    const [d] = documents
+    assert.deepEqual([d.old, d.target, d.status, d.final, d.ok, d.note], [old.url + '/files/prices.pdf', s.url + '/files/prices.pdf', 200, s.url + '/media/prices.pdf', true, undefined])
+    assert.deepEqual(old.requests, ['/files/prices.pdf'])
+    const json = JSON.parse(fs.readFileSync(path.join(out, 'compare.json'), 'utf8'))
+    assert.deepEqual(json.documents.map((r) => [r.old, r.final, r.ok]), [[d.old, d.final, true]])
+    assert.ok(fs.readFileSync(path.join(out, 'compare.md'), 'utf8').includes('1 old documents checked: 1 OK, 0 fail.'))
+  } finally { await old.close(); await s.close() }
+})
+
+test('an old document that answers 200 on the old site and 404 on the new site fails, listed under documents', async () => {
+  const old = await serve({ '/files/a.pdf': { body: '%PDF' } })
+  const s = await serve({ '/about': { body: 'ok' } })
+  try {
+    const out = folder([['/about', 200]], { source: old.url, documents: [old.url + '/files/a.pdf'] })
+    const { results, documents } = await compare(out, { newBase: s.url, allowPrivate: true, launchBrowser: noBrowser })
+    assert.deepEqual(results.map((r) => r.ok), [true])
+    assert.deepEqual(documents.map((d) => [pathOf(d.old), d.status, d.ok]), [['/files/a.pdf', 404, false]])
+    const md = fs.readFileSync(path.join(out, 'compare.md'), 'utf8')
+    const pages = md.indexOf('1 old addresses checked: 1 OK, 0 fail.')
+    const docs = md.indexOf('1 old documents checked: 0 OK, 1 fail.')
+    const line = md.indexOf(`- 404 /files/a.pdf → ${s.url}/files/a.pdf`)
+    assert.ok(pages !== -1 && docs > pages && line > docs && md.indexOf('## Screenshots') > line, md)
+  } finally { await old.close(); await s.close() }
+})
+
+test('an old document that does not answer 200 on the old site is not checked on the new one, only named in a note', async () => {
+  const more = Array.from({ length: 9 }, (_, i) => `/x${i}.pdf`)
+  const old = await serve({ '/moved.pdf': { status: 301, headers: { location: '/a.pdf' } }, '/reset.pdf': (req) => { req.socket.destroy(); return { body: '' } } })
+  const s = await serve({ '/about': { body: 'ok' } })
+  try {
+    const out = folder([['/about', 200]], { source: old.url, documents: ['/gone.pdf', '/moved.pdf', '/reset.pdf', ...more].map((p) => old.url + p) })
+    const { results, documents, notes } = await compare(out, { newBase: s.url, allowPrivate: true, launchBrowser: noBrowser })
+    assert.deepEqual(results.map((r) => r.ok), [true])
+    assert.deepEqual(documents, [])
+    assert.deepEqual(s.requests, ['/about'], 'the new site never got a document request')
+    const listed = ['/gone.pdf (404)', '/moved.pdf (301)', '/reset.pdf (socket hang up)', ...more.slice(0, 7).map((p) => `${p} (404)`)]
+    const note = `12 documents did not work on the old site either and were not checked: ${listed.join(', ')}, …`
+    assert.deepEqual(notes, [note, NO_PLAYWRIGHT])
+    const md = fs.readFileSync(path.join(out, 'compare.md'), 'utf8')
+    assert.ok(md.indexOf(`- ${note}`) > md.indexOf('## Notes'), md)
+    assert.ok(!md.includes('old documents checked'), 'no documents line when none was checked')
+  } finally { await old.close(); await s.close() }
+})
+
+test('documents on another origin than the crawled site are ignored', async () => {
+  const old = await serve({})
+  const other = await serve({ '/elsewhere.pdf': { body: '%PDF' } })
+  const s = await serve({ '/about': { body: 'ok' }, '/elsewhere.pdf': { body: '%PDF' } })
+  try {
+    const out = folder([['/about', 200]], { source: old.url, documents: [other.url + '/elsewhere.pdf'] })
+    const { documents, notes } = await compare(out, { newBase: s.url, allowPrivate: true, launchBrowser: noBrowser })
+    assert.deepEqual(documents, [])
+    assert.deepEqual([old.requests, other.requests, s.requests], [[], [], ['/about']])
+    assert.deepEqual(notes, [NO_PLAYWRIGHT])
+  } finally { await old.close(); await other.close(); await s.close() }
+})
+
 test('screenshots: the home page and the first page of each template, at most 12, desktop and mobile, old and new', async () => {
   const s = await serve({ '/': { body: 'home' } })
   const templates = [
@@ -265,6 +332,18 @@ test('command line: usage errors exit 2, a failing address exits 1, all OK exits
     assert.ok(stdout.includes('2 OK, 0 fail'), stdout)
     assert.ok(stdout.includes(path.join(ok, 'compare.md')), stdout)
     const help = await run('node', [BIN, '--help']).catch((e) => e)
-    assert.match(help.stdout, /compare {7}Check every old URL on the new site and take old\/new screenshots side by side/)
+    assert.match(help.stdout, /compare {7}Check every old URL and document on the new site and take old\/new screenshots side by side/)
   } finally { await s.close() }
+})
+
+test('command line: a failing document exits 1 even when every page is OK', async () => {
+  const old = await serve({ '/a.pdf': { body: '%PDF' }, '/b.pdf': { body: '%PDF' } })
+  const s = await serve({ '/': { body: 'home' }, '/b.pdf': { body: '%PDF' } })
+  try {
+    const bad = folder([['/', 200]], { source: old.url, documents: [old.url + '/a.pdf'] })
+    const ok = folder([['/', 200]], { source: old.url, documents: [old.url + '/b.pdf'] })
+    await assert.rejects(run('node', [BIN, 'compare', '--out', bad, '--new', s.url, '--allow-private'], { env }), (e) => e.code === 1 && e.stdout.includes('1 old addresses checked: 1 OK, 0 fail.') && e.stdout.includes('1 old documents checked: 0 OK, 1 fail.'))
+    const { stdout } = await run('node', [BIN, 'compare', '--out', ok, '--new', s.url, '--allow-private'], { env })
+    assert.ok(stdout.includes('1 old documents checked: 1 OK, 0 fail.'), stdout)
+  } finally { await old.close(); await s.close() }
 })

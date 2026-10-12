@@ -27,6 +27,7 @@ In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-buil
 - **report** writes `report.md` for the customer.
 - **compare** checks every old address that answered 200 on the new site: it must answer 200,
   or 301/308 to a page on the new site that does (at most 3 redirects). Four requests at a time.
+  The old site's documents (PDFs and the like) are checked the same way if they still work there.
   It writes `compare.md` and `compare.json`, and exits 1 when an address fails. With Playwright
   installed it also takes old and new screenshots (the home page and the first page of each
   template, desktop and mobile) into `shots/`, side by side in `compare.html`.

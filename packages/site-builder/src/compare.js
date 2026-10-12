@@ -1,6 +1,7 @@
 // Checks the new site against the old one before the domain moves: every old address that
-// answered 200 must answer 200 on the new site, or 301/308 there to a page that does. Then, if
-// Playwright is installed, old and new screenshots side by side (home page and one per template).
+// answered 200 must answer 200 on the new site, or 301/308 there to a page that does. So must every
+// document (PDFs and the like) that still answers 200 on the old site. Then, if Playwright is
+// installed, old and new screenshots side by side (home page and one per template).
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -28,6 +29,29 @@ function oldAddresses(out) {
     for (const entries of Object.values(byLang))
       for (const e of entries) if (e.status === 200 && !seen.has(pathOf(e.url))) seen.set(pathOf(e.url), e.url)
   return [...seen.values()]
+}
+
+/** The crawl's documents on the old site's own origin, once per path and query. */
+function oldDocuments(out) {
+  const inv = readJson(path.join(out, 'inventory.json'))
+  const origin = new URL(inv.source).origin
+  const seen = new Map()
+  for (const d of inv.documents ?? []) if (new URL(d.url).origin === origin && !seen.has(pathOf(d.url))) seen.set(pathOf(d.url), d.url)
+  return [...seen.values()]
+}
+
+/** Runs fn on every item, 4 at a time; the answers keep the items' order. */
+async function pool(items, fn) {
+  const answers = new Array(items.length)
+  let next = 0
+  async function worker() {
+    while (next < items.length) {
+      const i = next++
+      answers[i] = await fn(items[i])
+    }
+  }
+  await Promise.all(Array.from({ length: CONCURRENCY }, worker))
+  return answers
 }
 
 /** Requests the old address on the new site and follows at most 3 permanent redirects there. */
@@ -137,11 +161,16 @@ ${pairs.map((p) => `<section><h2>${esc(p.page)} · ${esc(p.viewport)}</h2><div c
 `
 }
 
-function markdown(newBase, results, skipped, notes) {
-  const bad = results.filter((r) => !r.ok)
-  const lines = [`# Compare with ${newBase}`, '', `${results.length} old addresses checked: ${results.length - bad.length} OK, ${bad.length} fail.`, '']
-  for (const r of bad) lines.push(`- ${r.status} ${pathOf(r.old)} → ${r.final ?? r.target}${r.note ? ` (${r.note})` : ''}`)
-  if (bad.length) lines.push('')
+function markdown(newBase, results, documents, skipped, notes) {
+  const lines = [`# Compare with ${newBase}`, '']
+  const section = (rows, what) => {
+    const bad = rows.filter((r) => !r.ok)
+    lines.push(`${rows.length} old ${what} checked: ${rows.length - bad.length} OK, ${bad.length} fail.`, '')
+    for (const r of bad) lines.push(`- ${r.status} ${pathOf(r.old)} → ${r.final ?? r.target}${r.note ? ` (${r.note})` : ''}`)
+    if (bad.length) lines.push('')
+  }
+  section(results, 'addresses')
+  if (documents.length) section(documents, 'documents')
   lines.push('## Screenshots', '', skipped ?? 'Old and new, desktop and mobile, side by side: [compare.html](compare.html)', '')
   const other = notes.filter((n) => n !== skipped)
   if (other.length) lines.push('## Notes', '', ...other.map((n) => `- ${n}`), '')
@@ -154,26 +183,28 @@ function markdown(newBase, results, skipped, notes) {
  */
 export async function compare(out, { newBase, allowPrivate = false, log = () => {}, launchBrowser = defaultLaunch }) {
   const origin = new URL(newBase).origin
-  const olds = oldAddresses(out)
-  const results = new Array(olds.length)
-  let next = 0
-  async function worker() {
-    while (next < olds.length) {
-      const i = next++
-      const r = (results[i] = await check(olds[i], origin, allowPrivate))
-      log(`${r.status} ${r.target}${r.final ? ` → ${r.final}` : ''}${r.note ? ` (${r.note})` : ''}`)
-    }
+  const checked = async (old) => {
+    const r = await check(old, origin, allowPrivate)
+    log(`${r.status} ${r.target}${r.final ? ` → ${r.final}` : ''}${r.note ? ` (${r.note})` : ''}`)
+    return r
   }
-  await Promise.all(Array.from({ length: CONCURRENCY }, worker))
+  const results = await pool(oldAddresses(out), checked)
+  // The crawl does not fetch documents, so each is first asked for on the old site (16 KB at most);
+  // only one that answers 200 there is judged on the new site.
+  const docs = oldDocuments(out)
+  const before = await pool(docs, (d) => get(d, { allowPrivate, maxBytes: 16 * 1024 }).then((r) => r.status, reason))
+  const documents = await pool(docs.filter((_, i) => before[i] === 200), checked)
+  const broken = docs.flatMap((d, i) => (before[i] === 200 ? [] : [`${pathOf(d)} (${before[i]})`]))
 
   const notes = []
+  if (broken.length) notes.push(`${broken.length} documents did not work on the old site either and were not checked: ${broken.slice(0, 10).join(', ')}${broken.length > 10 ? ', …' : ''}`)
   let shot
   // Screenshots never fail the command.
   try { shot = await screenshots(out, { origin, allowPrivate, launchBrowser, log, notes }) } catch (e) { shot = { shots: [], skipped: `Screenshots skipped: ${e.message}` } }
   if (shot.skipped) notes.push(shot.skipped)
   if (shot.pairs) fs.writeFileSync(path.join(out, 'compare.html'), html(newBase, shot.pairs))
 
-  fs.writeFileSync(path.join(out, 'compare.json'), JSON.stringify({ newBase, checkedAt: new Date().toISOString(), results, shots: shot.shots, notes }, null, 2))
-  fs.writeFileSync(path.join(out, 'compare.md'), markdown(newBase, results, shot.skipped, notes))
-  return { results, shots: shot.shots, notes }
+  fs.writeFileSync(path.join(out, 'compare.json'), JSON.stringify({ newBase, checkedAt: new Date().toISOString(), results, documents, shots: shot.shots, notes }, null, 2))
+  fs.writeFileSync(path.join(out, 'compare.md'), markdown(newBase, results, documents, shot.skipped, notes))
+  return { results, documents, shots: shot.shots, notes }
 }

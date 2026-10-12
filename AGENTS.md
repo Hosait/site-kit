@@ -52,8 +52,8 @@ moves, and `gaps` for anything no block matches. Check it locally:
 
 After the preview is up, run
 `pnpm site-builder compare --out .site-builder/<host> --new <preview address>` (add
-`--allow-private` for a local preview) and look at `compare.md` and `compare.html` in that
-folder; run `pnpm qa:axe`.
+`--allow-private` for a local preview) and look at `compare.md` (old pages and the old site's
+documents, PDFs and the like) and `compare.html` in that folder; run `pnpm qa:axe`.
 
 ## 7. Publish on Hosait
 

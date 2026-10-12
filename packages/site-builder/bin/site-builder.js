@@ -14,7 +14,7 @@ const HELP = `site-builder <command> [options]
   extract       Pull pages, navigation, footer, images and templates out of the cached pages
   theme         Draft site/theme.json colours, fonts and logo from the site's CSS
   report        Write report.md: technology, tracking, templates, quick checks, enhancements
-  compare       Check every old URL on the new site and take old/new screenshots side by side
+  compare       Check every old URL and document on the new site and take old/new screenshots side by side
 
 Options:
   --out <dir>        Working folder (default .site-builder/<host> for crawl, required otherwise)
@@ -57,10 +57,12 @@ try {
     if (!isHttp(newBase)) usage('compare needs --new <http(s) address of the new site>')
     const r = await compare(out, { newBase, allowPrivate: has('--allow-private'), log: (s) => console.log(s) })
     const fail = r.results.filter((x) => !x.ok).length
+    const docFail = r.documents.filter((x) => !x.ok).length
     console.log(`\n${r.results.length} old addresses checked: ${r.results.length - fail} OK, ${fail} fail.`)
+    if (r.documents.length) console.log(`${r.documents.length} old documents checked: ${r.documents.length - docFail} OK, ${docFail} fail.`)
     for (const n of r.notes) console.log('note: ' + n)
     console.log(`→ ${path.join(out, 'compare.md')}`)
-    if (fail) process.exit(1)
+    if (fail || docFail) process.exit(1)
   } else usage(cmd && cmd !== '--help' ? `unknown command: ${cmd}` : undefined)
 } catch (e) {
   console.error(e.code === 'EPRIVATE' ? `${e.message}. Use --allow-private only for your own local or intranet sites.` : e.message)
