@@ -57,9 +57,10 @@ After the preview is up: copy `.site-builder/<host>/urls.json` to `import-data/u
 ## 7. Publish on Hosait
 
 Push the repository and connect it to a blank Hosait project: the Hosait wizard, or the MCP tool
-`connect_repository` with a project token that has the `source` permission. The first deploy
-generates the secrets and imports `seed/site-plan.json` into the empty database;
-`/next/seed/status` shows progress. Then create the first admin user.
+`connect_repository` when the hosait connection covers a blank project (the plugin's sign-in to a
+blank project, or a project token with the `source` permission). The first deploy generates the
+secrets and imports `seed/site-plan.json` into the empty database; `/next/seed/status` shows
+progress. Then create the first admin user.
 Never commit `.env` or any secret.
 
 When the site's own domain points here, check that `origin` and `hosts` in `site/config.ts` name
