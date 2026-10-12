@@ -2,6 +2,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
+import { compare } from '../src/compare.js'
 import { crawl } from '../src/crawl.js'
 import { extract } from '../src/extract.js'
 import { report } from '../src/report.js'
@@ -13,11 +14,13 @@ const HELP = `site-builder <command> [options]
   extract       Pull pages, navigation, footer, images and templates out of the cached pages
   theme         Draft site/theme.json colours, fonts and logo from the site's CSS
   report        Write report.md: technology, tracking, templates, quick checks, enhancements
+  compare       Check every old URL on the new site and take old/new screenshots side by side
 
 Options:
   --out <dir>        Working folder (default .site-builder/<host> for crawl, required otherwise)
   --max <n>          Page cap for crawl (default 500)
   --budget <min>     Time budget for crawl in minutes (default 15); then it writes what it has
+  --new <url>        The new site's address, for compare
   --allow-private    Allow private and local addresses (for testing and intranet sites)
 `
 
@@ -32,6 +35,7 @@ const positive = (name, fallback, whole = false) => {
   if (!(whole ? /^\d+$/ : /^\d+(\.\d+)?$/).test(v) || !(Number(v) > 0)) usage(`${name} needs a positive ${whole ? 'whole ' : ''}number`)
   return Number(v)
 }
+const isHttp = (s) => { try { return /^https?:$/.test(new URL(s).protocol) } catch { return false } }
 
 try {
   if (cmd === 'crawl') {
@@ -46,6 +50,17 @@ try {
     if (cmd === 'extract') { const m = extract(out); console.log(`${m.pages.length} pages, ${m.templates.length} templates → ${path.join(out, 'extract.json')}`) }
     if (cmd === 'theme') { const t = await theme(out, { allowPrivate: has('--allow-private') }); console.log(JSON.stringify(t.theme.colors)); for (const n of t.notes) console.log('note: ' + n) }
     if (cmd === 'report') { report(out); console.log(`→ ${path.join(out, 'report.md')}`) }
+  } else if (cmd === 'compare') {
+    const out = flag('--out')
+    const newBase = flag('--new')
+    if (!out || !fs.existsSync(path.join(out, 'urls.json'))) usage('compare needs --out <dir> pointing at a crawl folder')
+    if (!isHttp(newBase)) usage('compare needs --new <http(s) address of the new site>')
+    const r = await compare(out, { newBase, allowPrivate: has('--allow-private'), log: (s) => console.log(s) })
+    const fail = r.results.filter((x) => !x.ok).length
+    console.log(`\n${r.results.length} old addresses checked: ${r.results.length - fail} OK, ${fail} fail.`)
+    for (const n of r.notes) console.log('note: ' + n)
+    console.log(`→ ${path.join(out, 'compare.md')}`)
+    if (fail) process.exit(1)
   } else usage(cmd && cmd !== '--help' ? `unknown command: ${cmd}` : undefined)
 } catch (e) {
   console.error(e.code === 'EPRIVATE' ? `${e.message}. Use --allow-private only for your own local or intranet sites.` : e.message)

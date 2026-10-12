@@ -50,14 +50,18 @@ moves, and `gaps` for anything no block matches. Check it locally:
     pnpm lint
     pnpm test:unit
 
-After the preview is up: copy `.site-builder/<host>/urls.json` to `import-data/urls.json` and run
-`pnpm qa:urls <preview address>`; run `pnpm qa:axe`.
+After the preview is up, run
+`pnpm site-builder compare --out .site-builder/<host> --new <preview address>` (add
+`--allow-private` for a local preview) and look at `compare.md` and `compare.html` in that
+folder; run `pnpm qa:axe`.
 
 ## 7. Publish on Hosait
 
 Push the repository and connect it to a blank Hosait project (the Hosait wizard, or the MCP tool
 `connect_repository`). The first deploy generates the secrets and imports `seed/site-plan.json`
 into the empty database; `/next/seed/status` shows progress. Then create the first admin user.
+Before the domain switch, run `pnpm site-builder compare` again with `--new` set to the site's
+hosait.com address.
 Never commit `.env` or any secret.
 
 ---

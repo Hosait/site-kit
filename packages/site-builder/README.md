@@ -6,6 +6,7 @@ Reads an existing website so it can be rebuilt on Hosait Site Kit. The steps tha
     site-builder extract --out .site-builder/www.example.com
     site-builder theme   --out .site-builder/www.example.com
     site-builder report  --out .site-builder/www.example.com
+    site-builder compare --out .site-builder/www.example.com --new https://preview.example.com
 
 In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-builder crawl <url>`.
 
@@ -24,6 +25,11 @@ In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-buil
   `site/fonts.ts`, and save the logo under `public/brand/`. Colours are already darkened where
   Site Kit's 4.5:1 contrast check needs it; `notes` lists each change.
 - **report** writes `report.md` for the customer.
+- **compare** checks every old address that answered 200 on the new site: it must answer 200,
+  or 301/308 to a page on the new site that does (at most 3 redirects). Four requests at a time.
+  It writes `compare.md` and `compare.json`, and exits 1 when an address fails. With Playwright
+  installed it also takes old and new screenshots (the home page and the first page of each
+  template, desktop and mobile) into `shots/`, side by side in `compare.html`.
 
 Private, loopback and link-local addresses are refused, and this is checked when connecting.
 `--allow-private` is for your own local or intranet sites.
