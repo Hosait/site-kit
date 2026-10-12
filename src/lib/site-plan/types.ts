@@ -2,10 +2,31 @@ import type { Locale } from '@/lib/sites'
 
 export type Localized<T> = Partial<Record<Locale, T>>
 /** Inside block data: { $media: ref } → media id, { $page: ref } → page id,
- *  { $pageLink: ref } → { relationTo: 'pages', value: id }, { $person: ref } / { $document: ref } → record id,
+ *  { $pageLink: ref } → { relationTo: 'pages', value: id }, { $person: ref } / { $document: ref } / { $form: ref } → record id,
  *  { $html: '<p>…</p>' } → Lexical JSON. */
 export type PlanValue = unknown
 export type PlanBlock = { blockType: string } & Record<string, PlanValue>
+
+export type PlanFormField = {
+  type: 'text' | 'email' | 'textarea' | 'number' | 'checkbox' | 'select' | 'country' | 'message'
+  name?: string
+  label?: Localized<string>
+  required?: boolean
+  width?: 25 | 33 | 50 | 66 | 75 | 100
+  default?: boolean
+  options?: { value: string; label: Localized<string> }[]
+  /** Only on `message`: the info text. */
+  text?: Localized<string>
+}
+export type PlanForm = {
+  ref: string
+  title: Localized<string>
+  fields: PlanFormField[]
+  submitLabel?: Localized<string>
+  confirmation: Localized<string>
+  /** Days, "keep", or left out for the site default (site/config.ts forms.retentionDays). */
+  retention?: number | 'keep'
+}
 
 export type SitePlan = {
   version: 1
@@ -14,6 +35,7 @@ export type SitePlan = {
   media: { ref: string; source: string; alt?: Localized<string>; credit?: string }[]
   people?: { ref: string; name: string; role?: Localized<string>; email?: string; phone?: string; image?: string; bio?: Localized<string> }[]
   documents?: { ref: string; source: string; title: Localized<string>; docType: string; language?: Locale; description?: Localized<string> }[]
+  forms?: PlanForm[]
   pages: {
     ref: string
     parent?: string
