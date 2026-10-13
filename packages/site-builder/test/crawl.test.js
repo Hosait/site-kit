@@ -5,6 +5,7 @@ import path from 'node:path'
 import { test } from 'node:test'
 
 import { crawl, normalize, sameSite } from '../src/crawl.js'
+import { get as netGet } from '../src/net.js'
 import { serve } from './server.js'
 
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'crawl-'))
@@ -210,5 +211,24 @@ test('media and document lists are capped with a note; languages must look like 
     const x = inv.pages.find((p) => p.url.endsWith('/x/'))
     assert.ok(x && x.status === 200 && x.lang === undefined)
     assert.deepEqual(inv.languages.sort(), ['en', 'nb'])
+  } finally { await s.close() }
+})
+
+test('sitemaps are read only from the same site, whether robots.txt or a sitemap index lists them', async () => {
+  const xml = (body) => ({ headers: { 'content-type': 'application/xml' }, body })
+  const s = await serve({
+    '/robots.txt': (req) => ({ headers: { 'content-type': 'text/plain' }, body: `User-agent: *\nSitemap: http://other.example/sitemap.xml\nSitemap: http://${req.headers.host}/index.xml\n` }),
+    '/index.xml': (req) => xml(`<sitemapindex><sitemap><loc>http://elsewhere.example/s.xml</loc></sitemap><sitemap><loc>http://${req.headers.host}/pages.xml</loc></sitemap></sitemapindex>`),
+    '/pages.xml': (req) => xml(`<urlset><url><loc>http://${req.headers.host}/listed</loc></url></urlset>`),
+    '/': page('Home', '<p>h</p>'),
+    '/listed': page('Listed', '<p>l</p>'),
+  })
+  // Requests to any other host are recorded and never sent.
+  const asked = []
+  const get = (url, o) => { asked.push(url); return new URL(url).host === new URL(s.url).host ? netGet(url, o) : Promise.reject(new Error('not sent')) }
+  try {
+    const inv = await crawl(s.url + '/', { out: tmp(), allowPrivate: true, delayMs: 0, get })
+    assert.deepEqual(asked.filter((u) => /\.example\//.test(u)), [])
+    assert.ok(inv.pages.some((p) => p.url.endsWith('/listed')), 'same-site sitemaps still read')
   } finally { await s.close() }
 })

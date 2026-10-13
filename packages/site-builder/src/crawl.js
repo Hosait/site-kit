@@ -119,10 +119,13 @@ export async function crawl(start, opts) {
     queue.push(n)
   }
 
-  // Sitemaps first: robots.txt's Sitemap lines, then the usual names. Each file is read once,
-  // and its parsed document is let go before the next one is read.
+  // Sitemaps first: robots.txt's Sitemap lines, then the usual names. Only sitemaps on the same
+  // site are read, each file once, and its parsed document is let go before the next one is read.
   const sitemapSeen = new Set()
   async function readSitemap(url) {
+    let u
+    try { u = new URL(url) } catch { return }
+    if (!sameSite(u.hostname, root.hostname)) return
     if (sitemapSeen.has(url) || sitemapSeen.size >= MAX_SITEMAPS || overBudget()) return
     sitemapSeen.add(url)
     let r
