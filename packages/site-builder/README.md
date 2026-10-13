@@ -10,7 +10,8 @@ Reads an existing website so it can be rebuilt on Hosait Site Kit. The steps tha
 In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-builder crawl <url>`.
 
 - **crawl** reads robots.txt and obeys it, reads the sitemap, follows links on the same site
-  (www and apex count as one), and stops at 500 pages. Two requests at a time, with a pause.
+  (www and apex count as one), and stops at 500 pages or after 15 minutes (`--max`,
+  `--budget <minutes>`), keeping what it has read. Two requests at a time, with a pause.
   It caches each page's HTML in `raw/`, lists media, documents, trackers, embeds and the CMS
   in `inventory.json`, and writes `urls.json` for Site Kit's `pnpm qa:urls`.
 - **extract** writes `extract.json`: per page the title, meta, headings, main content, images

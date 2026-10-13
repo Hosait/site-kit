@@ -17,6 +17,7 @@ const HELP = `site-builder <command> [options]
 Options:
   --out <dir>        Working folder (default .site-builder/<host> for crawl, required otherwise)
   --max <n>          Page cap for crawl (default 500)
+  --budget <min>     Time budget for crawl in minutes (default 15); then it writes what it has
   --allow-private    Allow private and local addresses (for testing and intranet sites)
 `
 
@@ -25,13 +26,20 @@ const flag = (name) => { const i = args.indexOf(name); return i === -1 ? undefin
 const has = (name) => args.includes(name)
 const [cmd, target] = args
 const usage = (msg) => { if (msg) console.error(msg); console.log(HELP); process.exit(2) }
+const positive = (name, fallback) => {
+  const v = flag(name)
+  if (v === undefined) return fallback
+  if (!/^\d+(\.\d+)?$/.test(v) || !(Number(v) > 0)) usage(`${name} needs a positive number`)
+  return Number(v)
+}
 
 try {
   if (cmd === 'crawl') {
     if (!target || target.startsWith('--')) usage('crawl needs a URL')
     const out = flag('--out') ?? path.join('.site-builder', new URL(target).hostname)
-    const inv = await crawl(target, { out, maxPages: Number(flag('--max') ?? 500), allowPrivate: has('--allow-private'), log: (s) => console.log(s) })
+    const inv = await crawl(target, { out, maxPages: Number(flag('--max') ?? 500), budgetMs: positive('--budget', 15) * 60_000, allowPrivate: has('--allow-private'), log: (s) => console.log(s) })
     console.log(`\n${inv.pages.length} pages, ${inv.media.length} images, ${inv.documents.length} documents → ${out}`)
+    for (const n of inv.notes) console.log('note: ' + n)
   } else if (cmd === 'extract' || cmd === 'theme' || cmd === 'report') {
     const out = flag('--out')
     if (!out || !fs.existsSync(path.join(out, 'inventory.json'))) usage(`${cmd} needs --out <dir> pointing at a crawl folder`)

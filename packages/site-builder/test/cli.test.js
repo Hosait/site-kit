@@ -25,3 +25,7 @@ test('crawl, extract, theme and report run end to end from the command line', as
 test('an unknown command prints the help and exits 2', async () => {
   await assert.rejects(run('node', [BIN, 'fly']), (e) => e.code === 2 && /site-builder <command>/.test(e.stdout + e.stderr))
 })
+
+test('a --budget that is not a positive number is a usage error', async () => {
+  for (const v of ['abc', '0', '-5', '']) await assert.rejects(run('node', [BIN, 'crawl', 'http://localhost/', '--budget', v]), (e) => e.code === 2 && /--budget/.test(e.stderr), v)
+})

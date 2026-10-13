@@ -1,5 +1,6 @@
 // Crawl one website politely and cache its HTML: robots.txt, same site (www/apex count as
-// one), sitemap first, then links; a page cap, two workers and a pause between requests.
+// one), sitemap first, then links; a page cap, a time budget, two workers and a pause between
+// requests.
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -38,11 +39,17 @@ function tally(map) {
 
 /**
  * @param {string} start
- * @param {{ out: string, maxPages?: number, concurrency?: number, delayMs?: number, allowPrivate?: boolean, get?: typeof defaultGet, log?: (s: string) => void }} opts
+ * @param {{ out: string, maxPages?: number, budgetMs?: number, concurrency?: number, delayMs?: number, allowPrivate?: boolean, get?: typeof defaultGet, log?: (s: string) => void }} opts
  */
 export async function crawl(start, opts) {
-  const { out, maxPages = 500, concurrency = 2, delayMs = 250, allowPrivate = false, log = () => {} } = opts
+  const { out, maxPages = 500, budgetMs = 15 * 60_000, concurrency = 2, delayMs = 250, allowPrivate = false, log = () => {} } = opts
+  if (!(Number.isFinite(budgetMs) && budgetMs > 0)) throw new Error('budgetMs must be a positive number')
   const get = opts.get ?? defaultGet
+  // After the budget no new request starts; those in flight finish and what was read is written.
+  const deadline = Date.now() + budgetMs
+  let budgetReached = false
+  const overBudget = () => (Date.now() >= deadline ? (budgetReached = true) : false)
+  const notes = []
   const first = normalize(start, start)
   if (!first) throw new Error(`${start}: not an http(s) address`)
   const root = new URL(first)
@@ -108,7 +115,7 @@ export async function crawl(start, opts) {
   // and its parsed document is let go before the next one is read.
   const sitemapSeen = new Set()
   async function readSitemap(url) {
-    if (sitemapSeen.has(url) || sitemapSeen.size >= MAX_SITEMAPS) return
+    if (sitemapSeen.has(url) || sitemapSeen.size >= MAX_SITEMAPS || overBudget()) return
     sitemapSeen.add(url)
     let r
     try { r = await getFollowing(url, { maxBytes: 10 * 1024 * 1024 }) } catch { return }
@@ -173,7 +180,7 @@ export async function crawl(start, opts) {
 
   let active = 0
   async function worker() {
-    while (reserved < maxPages) {
+    while (reserved < maxPages && !overBudget()) {
       const url = queue.shift()
       if (!url) {
         if (active === 0) return
@@ -186,6 +193,7 @@ export async function crawl(start, opts) {
     }
   }
   await Promise.all(Array.from({ length: concurrency }, worker))
+  if (budgetReached) notes.push(`Stopped at the ${Math.round(budgetMs / 6000) / 10}-minute time budget; ${queue.length} queued addresses were not read.`)
 
   const inventory = {
     version: 1,
@@ -200,6 +208,7 @@ export async function crawl(start, opts) {
     embeds: tally(embeds),
     cms: tally(cms),
     languages: [...languages],
+    notes,
   }
   fs.writeFileSync(path.join(out, 'inventory.json'), JSON.stringify(inventory, null, 2))
   // The shape scripts/qa/url-parity.ts reads (site "main", per language).

@@ -159,3 +159,31 @@ test('a sitemap with very many addresses is read in linear time', async () => {
     assert.ok(inv.notQueued > 39_000, `notQueued ${inv.notQueued}`)
   } finally { await s.close() }
 })
+
+test('the crawl stops at its time budget, lets requests in flight finish, writes what it has and says so', async () => {
+  const routes = { '/': page('Home', Array.from({ length: 40 }, (_, i) => `<a href="/p${i}">${i}</a>`).join(' ')) }
+  for (let i = 0; i < 40; i++) routes[`/p${i}`] = { ...page(`P${i}`, '<p>x</p>'), delay: 100 }
+  const s = await serve(routes)
+  const out = tmp()
+  try {
+    const t = Date.now()
+    const inv = await crawl(s.url + '/', { out, allowPrivate: true, delayMs: 0, budgetMs: 500 })
+    assert.ok(Date.now() - t < 1500, `took ${Date.now() - t} ms`)
+    assert.ok(inv.pages.length > 2 && inv.pages.length < 41, `${inv.pages.length} pages`)
+    assert.ok(inv.pages.every((p) => p.status === 200 && !p.error), 'requests in flight finish')
+    assert.ok(inv.notes.some((n) => /budget/.test(n)), JSON.stringify(inv.notes))
+    assert.equal(JSON.parse(fs.readFileSync(path.join(out, 'inventory.json'), 'utf8')).pages.length, inv.pages.length)
+  } finally { await s.close() }
+})
+
+test('a crawl that finishes within its budget has no budget note', async () => {
+  const s = await site()
+  try {
+    const inv = await crawl(s.url + '/', { out: tmp(), allowPrivate: true, delayMs: 0 })
+    assert.ok(!inv.notes.some((n) => /budget/.test(n)))
+  } finally { await s.close() }
+})
+
+test('a budget that is not a positive number is refused', async () => {
+  for (const budgetMs of [0, -1, NaN, '5', Infinity]) await assert.rejects(crawl('http://localhost/', { out: tmp(), budgetMs }), /budgetMs/, String(budgetMs))
+})
