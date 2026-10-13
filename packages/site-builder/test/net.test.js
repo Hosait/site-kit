@@ -101,3 +101,10 @@ test('a compressed response cut at the size cap also stops its decompressor', as
     await s.close()
   }
 })
+
+test('isPublicAddress refuses SIIT, Teredo, local-use NAT64 and documentation IPv6 ranges', () => {
+  for (const ip of ['::ffff:0:7f00:1', '::ffff:0:808:808', '2001::1', '2001:0:4136:e378:8000:63bf:3fff:fdd2', '64:ff9b:1::a00:1', '64:ff9b:1:ffff::808:808', '2001:db8::1', '2001:db8:ffff::1'])
+    assert.equal(isPublicAddress(ip), false, ip)
+  for (const ip of ['2001:4860:4860::8888', '2001:200::1', '2a00:1450:4001::200e', '64:ff9b::808:808'])
+    assert.equal(isPublicAddress(ip), true, ip)
+})

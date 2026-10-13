@@ -10,11 +10,11 @@ import zlib from 'node:zlib'
 export const USER_AGENT = 'HosaitSiteBuilder/0.1 (+https://hosait.com)'
 
 // IPv6 ranges that are never a public website: unspecified, loopback, unique local, link-local,
-// site-local and multicast.
+// site-local, multicast, IPv4-translated (SIIT), Teredo, local-use NAT64 and documentation.
 const PRIVATE6 = new net.BlockList()
 PRIVATE6.addAddress('::', 'ipv6')
 PRIVATE6.addAddress('::1', 'ipv6')
-for (const [prefix, bits] of [['fc00::', 7], ['fe80::', 10], ['fec0::', 10], ['ff00::', 8]]) PRIVATE6.addSubnet(prefix, bits, 'ipv6')
+for (const [prefix, bits] of [['fc00::', 7], ['fe80::', 10], ['fec0::', 10], ['ff00::', 8], ['::ffff:0:0:0', 96], ['2001::', 32], ['64:ff9b:1::', 48], ['2001:db8::', 32]]) PRIVATE6.addSubnet(prefix, bits, 'ipv6')
 // IPv6 forms that carry an IPv4 address, and the byte it starts at: IPv4-mapped, IPv4-compatible,
 // NAT64 and 6to4. The IPv4 rules decide for them.
 const CARRIES_IPV4 = [['::ffff:0:0', 96, 12], ['::', 96, 12], ['64:ff9b::', 96, 12], ['2002::', 16, 2]].map(([prefix, bits, at]) => {
