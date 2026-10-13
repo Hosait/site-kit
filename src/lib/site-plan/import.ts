@@ -42,6 +42,18 @@ export async function importPlan(payload: Payload, plan: SitePlan, opts: ImportO
   const ctx = { disableRevalidate: true }
   const others = LOCALES.filter((l) => l !== DEFAULT_LOCALE)
 
+  // Local files are checked before anything is deleted, so a bad one never leaves a replaced site empty.
+  const localFiles = new Map<string, string>()
+  for (const [collection, list] of [['media', plan.media], ['documents', plan.documents ?? []]] as const) {
+    for (const { source } of list) {
+      if (/^[a-z][a-z0-9+.-]*:\/\//i.test(source)) continue
+      const filePath = await resolveLocalFile(baseDir, source)
+      const problem = await localFileProblem(collection, filePath, source)
+      if (problem) throw new Error(problem)
+      localFiles.set(source, filePath)
+    }
+  }
+
   // Any content counts: a run that failed half-way leaves media without pages, and must not be duplicated.
   let existing = 0
   for (const c of CONTENT_COLLECTIONS) existing += (await payload.count({ collection: c })).totalDocs
@@ -82,9 +94,7 @@ export async function importPlan(payload: Payload, plan: SitePlan, opts: ImportO
         }
         return wrote(collection, await payload.create({ collection, data: data as never, file: { ...file, size: file.data.length }, locale: DEFAULT_LOCALE, context: ctx }))
       }
-      const filePath = await resolveLocalFile(baseDir, source)
-      const problem = await localFileProblem(collection, filePath, source)
-      if (problem) throw new Error(problem)
+      const filePath = localFiles.get(source) ?? (await resolveLocalFile(baseDir, source))
       return wrote(collection, await payload.create({ collection, data: data as never, filePath, locale: DEFAULT_LOCALE, context: ctx }))
     }
 

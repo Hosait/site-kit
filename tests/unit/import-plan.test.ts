@@ -112,3 +112,17 @@ test('a local SVG is refused as media before anything is written', async () => {
   await assert.rejects(importPlan(payload, p, { baseDir: dir, toLexical }), /media\/logo\.svg: SVG is not imported/)
   assert.equal(payload.calls.filter((c) => c.op === 'create').length, 0)
 })
+
+// With replace, the import deletes the site's content first; a bad local file found after that
+// would leave the site empty. Local files are checked before anything is deleted.
+test('a bad local file stops a replacing import before anything is deleted', async () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'import-replace-'))
+  mkdirSync(path.join(dir, 'media'))
+  writeFileSync(path.join(dir, 'media', 'hero.jpg'), readFileSync('tests/fixtures/media/hero.jpg'))
+  writeFileSync(path.join(dir, 'media', 'logo.svg'), '<svg xmlns="http://www.w3.org/2000/svg"></svg>')
+  const p = plan()
+  p.media.push({ ref: 'logo', source: 'media/logo.svg' })
+  const payload = fakePayload(3)
+  await assert.rejects(importPlan(payload, p, { baseDir: dir, toLexical, reset: true }), /media\/logo\.svg: SVG is not imported/)
+  assert.deepEqual(payload.calls.filter((c) => c.op === 'delete' || c.op === 'create'), [])
+})
