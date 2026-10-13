@@ -71,3 +71,16 @@ test('a response that never ends is stopped by the overall deadline', async () =
     await assert.rejects(get(s.url + '/', { allowPrivate: true, deadlineMs: 200 }), /took longer/)
   } finally { await s.close() }
 })
+
+// --- Hardening ------------------------------------------------------------
+test('isPublicAddress applies the IPv4 rules to IPv6 forms that carry an IPv4 address, and refuses site-local', () => {
+  for (const ip of ['::ffff:7f00:1', '::ffff:127.0.0.1', '::7f00:1', '::127.0.0.1', '64:ff9b::7f00:1', '64:ff9b::a00:1', '2002:7f00:1::', '2002:c0a8:101::1', 'fec0::1', 'fe80::1%lo0', '0:0:0:0:0:ffff:a9fe:a9fe'])
+    assert.equal(isPublicAddress(ip), false, ip)
+  for (const ip of ['::ffff:101:101', '::ffff:8.8.8.8', '64:ff9b::101:101', '2002:101:101::1', '2606:4700::1111', '2a00:1450:4001::200e', '1.1.1.1', '8.8.8.8'])
+    assert.equal(isPublicAddress(ip), true, ip)
+})
+
+test('IPv6 literals that carry a private IPv4 address are refused before connecting', async () => {
+  for (const u of ['http://[::ffff:127.0.0.1]/', 'http://[::127.0.0.1]/', 'http://[64:ff9b::127.0.0.1]/', 'http://[2002:7f00:1::]/', 'http://[fec0::1]/'])
+    await assert.rejects(get(u, { deadlineMs: 2000 }), (e) => e.code === 'EPRIVATE', u)
+})

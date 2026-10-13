@@ -9,6 +9,35 @@ import zlib from 'node:zlib'
 
 export const USER_AGENT = 'HosaitSiteBuilder/0.1 (+https://hosait.com)'
 
+// IPv6 ranges that are never a public website: unspecified, loopback, unique local, link-local,
+// site-local and multicast.
+const PRIVATE6 = new net.BlockList()
+PRIVATE6.addAddress('::', 'ipv6')
+PRIVATE6.addAddress('::1', 'ipv6')
+for (const [prefix, bits] of [['fc00::', 7], ['fe80::', 10], ['fec0::', 10], ['ff00::', 8]]) PRIVATE6.addSubnet(prefix, bits, 'ipv6')
+// IPv6 forms that carry an IPv4 address, and the byte it starts at: IPv4-mapped, IPv4-compatible,
+// NAT64 and 6to4. The IPv4 rules decide for them.
+const CARRIES_IPV4 = [['::ffff:0:0', 96, 12], ['::', 96, 12], ['64:ff9b::', 96, 12], ['2002::', 16, 2]].map(([prefix, bits, at]) => {
+  const list = new net.BlockList()
+  list.addSubnet(prefix, bits, 'ipv6')
+  return { list, at }
+})
+
+/** The 16 bytes of an address net.isIPv6 accepts, without a zone. */
+function ipv6Bytes(ip) {
+  let s = ip
+  const dotted = /(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(s)
+  if (dotted) {
+    const [a, b, c, d] = dotted.slice(1).map(Number)
+    s = s.slice(0, dotted.index) + ((a << 8) | b).toString(16) + ':' + ((c << 8) | d).toString(16)
+  }
+  const [head, tail] = s.split('::')
+  const h = head ? head.split(':') : []
+  const t = tail ? tail.split(':') : []
+  const groups = tail === undefined ? h : [...h, ...Array(8 - h.length - t.length).fill('0'), ...t]
+  return groups.flatMap((g) => [parseInt(g, 16) >> 8, parseInt(g, 16) & 255])
+}
+
 /** @param {string} ip */
 export function isPublicAddress(ip) {
   if (net.isIPv4(ip)) {
@@ -22,11 +51,9 @@ export function isPublicAddress(ip) {
     return true
   }
   if (net.isIPv6(ip)) {
-    const v = ip.toLowerCase()
-    if (v === '::' || v === '::1') return false
-    const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(v)
-    if (mapped) return isPublicAddress(mapped[1])
-    if (/^f[cd]/.test(v) || /^fe[89ab]/.test(v) || /^ff/.test(v)) return false
+    const v = ip.split('%')[0]
+    if (PRIVATE6.check(v, 'ipv6')) return false
+    for (const { list, at } of CARRIES_IPV4) if (list.check(v, 'ipv6')) return isPublicAddress(ipv6Bytes(v).slice(at, at + 4).join('.'))
     return true
   }
   return false
