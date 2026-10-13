@@ -96,3 +96,10 @@ test("a server's Content-Type does not decide: an SVG sent as image/png is refus
   const got = await fetchMedia('https://example.com/b', { request: answering(png, { 'content-type': 'application/octet-stream' }) })
   assert.equal(got.mimetype, 'image/png')
 })
+
+test('SIIT, Teredo, local-use NAT64 and documentation IPv6 ranges are refused', () => {
+  for (const ip of ['::ffff:0:7f00:1', '::ffff:0:808:808', '2001::1', '2001:0:4136:e378:8000:63bf:3fff:fdd2', '64:ff9b:1::1', '2001:db8::1'])
+    assert.equal(isPublicAddress(ip), false, ip)
+  for (const ip of ['2001:4860:4860::8888', '2001:1::1', '64:ff9b::808:808'])
+    assert.equal(isPublicAddress(ip), true, ip)
+})

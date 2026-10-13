@@ -52,6 +52,9 @@ export function isPublicAddress(ip: string): boolean {
     if (zero(0, 6)) return isPublicAddress(v4(h[6], h[7])) // ::a.b.c.d (compatible)
     if (h[0] === 0x64 && h[1] === 0xff9b && zero(2, 6)) return isPublicAddress(v4(h[6], h[7])) // NAT64 64:ff9b::/96
     if (h[0] === 0x2002) return isPublicAddress(v4(h[1], h[2])) // 6to4 2002::/16
+    if (zero(0, 4) && h[4] === 0xffff && h[5] === 0) return false // SIIT ::ffff:0:0:0/96
+    if (h[0] === 0x64 && h[1] === 0xff9b && h[2] === 1) return false // local-use NAT64 64:ff9b:1::/48
+    if (h[0] === 0x2001 && (h[1] === 0 || h[1] === 0xdb8)) return false // Teredo 2001::/32, documentation 2001:db8::/32
     if ((h[0] & 0xfe00) === 0xfc00) return false // unique local fc00::/7
     if ((h[0] & 0xffc0) === 0xfe80 || (h[0] & 0xffc0) === 0xfec0) return false // link-local, site-local
     if ((h[0] & 0xff00) === 0xff00) return false // multicast
