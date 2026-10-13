@@ -18,6 +18,28 @@ export const PAIRS = [
 ]
 const DEFAULTS = { ink: '#14213d', brand: '#2a6fdb', muted: '#f4f5f7', background: '#ffffff', highlight: '#b0144f' }
 const MAX_CSS = 2 * 1024 * 1024
+const MAX_PIECE = 4096
+
+/**
+ * The CSS as rules, found in linear time: split once on }, then each piece on { (the last part
+ * holds the declarations, the one before it the selector, so rules inside @media count too) and
+ * the declarations on ;. Selectors and declarations longer than MAX_PIECE are left out.
+ */
+function cssRules(css) {
+  const rules = []
+  for (const block of css.split('}')) {
+    const parts = block.split('{')
+    if (parts.length < 2) continue
+    const selector = parts[parts.length - 2]
+    const decls = []
+    for (const d of parts[parts.length - 1].split(';')) {
+      const i = d.indexOf(':')
+      if (i !== -1 && d.length <= MAX_PIECE) decls.push([d.slice(0, i).trim(), d.slice(i + 1).trim()])
+    }
+    rules.push({ selector: selector.length <= MAX_PIECE ? selector : '', decls })
+  }
+  return rules
+}
 
 export function parseColor(v) {
   const s = String(v).trim().toLowerCase()
@@ -61,9 +83,13 @@ export function themeFromCss(css, html, baseUrl) {
   const add = (map, hex) => map.set(hex, (map.get(hex) || 0) + 1)
   let brand = null
   let radius = null
-  for (const m of css.matchAll(/--([\w-]+)\s*:\s*([^;}]+)/g)) {
-    const c = parseColor(m[2])
-    if (!brand && c && /primary|brand|accent|main/i.test(m[1]) && saturation(c) > 0.35) brand = toHex(c)
+  const rules = cssRules(css)
+  for (const { decls } of rules) {
+    for (const [name, value] of decls) {
+      if (brand || !name.startsWith('--')) continue
+      const c = parseColor(value)
+      if (c && /primary|brand|accent|main/i.test(name) && saturation(c) > 0.35) brand = toHex(c)
+    }
   }
   for (const m of css.matchAll(/(?:^|[;{\s])(color|background-color|background|border-color|fill)\s*:\s*([^;}]+)/g)) {
     const c = parseColor(m[2].split(/\s+/)[0])
@@ -93,8 +119,11 @@ export function themeFromCss(css, html, baseUrl) {
 
   const $ = cheerio.load(html)
   const families = (sel) => {
-    const re = new RegExp(`(?:^|})\\s*([^{}]*\\b(?:${sel})\\b[^{}]*)\\{[^}]*font-family\\s*:\\s*([^;}]+)`, 'g')
-    for (const m of css.matchAll(re)) return m[2].split(',')[0].replace(/["']/g, '').trim()
+    const re = new RegExp(`\\b(?:${sel})\\b`)
+    for (const { selector, decls } of rules) {
+      const family = re.test(selector) && decls.find(([name]) => name === 'font-family')
+      if (family) return family[1].split(',')[0].replace(/["']/g, '').trim()
+    }
     return null
   }
   const googleFonts = [...new Set($('link[href*="fonts.googleapis.com"]').map((_, l) => [...String($(l).attr('href')).matchAll(/family=([^:&]+)/g)].map((m) => decodeURIComponent(m[1]).replace(/\+/g, ' '))).get().flat())]

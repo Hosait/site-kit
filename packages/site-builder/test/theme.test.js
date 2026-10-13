@@ -53,3 +53,15 @@ test('theme(dir) reads the cached home page, fetches its stylesheets and writes 
     assert.ok(fs.existsSync(path.join(dir, 'theme.draft.json')))
   } finally { await s.close() }
 })
+
+// --- Hardening ------------------------------------------------------------
+test('custom properties and font families are read in linear time, also from rules inside @media', () => {
+  for (const css of ['--' + '-'.repeat(40_000), '}' + 'body '.repeat(20_000)]) {
+    const t = Date.now()
+    themeFromCss(css, '<html><body></body></html>', 'https://x.no/')
+    assert.ok(Date.now() - t < 1000, `took ${Date.now() - t} ms for ${css.slice(0, 12)}…`)
+  }
+  const r = themeFromCss('@media screen{:root{--brand-main:#0b5394}body{font-family:"Source Sans",sans-serif}}', '<html><body></body></html>', 'https://x.no/')
+  assert.equal(r.theme.colors.brand, '#0b5394')
+  assert.equal(r.fonts.body, 'Source Sans')
+})
