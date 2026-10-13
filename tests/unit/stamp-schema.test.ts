@@ -33,3 +33,11 @@ test('the shipped schema/site-plan.schema.json lists this site\'s locales and th
   })
   assert.ok(localeMaps > 0 && blockTypeNodes > 0)
 })
+
+test('stampSchema fills a value marked with a choice name from the site\'s own options', () => {
+  const input = { kind: { $comment: 'articleKind', type: 'string' }, other: { $comment: 'note', type: 'string' } }
+  assert.deepEqual(stampSchema(input, ['no'], undefined, { articleKind: ['news', 'blog'] }), {
+    kind: { $comment: 'articleKind', type: 'string', enum: ['news', 'blog'] },
+    other: { $comment: 'note', type: 'string' },
+  })
+})

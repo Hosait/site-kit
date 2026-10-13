@@ -2,15 +2,22 @@ import Ajv, { type ErrorObject } from 'ajv'
 
 import blocks from '../../../schema/blocks.schema.json'
 import planSchema from '../../../schema/site-plan.schema.json'
-import { DEFAULT_LOCALE, LOCALES } from '../sites'
+import { DEFAULT_LOCALE, LOCALES, SITE_CONFIG } from '../sites'
 import { orderPages } from './refs'
 import { stampSchema } from './stamp-schema'
 import type { SitePlan } from './types'
 
 const BLOCK_TYPES: string[] = blocks.blockTypes
 
+/** The values Payload stores as selects, so a plan can only use what the site offers. */
+export const PLAN_CHOICES = {
+  articleKind: Object.keys(SITE_CONFIG.articleKinds),
+  documentType: Object.keys(SITE_CONFIG.documentTypes),
+  documentLanguage: [...LOCALES, 'multi'],
+}
+
 const ajv = new Ajv({ allErrors: true, strict: false })
-const check = ajv.compile(stampSchema(planSchema, LOCALES, BLOCK_TYPES) as object)
+const check = ajv.compile(stampSchema(planSchema, LOCALES, BLOCK_TYPES, PLAN_CHOICES) as object)
 
 const fmt = (e: ErrorObject) => {
   const allowed = (e.params as { allowedValues?: unknown[] }).allowedValues
@@ -19,7 +26,8 @@ const fmt = (e: ErrorObject) => {
 
 /**
  * What JSON Schema cannot say, and the import would refuse or get wrong: unique refs per kind,
- * no cycle among page parents, and a title in the default language. Paths as Ajv writes them.
+ * unique redirect addresses, no cycle among page parents, and a title in the default language.
+ * Paths as Ajv writes them.
  */
 function crossCheck(plan: SitePlan): string[] {
   const errors: string[] = []
@@ -36,7 +44,12 @@ function crossCheck(plan: SitePlan): string[] {
   } catch (e) {
     errors.push(`/pages ${e instanceof Error ? e.message : String(e)}`)
   }
-  for (const [kind, list] of [['pages', plan.pages], ['articles', plan.articles]] as const)
+  const from = new Set<string>()
+  ;(plan.redirects ?? []).forEach((r, i) => {
+    if (from.has(r.from)) errors.push(`/redirects/${i}/from duplicate redirect from "${r.from}"`)
+    from.add(r.from)
+  })
+  for (const [kind, list] of [['pages', plan.pages], ['articles', plan.articles], ['documents', plan.documents]] as const)
     (list ?? []).forEach((item, i) => {
       if (!item.title[DEFAULT_LOCALE]) errors.push(`/${kind}/${i}/title needs a title in "${DEFAULT_LOCALE}", the default language`)
     })

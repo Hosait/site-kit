@@ -185,10 +185,24 @@
             "$ref": "#/definitions/text"
           },
           "docType": {
-            "type": "string"
+            "type": "string",
+            "$comment": "documentType",
+            "enum": [
+              "brochure",
+              "datasheet",
+              "manual",
+              "certificate",
+              "other"
+            ]
           },
           "language": {
-            "type": "string"
+            "type": "string",
+            "$comment": "documentLanguage",
+            "enum": [
+              "no",
+              "en",
+              "multi"
+            ]
           },
           "description": {
             "$ref": "#/definitions/text"
@@ -302,7 +316,12 @@
             "$ref": "#/definitions/ref"
           },
           "kind": {
-            "type": "string"
+            "type": "string",
+            "$comment": "articleKind",
+            "enum": [
+              "news",
+              "blog"
+            ]
           },
           "publishedAt": {
             "type": "string",
