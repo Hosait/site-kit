@@ -9,6 +9,7 @@ import { getPayload } from 'payload'
 import { seedDbDecision } from '@/lib/seed-guard'
 import { reindexAll } from '@/lib/search/indexer'
 import { loadSeedPlan, runPlanSeed, seedSource, type PlanSeedProgress } from '@/lib/site-plan/seed-plan'
+import { planOutcome, settlesWithin, WAIT_MS } from '@/lib/site-plan/seed-response'
 import { SITE_KEYS } from '@/lib/sites'
 
 export const dynamic = 'force-dynamic'
@@ -23,6 +24,8 @@ export const maxDuration = 900
  *   wget -qO- --post-data= --header "Authorization: Bearer $CRON_SECRET" http://127.0.0.1:3000/next/seed/media
  *   wget -qO- --header "Authorization: Bearer $CRON_SECRET" http://127.0.0.1:3000/next/seed/status
  *   (…/next/seed/media?only=documents kjører bare dokumentene på nytt)
+ *   (…/next/seed/db?wait=1 svarer først når importen er ferdig: 200, 500 ved feil, 504 om den fortsatt går.
+ *    Hosaits seed.run bruker den, så en mislykket import gir feilkode i stedet for «ferdig».)
  *
  * - db:    tømmer innholdstabellene og legger inn seed/content.sql.gz (brukere berøres ikke).
  *          Bare på en tom installasjon, eller med ?replace=1 (panelet sender det).
@@ -34,7 +37,7 @@ export const maxDuration = 900
 const SEED_DIR = path.join(process.cwd(), 'seed')
 
 type Progress = { running: boolean; total: number; done: number; failed: string[]; startedAt?: string; finishedAt?: string }
-const g = globalThis as unknown as { __seedMedia?: Progress; __seedPlan?: PlanSeedProgress }
+const g = globalThis as unknown as { __seedMedia?: Progress; __seedPlan?: PlanSeedProgress; __seedPlanRun?: Promise<void> }
 
 // Samme navn brukes i src/components/admin/SeedPanelClient.tsx.
 const SEED_HEADER = 'x-site-seed'
@@ -61,7 +64,7 @@ function flushCache() {
 
 async function seedDb() {
   const file = path.join(SEED_DIR, 'content.sql.gz')
-  if (!fs.existsSync(file)) return { ok: false, error: 'seed/content.sql.gz finnes ikke i imaget' }
+  if (!fs.existsSync(file)) return { ok: false, missing: true, error: 'seed/content.sql.gz finnes ikke i imaget' }
   const sql = zlib.gunzipSync(fs.readFileSync(file)).toString('utf8')
   const payload = await getPayload({ config: configPromise })
   // Egen tilkobling: dumpen endrer søkesti og replikeringsrolle, og tilkoblingen kastes etterpå.
@@ -157,17 +160,24 @@ async function seedPlan(replace: boolean, progress: PlanSeedProgress, release: (
   const loaded = loadSeedPlan(SEED_DIR)
   if (!loaded.ok) {
     release()
-    return { ok: false, error: loaded.error }
+    return { status: 422, body: { ok: false, error: loaded.error } }
   }
   const payload = await getPayload({ config: configPromise })
-  void runPlanSeed(payload, loaded.plan, SEED_DIR, progress, {
+  const run = runPlanSeed(payload, loaded.plan, SEED_DIR, progress, {
     reset: replace,
     after: async () => {
       flushCache()
       await reindexAll(payload)
     },
   })
-  return { ok: true, started: true, mode: 'plan' }
+  g.__seedPlanRun = run
+  return { status: 200, body: { ok: true, started: true, mode: 'plan' }, run }
+}
+
+/** ?wait=1: answer when the import has finished (or at the deadline), never 200 for a failure. */
+async function waitForPlan(progress: PlanSeedProgress, run: Promise<void>) {
+  const { status, body } = planOutcome(progress, await settlesWithin(run, WAIT_MS))
+  return Response.json(body, { status })
 }
 
 async function handle(req: Request, step: string) {
@@ -180,8 +190,12 @@ async function handle(req: Request, step: string) {
   }
   if (req.method !== 'POST') return Response.json({ ok: false, error: 'Bruk POST' }, { status: 405 })
   if (step === 'db') {
+    const wait = new URL(req.url).searchParams.get('wait') === '1'
     // A retry (Hosait's seed.run, or the panel clicked twice) must not start a second import.
-    if (g.__seedPlan?.running) return Response.json({ ok: true, alreadyRunning: true, progress: g.__seedPlan })
+    if (g.__seedPlan?.running) {
+      if (wait && g.__seedPlanRun) return waitForPlan(g.__seedPlan, g.__seedPlanRun)
+      return Response.json({ ok: true, alreadyRunning: true, progress: g.__seedPlan })
+    }
     // The slot is claimed before the first await, so two requests at once cannot both start one.
     const previous = g.__seedPlan
     const claim: PlanSeedProgress = { running: true, done: 0, total: 0, startedAt: new Date().toISOString() }
@@ -201,15 +215,23 @@ async function handle(req: Request, step: string) {
         release()
         return Response.json({ ok: false, error: 'Nettstedet har allerede sider. Bruk ?replace=1 for å erstatte alt innhold.' }, { status: 409 })
       }
-      if (seedSource(SEED_DIR) === 'plan') return Response.json(await seedPlan(replace, claim, release))
+      if (seedSource(SEED_DIR) === 'plan') {
+        const started = await seedPlan(replace, claim, release)
+        if (wait && started.run) return waitForPlan(claim, started.run)
+        return Response.json(started.body, { status: started.status })
+      }
       release()
-      return Response.json(await seedDb())
+      const sql = await seedDb()
+      return Response.json(sql, { status: sql.ok ? 200 : 'missing' in sql ? 404 : 500 })
     } catch (e) {
       release()
       throw e
     }
   }
-  if (step === 'media') return Response.json(await seedMedia(new URL(req.url).searchParams.get('only')))
+  if (step === 'media') {
+    const media = await seedMedia(new URL(req.url).searchParams.get('only'))
+    return Response.json(media, { status: media.ok ? 200 : 404 })
+  }
   return Response.json({ ok: false, error: 'Ukjent steg (db, media, status)' }, { status: 404 })
 }
 
