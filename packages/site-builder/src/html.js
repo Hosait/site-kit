@@ -36,8 +36,7 @@ class BoundedParser extends Parser {
     const parent = this.stack.length - (isVoid ? 0 : 1)
     // Only what is kept counts towards the limits; a tag left out for depth does not.
     const deep = this.stack.length > MAX_DEPTH + (name === 'a' ? 1 : 0)
-    const crowded = !deep && this.htmlMode && ((this.children[parent] = (this.children[parent] ?? 0) + 1) > MAX_CHILDREN || ++this.elements > MAX_ELEMENTS)
-    if (!deep && !crowded) {
+    if (!deep && !this.crowded(parent)) {
       if (!isVoid) this.children[this.stack.length] = 0
       return
     }
@@ -52,14 +51,26 @@ class BoundedParser extends Parser {
     this.skipped.push(name)
   }
 
+  /** Counts one more element under the element at depth `parent`; true when it is past a limit. */
+  crowded(parent) {
+    if (!this.htmlMode) return false
+    this.children[parent] = (this.children[parent] ?? 0) + 1
+    return this.children[parent] > MAX_CHILDREN || ++this.elements > MAX_ELEMENTS
+  }
+
   onclosetag(start, endIndex) {
-    const name = this.skipped.length ? this.getSlice(start, endIndex) : ''
-    if (name && (this.lowerCaseTagNames ? name.toLowerCase() : name) === this.skipped[this.skipped.length - 1]) {
-      this.skipped.pop()
+    const raw = this.getSlice(start, endIndex)
+    const name = this.lowerCaseTagNames ? raw.toLowerCase() : raw
+    const leaveOut = () => {
       this.endIndex = endIndex
       this.startIndex = endIndex + 1
-      return
     }
+    if (this.skipped.length && name === this.skipped[this.skipped.length - 1]) {
+      this.skipped.pop()
+      return leaveOut()
+    }
+    // A </br> makes a <br> without an opening tag, as browsers do, so it keeps to the limits here.
+    if (this.htmlMode && name === 'br' && this.crowded(this.stack.length)) return leaveOut()
     // A stray </p> opens and closes an empty p; at the limit that p is left out, not remembered.
     const before = this.skipped.length
     super.onclosetag(start, endIndex)

@@ -171,3 +171,18 @@ test('the element limits apply to pages, not to sitemaps', async () => {
   const $sitemap = load('<urlset>' + '<url><loc>https://acme.no/p</loc></url>'.repeat(MAX_CHILDREN + 1000) + '</urlset>', { xml: true })
   assert.equal($sitemap('loc').length, MAX_CHILDREN + 1000)
 })
+
+// </br> makes a <br> without an opening tag, and a void tag past a limit has no closing tag of its
+// own: both must keep to the limits and leave the elements around them where they belong.
+test('</br> and void tags keep to the element limits, and what follows stays in its parent', async () => {
+  const { load, MAX_CHILDREN } = await import('../src/html.js')
+  const $end = load('<section id="s"><div>' + '</br>'.repeat(MAX_CHILDREN + 1000) + '</div><p id="after">x</p></section>')
+  assert.equal($end('br').length, MAX_CHILDREN)
+  assert.equal($end('#after').parent().attr('id'), 's')
+  const $void = load('<section id="s"><div>' + '<br>'.repeat(MAX_CHILDREN + 1000) + '</div><p id="after">x</p></section>')
+  assert.equal($void('br').length, MAX_CHILDREN)
+  assert.equal($void('#after').parent().attr('id'), 's')
+  const start = Date.now()
+  extractPage('<html><body>' + '</br>'.repeat(40_000) + '</body></html>', 'https://acme.no/br')
+  assert.ok(Date.now() - start < 1500, `took ${Date.now() - start} ms`)
+})
