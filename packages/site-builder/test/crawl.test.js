@@ -191,8 +191,10 @@ test('a budget that is not a positive number is refused', async () => {
 })
 
 test('media and document lists are capped with a note; languages must look like language tags; titles are cut', async () => {
-  const imgs = Array.from({ length: 6000 }, (_, i) => `<img src="/i/${i}.jpg">`).join('')
-  const docs = Array.from({ length: 2500 }, (_, i) => `<a href="/d/${i}.pdf">d</a>`).join('')
+  // In containers of 1000, as a page would group them (one element keeps at most 5000 children).
+  const groups = (n, item) => Array.from({ length: Math.ceil(n / 1000) }, (_, g) => '<div>' + Array.from({ length: Math.min(1000, n - g * 1000) }, (__, i) => item(g * 1000 + i)).join('') + '</div>').join('')
+  const imgs = groups(6000, (i) => `<img src="/i/${i}.jpg">`)
+  const docs = groups(2500, (i) => `<a href="/d/${i}.pdf">d</a>`)
   const head = `<title>${'T'.repeat(1000)}</title><link rel="alternate" hreflang="nb" href="/nb/"><link rel="alternate" hreflang="not a language" href="/x/"><link rel="alternate" hreflang="x-default" href="/">`
   const s = await serve({
     '/': { body: `<!doctype html><html lang=" EN-GB "><head>${head}</head><body><a href="/x/">x</a>${imgs}${docs}</body></html>` },

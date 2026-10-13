@@ -48,7 +48,7 @@ function mainElement($) {
     if ($el.is(CHROME)) continue
     const len = $el.children('p').text().trim().length
     if (len > bestLen) { best = $el; bestLen = len }
-    stack.push(...$el.children().get().reverse())
+    for (const child of $el.children().get().reverse()) stack.push(child)
   }
   return best ?? body
 }

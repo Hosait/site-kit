@@ -149,3 +149,25 @@ test('a page of unclosed <p><font> or <tr><td><span> tags keeps its text and lin
     assert.ok(p.links.some((l) => /\/last/.test(l)), 'a link after the limit is kept')
   }
 })
+
+// Thousands of elements side by side (a page of generated rows, a broken template) made selector
+// lookups slow when they sat right under body. An element keeps at most MAX_CHILDREN children and a
+// page MAX_ELEMENTS elements; what is left out keeps its text. Sitemaps (XML) are not limited.
+test('a page with tens of thousands of elements side by side is read quickly, its text kept', () => {
+  const html = '<html><body>' + '<div>row</div>'.repeat(30_000) + '</body></html>'
+  const start = Date.now()
+  const page = extractPage(html, 'https://acme.no/wide')
+  assert.ok(Date.now() - start < 1500, `took ${Date.now() - start} ms`)
+  assert.match(page.mainHtml, /^(<body>)?(<div>row<\/div>)+/)
+})
+
+test('the element limits apply to pages, not to sitemaps', async () => {
+  const { load, MAX_CHILDREN, MAX_ELEMENTS } = await import('../src/html.js')
+  const $list = load('<ul>' + '<li><a href="/x">a</a></li>'.repeat(MAX_CHILDREN + 1000) + '</ul>')
+  assert.equal($list('li').length, MAX_CHILDREN)
+  assert.equal(($list('ul').text().match(/a/g) || []).length, MAX_CHILDREN + 1000)
+  const $grouped = load(('<div>' + '<span>s</span>'.repeat(99) + '</div>').repeat(Math.ceil(MAX_ELEMENTS / 100) + 100))
+  assert.ok($grouped('*').length <= MAX_ELEMENTS + 3, String($grouped('*').length))
+  const $sitemap = load('<urlset>' + '<url><loc>https://acme.no/p</loc></url>'.repeat(MAX_CHILDREN + 1000) + '</urlset>', { xml: true })
+  assert.equal($sitemap('loc').length, MAX_CHILDREN + 1000)
+})

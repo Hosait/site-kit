@@ -6,6 +6,8 @@ import * as cheerio from 'cheerio'
 import { DomHandler, Parser } from 'htmlparser2'
 
 export const MAX_DEPTH = 256
+export const MAX_CHILDREN = 5000
+export const MAX_ELEMENTS = 100_000
 const MAX_TITLE = 300
 const LANGUAGE = /^[a-z]{2,3}(-[a-z0-9]{1,8})*$/
 
@@ -16,17 +18,37 @@ const LANGUAGE = /^[a-z]{2,3}(-[a-z0-9]{1,8})*$/
  * searches on every tag, stays short. A link is still opened one level past the limit, so links
  * are kept too; void elements (img) never count. A closing tag that matches the last tag left out
  * is dropped with it.
+ *
+ * A page (not a sitemap) also keeps at most MAX_CHILDREN children per element and MAX_ELEMENTS
+ * elements in all: selector lookups slow down with the number of elements side by side. Past
+ * either limit a tag is left out the same way, its text kept.
  */
 class BoundedParser extends Parser {
   skipped = []
+  // Children opened so far under each element on the stack, by its depth (0 is the document).
+  children = [0]
+  elements = 0
 
   emitOpenTag(name) {
     const foreign = this.foreignContext.length
     super.emitOpenTag(name)
-    if (this.stack.length <= MAX_DEPTH + (name === 'a' ? 1 : 0)) return
+    const isVoid = this.isVoidElement(name)
+    const parent = this.stack.length - (isVoid ? 0 : 1)
+    // Only what is kept counts towards the limits; a tag left out for depth does not.
+    const deep = this.stack.length > MAX_DEPTH + (name === 'a' ? 1 : 0)
+    const crowded = !deep && this.htmlMode && ((this.children[parent] = (this.children[parent] ?? 0) + 1) > MAX_CHILDREN || ++this.elements > MAX_ELEMENTS)
+    if (!deep && !crowded) {
+      if (!isVoid) this.children[this.stack.length] = 0
+      return
+    }
+    this.attribs = null
+    // A void tag was never put on the stack; without its name no closing tag is sent for it.
+    if (isVoid) {
+      this.tagname = ''
+      return
+    }
     this.stack.shift()
     if (this.foreignContext.length > foreign) this.foreignContext.shift()
-    this.attribs = null
     this.skipped.push(name)
   }
 
