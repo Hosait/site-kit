@@ -132,7 +132,7 @@ test('a malformed Location header is recorded, and the crawl goes on', async () 
 })
 
 // --- Hardening ------------------------------------------------------------
-test('a page nested far too deep is recorded with an error, quickly, and the crawl goes on', async () => {
+test('a page nested far too deep is read quickly, and its links are still followed', async () => {
   const s = await serve({
     '/': page('Home', '<a href="/deep">deep</a> <a href="/ok">ok</a>'),
     '/deep': page('Deep', '<div>'.repeat(50_000) + '<a href="/hidden">x</a>'),
@@ -143,7 +143,8 @@ test('a page nested far too deep is recorded with an error, quickly, and the cra
     const inv = await crawl(s.url + '/', { out: tmp(), allowPrivate: true, delayMs: 0 })
     assert.ok(Date.now() - t < 2000, `took ${Date.now() - t} ms`)
     const deep = inv.pages.find((p) => p.url.endsWith('/deep'))
-    assert.match(deep.error, /nested/)
+    assert.equal(deep.error, undefined)
+    assert.ok(s.requests.includes('/hidden'), 'link past the nesting limit followed')
     assert.ok(inv.pages.some((p) => p.url.endsWith('/ok') && p.status === 200))
   } finally { await s.close() }
 })
@@ -291,4 +292,15 @@ test('a page cut at the size cap is marked as truncated', async () => {
 
 test('a page cap that is not a positive whole number is refused', async () => {
   for (const maxPages of [0, -1, 2.5, NaN, '5']) await assert.rejects(crawl('http://localhost/', { out: tmp(), maxPages }), /maxPages/, String(maxPages))
+})
+
+test('pages of unclosed <p><font> or <tr><td><span> tags are read past the nesting limit and their links followed', async () => {
+  const font = Array.from({ length: 300 }, (_, i) => `<p><font face="Arial">text ${i} <a href="/x">x</a>`).join('') + '<a href="/last">last</a>'
+  const cells = '<table>' + Array.from({ length: 300 }, (_, i) => `<tr><td><span>cell ${i} <a href="/y">y</a>`).join('') + '<a href="/last-cell">last</a>'
+  const s = await serve({ '/': page('Home', '<a href="/font">f</a> <a href="/cells">c</a>'), '/font': page('Font', font), '/cells': page('Cells', cells) })
+  try {
+    const inv = await crawl(s.url + '/', { out: tmp(), allowPrivate: true, delayMs: 0 })
+    for (const p of ['/font', '/cells']) assert.equal(inv.pages.find((r) => r.url.endsWith(p)).error, undefined, p)
+    for (const p of ['/x', '/last', '/y', '/last-cell']) assert.ok(s.requests.includes(p), p)
+  } finally { await s.close() }
 })

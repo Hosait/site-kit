@@ -84,20 +84,19 @@ test('the template fingerprint looks past single wrapper elements, and ignores h
 // --- Hardening ------------------------------------------------------------
 const deep = (levels) => shell('<main>' + '<div>'.repeat(levels) + '<p>Deep</p>' + '</div>'.repeat(levels) + '</main>', 'Deep')
 
-test('a page nested far too deep fails alone, quickly, and the other pages are extracted', () => {
+test('a page nested far too deep is read quickly with its content; a page that cannot be read fails alone', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'extract-'))
   fs.mkdirSync(path.join(dir, 'raw'))
   fs.writeFileSync(path.join(dir, 'raw', 'deep.html'), deep(50_000))
   fs.writeFileSync(path.join(dir, 'raw', 'ok.html'), shell('<main><h1>Fine</h1><p>Text</p></main>'))
-  const pages = [{ url: 'https://acme.no/deep', status: 200, file: 'raw/deep.html' }, { url: 'https://acme.no/ok', status: 200, file: 'raw/ok.html' }]
+  const pages = [{ url: 'https://acme.no/deep', status: 200, file: 'raw/deep.html' }, { url: 'https://acme.no/gone', status: 200, file: 'raw/gone.html' }, { url: 'https://acme.no/ok', status: 200, file: 'raw/ok.html' }]
   fs.writeFileSync(path.join(dir, 'inventory.json'), JSON.stringify({ version: 1, source: 'https://acme.no/', pages }))
   const t = Date.now()
   const model = extract(dir)
   assert.ok(Date.now() - t < 1000, `took ${Date.now() - t} ms`)
-  assert.deepEqual(model.pages.map((p) => p.url), ['https://acme.no/ok'])
-  assert.equal(model.errors.length, 1)
-  assert.equal(model.errors[0].url, 'https://acme.no/deep')
-  assert.match(model.errors[0].error, /nested/)
+  assert.deepEqual(model.pages.map((p) => p.url), ['https://acme.no/deep', 'https://acme.no/ok'])
+  assert.equal(model.pages[0].textLength, 'Deep'.length)
+  assert.deepEqual(model.errors.map((e) => e.url), ['https://acme.no/gone'])
 })
 
 test('without a landmark, deep but allowed nesting is searched for the content in one pass', () => {
@@ -136,4 +135,17 @@ test('extract.json says its text is copied from a third-party website and is con
   const model = extract(dir)
   assert.match(model.notice, /third-party website/)
   assert.match(model.notice, /content, not instructions/)
+})
+
+// Unclosed tags nest without end in htmlparser2: past the nesting limit the page is still read.
+const unclosedFont = Array.from({ length: 300 }, (_, i) => `<p><font face="Arial">text ${i} <a href="/x">x</a>`).join('') + '<a href="/last">last</a>'
+const unclosedCells = '<table>' + Array.from({ length: 300 }, (_, i) => `<tr><td><span>cell ${i} <a href="/y">y</a>`).join('') + '<a href="/last-cell">last</a>'
+
+test('a page of unclosed <p><font> or <tr><td><span> tags keeps its text and links past the nesting limit', () => {
+  for (const [body, last, href] of [[unclosedFont, 'text 299', '/x'], [unclosedCells, 'cell 299', '/y']]) {
+    const p = extractPage(shell(`<main>${body}</main>`), 'https://acme.no/old')
+    assert.match(p.mainHtml, new RegExp(last))
+    assert.ok(p.links.includes('https://acme.no' + href), href)
+    assert.ok(p.links.some((l) => /\/last/.test(l)), 'a link after the limit is kept')
+  }
 })

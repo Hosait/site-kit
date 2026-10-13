@@ -1,8 +1,7 @@
 // Parses pages and sitemaps with a nesting limit. htmlparser2 (cheerio's own) builds the tree, and
-// a document with elements nested deeper than MAX_DEPTH is refused while it is read, so parsing,
-// selectors and every later walk over the tree (text, html, clone) stay bounded in time and stack.
-// Real pages nest a few dozen levels. Also how a page's bytes become text, and its language and
-// title, read the same way by crawl and extract.
+// no element is opened more than MAX_DEPTH levels deep, so parsing, selectors and every later walk
+// over the tree (text, html, clone) stay bounded in time and stack. Also how a page's bytes become
+// text, and its language and title, read the same way by crawl and extract.
 import * as cheerio from 'cheerio'
 import { DomHandler, Parser } from 'htmlparser2'
 
@@ -10,16 +9,46 @@ export const MAX_DEPTH = 256
 const MAX_TITLE = 300
 const LANGUAGE = /^[a-z]{2,3}(-[a-z0-9]{1,8})*$/
 
+/**
+ * htmlparser2 closes few tags by itself, so old pages with unclosed tags (<p><font> without
+ * </font>) nest hundreds of levels deep. Past MAX_DEPTH an opening tag is left out and what it
+ * holds goes to the element at the limit, so the text is kept and the parser's stack, which it
+ * searches on every tag, stays short. A link is still opened one level past the limit, so links
+ * are kept too; void elements (img) never count. A closing tag that matches the last tag left out
+ * is dropped with it.
+ */
+class BoundedParser extends Parser {
+  skipped = []
+
+  emitOpenTag(name) {
+    const foreign = this.foreignContext.length
+    super.emitOpenTag(name)
+    if (this.stack.length <= MAX_DEPTH + (name === 'a' ? 1 : 0)) return
+    this.stack.shift()
+    if (this.foreignContext.length > foreign) this.foreignContext.shift()
+    this.attribs = null
+    this.skipped.push(name)
+  }
+
+  onclosetag(start, endIndex) {
+    const name = this.skipped.length ? this.getSlice(start, endIndex) : ''
+    if (name && (this.lowerCaseTagNames ? name.toLowerCase() : name) === this.skipped[this.skipped.length - 1]) {
+      this.skipped.pop()
+      this.endIndex = endIndex
+      this.startIndex = endIndex + 1
+      return
+    }
+    // A stray </p> opens and closes an empty p; at the limit that p is left out, not remembered.
+    const before = this.skipped.length
+    super.onclosetag(start, endIndex)
+    this.skipped.length = before
+  }
+}
+
 /** @param {string} text @param {{ xml?: boolean }} [opts] */
 export function load(text, { xml = false } = {}) {
   const handler = new DomHandler(undefined, { xmlMode: xml })
-  const open = handler.onopentag.bind(handler)
-  handler.onopentag = (name, attribs) => {
-    // tagStack holds the document itself plus every open element.
-    if (handler.tagStack.length > MAX_DEPTH) throw new Error(`elements nested more than ${MAX_DEPTH} levels deep`)
-    open(name, attribs)
-  }
-  new Parser(handler, { xmlMode: xml }).end(text)
+  new BoundedParser(handler, { xmlMode: xml }).end(text)
   return cheerio.load(handler.root, xml ? { xml: true } : { xml: { xmlMode: false, encodeEntities: 'utf8' } })
 }
 
