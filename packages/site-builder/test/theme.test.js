@@ -73,3 +73,10 @@ test('a logo src that is not a web address (invalid, or an inline data: image) i
     assert.ok(r.notes.some((n) => /logo/.test(n)), src)
   }
 })
+
+test('a Google Fonts family with a malformed % escape is skipped with a note, and the run goes on', () => {
+  const html = '<html><head><link href="https://fonts.googleapis.com/css2?family=Inter&family=%E0%A4%A&family=Open+Sans" rel="stylesheet"></head><body></body></html>'
+  const r = themeFromCss('', html, 'https://x.no/')
+  assert.deepEqual(r.fonts.googleFonts, ['Inter', 'Open Sans'])
+  assert.ok(r.notes.some((n) => /Google Fonts/.test(n)), JSON.stringify(r.notes))
+})

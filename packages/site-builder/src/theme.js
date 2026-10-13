@@ -125,7 +125,11 @@ export function themeFromCss(css, html, baseUrl) {
     }
     return null
   }
-  const googleFonts = [...new Set($('link[href*="fonts.googleapis.com"]').toArray().map((l) => [...String($(l).attr('href')).matchAll(/family=([^:&]+)/g)].map((m) => decodeURIComponent(m[1]).replace(/\+/g, ' '))).flat())]
+  // A family name that cannot be decoded (a malformed % escape) is skipped with one note.
+  let undecodable = false
+  const family = (raw) => { try { return decodeURIComponent(raw).replace(/\+/g, ' ') } catch { undecodable = true; return null } }
+  const googleFonts = [...new Set($('link[href*="fonts.googleapis.com"]').toArray().map((l) => [...String($(l).attr('href')).matchAll(/family=([^:&]+)/g)].map((m) => family(m[1]))).flat().filter(Boolean))]
+  if (undecodable) notes.push('a font family in a Google Fonts link has a malformed % escape and was skipped')
   const logoEl = $('header img, a[class*=logo] img, img[class*=logo], img[alt*=logo i], img[src*=logo i]').first()
   let logo = null
   if (logoEl.length) {
