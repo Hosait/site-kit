@@ -71,7 +71,10 @@ on the project page; lines starting with `[seed]`). Fix the plan and push; then 
 Never commit `.env` or any secret.
 
 Right after the first deploy, the user creates the first admin user at `/admin` on the
-hosait.com address: until someone has, that page lets anyone create one.
+hosait.com address: until someone has, that page lets anyone create one. Once a user exists, an
+import cut off part-way (the web service restarted during it) leaves pages that make "Run seed
+again" refuse; the admin then replaces the content with "Legg inn innhold" in the Testinnhold
+panel on the admin dashboard.
 
 When the site moves to its own domain:
 

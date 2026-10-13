@@ -49,3 +49,8 @@ test('step 5 says which files come from seed/, as documents, and that SVG is not
   assert.match(step5, /public\/brand\//)
   assert.doesNotMatch(step5, /and SVG cannot be imported from a URL/)
 })
+
+test('step 7 says how an import cut off after the first admin is recovered', () => {
+  const step7 = guide.slice(guide.indexOf('## 7.')).replace(/\s+/g, ' ')
+  assert.match(step7, /Testinnhold/)
+})
