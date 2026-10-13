@@ -29,3 +29,13 @@ export function planOutcome(progress: PlanSeedProgress, finished: boolean): { st
   if (progress.error) return { status: 500, body: { ok: false, error: progress.error } }
   return { status: 200, body: { ok: true, mode: 'plan', result: progress.result } }
 }
+
+/**
+ * The route's JSON answer. Anything that is not a success is also logged with its reason: the
+ * seed command's wget drops the body of an error answer, so the web service's log is where the
+ * reason can be read (Hosait shows it under the project's logs).
+ */
+export function seedAnswer(status: number, body: Record<string, unknown>, log: (...a: unknown[]) => void = console.error): Response {
+  if (status >= 400) log('[seed]', status, String(body.error ?? ''))
+  return Response.json(body, { status })
+}

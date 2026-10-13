@@ -50,8 +50,13 @@ export async function importPlan(payload: Payload, plan: SitePlan, opts: ImportO
     for (const c of CONTENT_COLLECTIONS) await payload.delete({ collection: c, where: { id: { exists: true } }, context: ctx })
   }
 
-  // The site was empty when the writing starts (or reset emptied it). If the import fails part-way,
-  // it removes what it wrote, so the next attempt finds an empty site instead of being refused.
+  // If the import fails part-way, it removes exactly what it created (by id), so the next attempt
+  // starts where this one began, and nothing else on the site is touched.
+  const written: Partial<Record<(typeof CONTENT_COLLECTIONS)[number], (string | number)[]>> = {}
+  const wrote = <T extends { id: string | number }>(collection: (typeof CONTENT_COLLECTIONS)[number], doc: T): T => {
+    ;(written[collection] ??= []).push(doc.id)
+    return doc
+  }
   try {
     let toLexical = opts.toLexical
     const html = async (h: string) => {
@@ -75,10 +80,10 @@ export async function importPlan(payload: Payload, plan: SitePlan, opts: ImportO
           const message = e instanceof Error ? e.message : String(e)
           throw new Error(message.includes(source) ? message : `${source}: ${message}`)
         }
-        return payload.create({ collection, data: data as never, file: { ...file, size: file.data.length }, locale: DEFAULT_LOCALE, context: ctx })
+        return wrote(collection, await payload.create({ collection, data: data as never, file: { ...file, size: file.data.length }, locale: DEFAULT_LOCALE, context: ctx }))
       }
       const filePath = await resolveLocalFile(baseDir, source)
-      return payload.create({ collection, data: data as never, filePath, locale: DEFAULT_LOCALE, context: ctx })
+      return wrote(collection, await payload.create({ collection, data: data as never, filePath, locale: DEFAULT_LOCALE, context: ctx }))
     }
 
     async function localized(collection: string, id: number, item: Record<string, unknown>, fields: string[], resolve = false) {
@@ -97,7 +102,7 @@ export async function importPlan(payload: Payload, plan: SitePlan, opts: ImportO
     }
     for (const p of plan.people ?? []) {
       const data = { ...localeData(p, DEFAULT_LOCALE, ['name', 'role', 'email', 'phone', 'bio']), image: p.image ? ids.media.get(p.image) : undefined, site }
-      const doc = await payload.create({ collection: 'people', data: data as never, locale: DEFAULT_LOCALE, context: ctx })
+      const doc = wrote('people', await payload.create({ collection: 'people', data: data as never, locale: DEFAULT_LOCALE, context: ctx }))
       ids.people.set(p.ref, doc.id as number)
       await localized('people', doc.id as number, p, ['role', 'bio'])
       tick()
@@ -120,7 +125,7 @@ export async function importPlan(payload: Payload, plan: SitePlan, opts: ImportO
         cardImage: p.cardImage ? ids.media.get(p.cardImage) : undefined,
         _status: 'published',
       }
-      const doc = await payload.create({ collection: 'pages', data: { ...base, ...localeData(p, DEFAULT_LOCALE, ['title', 'slug', 'summary']) } as never, locale: DEFAULT_LOCALE, context: ctx })
+      const doc = wrote('pages', await payload.create({ collection: 'pages', data: { ...base, ...localeData(p, DEFAULT_LOCALE, ['title', 'slug', 'summary']) } as never, locale: DEFAULT_LOCALE, context: ctx }))
       ids.pages.set(p.ref, doc.id as number)
       await localized('pages', doc.id as number, p, ['title', 'slug', 'summary'])
       tick()
@@ -143,7 +148,7 @@ export async function importPlan(payload: Payload, plan: SitePlan, opts: ImportO
         ...localeData(a, DEFAULT_LOCALE, ['title', 'slug', 'lead']),
         content: contentHtml ? await html(contentHtml) : undefined,
       }
-      const doc = await payload.create({ collection: 'articles', data: data as never, locale: DEFAULT_LOCALE, context: ctx })
+      const doc = wrote('articles', await payload.create({ collection: 'articles', data: data as never, locale: DEFAULT_LOCALE, context: ctx }))
       for (const l of others) {
         const c = a.contentHtml?.[l]
         const ld = { ...localeData(a, l, ['title', 'slug', 'lead']), content: c ? await html(c) : undefined }
@@ -159,23 +164,28 @@ export async function importPlan(payload: Payload, plan: SitePlan, opts: ImportO
       footerColumns: (plan.settings.footer?.[l] ?? []).map((c) => ({ heading: c.heading, links: c.links.map((x) => ({ link: link(x.page, x.url, x.label) })) })),
       copyright: plan.settings.copyright?.[l],
     })
-    const settings = await payload.create({
+    const settings = wrote('site-settings', await payload.create({
       collection: 'site-settings',
       data: { site, ...settingsFor(DEFAULT_LOCALE), phone: plan.settings.phone, email: plan.settings.email, address: plan.settings.address } as never,
       locale: DEFAULT_LOCALE,
       context: ctx,
-    })
+    }))
     for (const l of others) await payload.update({ collection: 'site-settings', id: settings.id, locale: l, data: settingsFor(l) as never, context: ctx })
     tick()
     for (const r of plan.redirects ?? []) {
-      await payload.create({ collection: 'redirects', data: { from: r.from, to: link(r.toPage, r.toUrl), permanent: r.permanent ?? true } as never, context: ctx })
+      wrote('redirects', await payload.create({ collection: 'redirects', data: { from: r.from, to: link(r.toPage, r.toUrl), permanent: r.permanent ?? true } as never, context: ctx }))
       tick()
     }
     return { media: plan.media.length, pages: plan.pages.length, articles: plan.articles?.length ?? 0 }
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
     try {
-      for (const c of CONTENT_COLLECTIONS) await payload.delete({ collection: c, where: { id: { exists: true } }, context: ctx })
+      for (const c of CONTENT_COLLECTIONS) {
+        const ids = written[c]
+        if (!ids?.length) continue
+        const res = await payload.delete({ collection: c, where: { id: { in: ids } }, context: ctx })
+        if (res.errors?.length) throw new Error(`${res.errors.length} of ${ids.length} ${c} could not be deleted`)
+      }
     } catch (cleanup) {
       throw new Error(`${message} (removing what this import wrote also failed: ${cleanup instanceof Error ? cleanup.message : String(cleanup)})`)
     }

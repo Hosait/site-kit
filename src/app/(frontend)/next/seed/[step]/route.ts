@@ -6,10 +6,10 @@ import configPromise from '@payload-config'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { getPayload } from 'payload'
 
-import { seedDbDecision } from '@/lib/seed-guard'
+import { planReset, seedDbDecision } from '@/lib/seed-guard'
 import { reindexAll } from '@/lib/search/indexer'
 import { loadSeedPlan, runPlanSeed, seedSource, type PlanSeedProgress } from '@/lib/site-plan/seed-plan'
-import { planOutcome, settlesWithin, WAIT_MS } from '@/lib/site-plan/seed-response'
+import { planOutcome, seedAnswer, settlesWithin, WAIT_MS } from '@/lib/site-plan/seed-response'
 import { SITE_KEYS } from '@/lib/sites'
 
 export const dynamic = 'force-dynamic'
@@ -156,7 +156,7 @@ async function seedMedia(only: string | null) {
  * Imports seed/site-plan.json in the background: media come one by one, which can take minutes.
  * `progress` is the slot the db step already claimed; `release` gives it back on failure.
  */
-async function seedPlan(progress: PlanSeedProgress, release: () => void) {
+async function seedPlan(progress: PlanSeedProgress, release: () => void, reset: boolean) {
   const loaded = loadSeedPlan(SEED_DIR)
   if (!loaded.ok) {
     release()
@@ -164,9 +164,9 @@ async function seedPlan(progress: PlanSeedProgress, release: () => void) {
   }
   const payload = await getPayload({ config: configPromise })
   const run = runPlanSeed(payload, loaded.plan, SEED_DIR, progress, {
-    // Only reached when the site has no pages, or the admin chose replace: clear what a run that
-    // was stopped before it could clean up (a restart, a killed container) left behind.
-    reset: true,
+    // planReset: on replace, or while nobody has signed up (a first deploy), so it also clears what
+    // a run stopped before it could clean up (a restart, a killed container) left behind.
+    reset,
     after: async () => {
       flushCache()
       await reindexAll(payload)
@@ -179,13 +179,13 @@ async function seedPlan(progress: PlanSeedProgress, release: () => void) {
 /** ?wait=1: answer when the import has finished (or at the deadline), never 200 for a failure. */
 async function waitForPlan(progress: PlanSeedProgress, run: Promise<void>) {
   const { status, body } = planOutcome(progress, await settlesWithin(run, WAIT_MS))
-  return Response.json(body, { status })
+  return seedAnswer(status, body)
 }
 
 async function handle(req: Request, step: string) {
   if (!(await authorized(req))) return new Response('Forbidden', { status: 403 })
   if (process.env.SITE_ORIGINS === 'production') {
-    return Response.json({ ok: false, error: 'Seed er sperret i produksjon' }, { status: 409 })
+    return seedAnswer(409, { ok: false, error: 'Seed er sperret i produksjon' })
   }
   if (step === 'status') {
     return Response.json({ media: g.__seedMedia ?? null, plan: g.__seedPlan ?? null, sources: fs.existsSync(path.join(SEED_DIR, 'sources.json')) })
@@ -215,16 +215,17 @@ async function handle(req: Request, step: string) {
       })
       if (decision === 'refuse_existing') {
         release()
-        return Response.json({ ok: false, error: 'Nettstedet har allerede sider. Bruk ?replace=1 for å erstatte alt innhold.' }, { status: 409 })
+        return seedAnswer(409, { ok: false, error: 'Nettstedet har allerede sider. Bruk ?replace=1 for å erstatte alt innhold.' })
       }
       if (seedSource(SEED_DIR) === 'plan') {
-        const started = await seedPlan(claim, release)
+        const users = (await payload.count({ collection: 'users' })).totalDocs
+        const started = await seedPlan(claim, release, planReset({ replace, users }))
         if (wait && started.run) return waitForPlan(claim, started.run)
-        return Response.json(started.body, { status: started.status })
+        return seedAnswer(started.status, started.body)
       }
       release()
       const sql = await seedDb()
-      return Response.json(sql, { status: sql.ok ? 200 : 'missing' in sql ? 404 : 500 })
+      return seedAnswer(sql.ok ? 200 : 'missing' in sql ? 404 : 500, sql)
     } catch (e) {
       release()
       throw e
@@ -232,9 +233,9 @@ async function handle(req: Request, step: string) {
   }
   if (step === 'media') {
     const media = await seedMedia(new URL(req.url).searchParams.get('only'))
-    return Response.json(media, { status: media.ok ? 200 : 404 })
+    return seedAnswer(media.ok ? 200 : 404, media)
   }
-  return Response.json({ ok: false, error: 'Ukjent steg (db, media, status)' }, { status: 404 })
+  return seedAnswer(404, { ok: false, error: 'Ukjent steg (db, media, status)' })
 }
 
 export async function GET(req: Request, { params }: { params: Promise<{ step: string }> }) {

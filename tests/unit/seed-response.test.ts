@@ -29,3 +29,15 @@ test('settlesWithin tells whether a promise settled before the deadline, rejecte
   assert.equal(await settlesWithin(Promise.reject(new Error('x')), 50), true)
   assert.equal(await settlesWithin(new Promise(() => {}), 30), false)
 })
+
+test('an answer that is not 200 is logged with its reason, since wget drops the body', async () => {
+  const { seedAnswer } = await import('../../src/lib/site-plan/seed-response')
+  const lines: string[] = []
+  const log = (...a: unknown[]) => lines.push(a.join(' '))
+  const failed = seedAnswer(500, { ok: false, error: 'https://x/a.jpg: HTTP 404' }, log)
+  assert.equal(failed.status, 500)
+  assert.deepEqual(await failed.json(), { ok: false, error: 'https://x/a.jpg: HTTP 404' })
+  assert.deepEqual(lines, ['[seed] 500 https://x/a.jpg: HTTP 404'])
+  seedAnswer(200, { ok: true }, log)
+  assert.equal(lines.length, 1, 'a success is not logged as an error')
+})

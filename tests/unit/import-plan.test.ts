@@ -14,7 +14,7 @@ function fakePayload(existing = 0) {
   const payload = {
     calls,
     count: async () => ({ totalDocs: existing }),
-    delete: async ({ collection }: { collection: string }) => { calls.push({ op: 'delete', collection }); return {} },
+    delete: async ({ collection, where }: { collection: string; where?: unknown }) => { calls.push({ op: 'delete', collection, data: where }); return { docs: [], errors: [] } },
     create: async (a: { collection: string; data: unknown; filePath?: string; file?: unknown; locale?: string }) => { calls.push({ op: 'create', ...a }); return { id: ++id } },
     update: async (a: { collection: string; data: unknown; locale?: string }) => { calls.push({ op: 'update', ...a }); return { id: 1 } },
     config: {},
@@ -72,16 +72,26 @@ test('a refused download names the whole media URL, even when the error itself n
   await assert.rejects(importPlan(fakePayload(), p, { baseDir: 'tests/fixtures', toLexical, fetchMedia }), /https:\/\/evil\.example\/path\/x\.jpg/)
 })
 
-test('an import that fails part-way removes what it wrote, so the next run starts on an empty site', async () => {
+test('an import that fails part-way removes only what it wrote, so the next run starts where it began', async () => {
   const p = plan()
   p.media.push({ ref: 'gone', source: 'https://cdn.example/gone.jpg' })
   const payload = fakePayload()
   const fetchMedia = async (u: string) => { throw new Error(`${u}: HTTP 404`) }
   await assert.rejects(importPlan(payload, p, { baseDir: 'tests/fixtures', toLexical, fetchMedia }), /gone\.jpg: HTTP 404.*removed/)
-  const firstCreate = payload.calls.findIndex((c) => c.op === 'create')
-  const deletes = payload.calls.map((c, i) => ({ ...c, i })).filter((c) => c.op === 'delete')
-  assert.ok(firstCreate >= 0 && deletes.every((d) => d.i > firstCreate), 'cleanup runs after the writes')
-  assert.deepEqual(deletes.map((d) => d.collection), [...CONTENT_COLLECTIONS])
+  const created = payload.calls.filter((c) => c.op === 'create')
+  const deletes = payload.calls.filter((c) => c.op === 'delete')
+  assert.equal(created.length, 1, 'the local media was written before the download failed')
+  assert.deepEqual(deletes.map((d) => [d.collection, d.data]), [['media', { id: { in: [1] } }]], 'only what this run created, by id')
+})
+
+test('a removal the database refuses is reported, not called removed', async () => {
+  const p = plan()
+  p.media.push({ ref: 'gone', source: 'https://cdn.example/gone.jpg' })
+  const payload = fakePayload()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- replace one method of the fake
+  ;(payload as any).delete = async () => ({ docs: [], errors: [{ id: 1, message: 'locked' }] })
+  const fetchMedia = async (u: string) => { throw new Error(`${u}: HTTP 404`) }
+  await assert.rejects(importPlan(payload, p, { baseDir: 'tests/fixtures', toLexical, fetchMedia }), /removing what this import wrote also failed/)
 })
 
 test('a run refused because the site has content deletes nothing', async () => {
