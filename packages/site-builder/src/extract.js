@@ -77,7 +77,7 @@ function template($, $main) {
 }
 
 function links($, $scope, base) {
-  return $scope.find('a[href]').map((_, a) => ({ label: $(a).text().replace(/\s+/g, ' ').trim(), href: abs(String($(a).attr('href')), base) })).get().filter((l) => l.href && l.label)
+  return $scope.find('a[href]').toArray().map((a) => ({ label: $(a).text().replace(/\s+/g, ' ').trim(), href: abs(String($(a).attr('href')), base) })).filter((l) => l.href && l.label)
 }
 
 /** @param {string} html @param {string} url */
@@ -100,10 +100,10 @@ export function extractPage(html, url) {
     ogImage: abs($('meta[property="og:image"]').attr('content') || '', url) || undefined,
     canonical: abs($('link[rel="canonical"]').attr('href') || '', url) || undefined,
     h1: $main.find('h1').first().text().trim() || $('h1').first().text().trim() || undefined,
-    headings: $main.find('h1, h2, h3').map((_, h) => ({ level: Number(h.tagName[1]), text: $(h).text().trim() })).get(),
+    headings: $main.find('h1, h2, h3').toArray().map((h) => ({ level: Number(h.tagName[1]), text: $(h).text().trim() })),
     mainHtml,
     textLength: main.text().replace(/\s+/g, ' ').trim().length,
-    images: $main.find('img').map((_, img) => ({ src: imageSrc($(img), url), alt: String($(img).attr('alt') ?? '').trim() })).get().filter((i) => i.src),
+    images: $main.find('img').toArray().map((img) => ({ src: imageSrc($(img), url), alt: String($(img).attr('alt') ?? '').trim() })).filter((i) => i.src),
     links: [...new Set(links($, $main, url).map((l) => l.href))],
     template: tpl,
     nav: navEl.length ? links($, navEl, url) : [],

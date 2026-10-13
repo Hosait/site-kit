@@ -125,7 +125,7 @@ export function themeFromCss(css, html, baseUrl) {
     }
     return null
   }
-  const googleFonts = [...new Set($('link[href*="fonts.googleapis.com"]').map((_, l) => [...String($(l).attr('href')).matchAll(/family=([^:&]+)/g)].map((m) => decodeURIComponent(m[1]).replace(/\+/g, ' '))).get().flat())]
+  const googleFonts = [...new Set($('link[href*="fonts.googleapis.com"]').toArray().map((l) => [...String($(l).attr('href')).matchAll(/family=([^:&]+)/g)].map((m) => decodeURIComponent(m[1]).replace(/\+/g, ' '))).flat())]
   const logoEl = $('header img, a[class*=logo] img, img[class*=logo], img[alt*=logo i], img[src*=logo i]').first()
   const logo = logoEl.length
     ? { src: new URL(String(logoEl.attr('src')), baseUrl).toString(), width: Number(logoEl.attr('width')) || null, height: Number(logoEl.attr('height')) || null }
@@ -150,8 +150,8 @@ export async function theme(dir, opts = {}) {
   const home = inventory.pages.find((p) => p.status === 200 && p.file && new URL(p.url).pathname === new URL(inventory.source).pathname) ?? inventory.pages.find((p) => p.status === 200 && p.file)
   const html = home ? fs.readFileSync(path.join(dir, home.file), 'utf8') : ''
   const $ = load(html)
-  let css = $('style').map((_, s) => $(s).text()).get().join('\n')
-  for (const href of $('link[rel="stylesheet"][href]').map((_, l) => String($(l).attr('href'))).get().slice(0, 10)) {
+  let css = $('style').toArray().map((s) => $(s).text()).join('\n')
+  for (const href of $('link[rel="stylesheet"][href]').toArray().slice(0, 10).map((l) => String($(l).attr('href')))) {
     if (css.length > MAX_CSS) break
     try {
       const r = await get(new URL(href, home?.url ?? inventory.source).toString(), { allowPrivate: opts.allowPrivate, maxBytes: MAX_CSS - css.length, accept: 'text/css' })

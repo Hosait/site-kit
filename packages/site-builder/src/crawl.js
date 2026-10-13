@@ -117,8 +117,8 @@ export async function crawl(start, opts) {
     let locs
     try {
       const $ = load(r.body.toString('utf8'), { xml: true })
-      subs = $('sitemap > loc').map((_, e) => $(e).text().trim()).get()
-      locs = $('url > loc').map((_, e) => $(e).text().trim()).get()
+      subs = $('sitemap > loc').toArray().map((e) => $(e).text().trim())
+      locs = $('url > loc').toArray().map((e) => $(e).text().trim())
     } catch { return }
     for (const l of locs) enqueue(l, url)
     for (const s of subs) await readSitemap(s)
@@ -162,7 +162,7 @@ export async function crawl(start, opts) {
     record.title = $('title').first().text().trim()
     record.lang = ($('html').attr('lang') || '').trim().toLowerCase() || undefined
     if (record.lang) languages.add(record.lang.split('-')[0])
-    record.alternates = $('link[rel="alternate"][hreflang]').map((_, e) => ({ lang: String($(e).attr('hreflang')).toLowerCase(), href: normalize(String($(e).attr('href')), url) })).get().filter((a) => a.href)
+    record.alternates = $('link[rel="alternate"][hreflang]').toArray().map((e) => ({ lang: String($(e).attr('hreflang')).toLowerCase(), href: normalize(String($(e).attr('href')), url) })).filter((a) => a.href)
     for (const a of record.alternates) { if (a.lang !== 'x-default') languages.add(a.lang.split('-')[0]); enqueue(a.href, url) }
     count(trackers, detect.trackers(html))
     count(embeds, detect.embeds(html))

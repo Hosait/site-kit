@@ -146,3 +146,16 @@ test('a page nested far too deep is recorded with an error, quickly, and the cra
     assert.ok(inv.pages.some((p) => p.url.endsWith('/ok') && p.status === 200))
   } finally { await s.close() }
 })
+
+test('a sitemap with very many addresses is read in linear time', async () => {
+  const s = await serve({
+    '/sitemap.xml': (req) => ({ headers: { 'content-type': 'application/xml' }, body: '<urlset>' + Array.from({ length: 40_000 }, (_, i) => `<url><loc>http://${req.headers.host}/p${i}</loc></url>`).join('') + '</urlset>' }),
+    '/': page('Home', '<p>h</p>'),
+  })
+  try {
+    const t = Date.now()
+    const inv = await crawl(s.url + '/', { out: tmp(), allowPrivate: true, delayMs: 0, maxPages: 2 })
+    assert.ok(Date.now() - t < 1500, `took ${Date.now() - t} ms`)
+    assert.ok(inv.notQueued > 39_000, `notQueued ${inv.notQueued}`)
+  } finally { await s.close() }
+})

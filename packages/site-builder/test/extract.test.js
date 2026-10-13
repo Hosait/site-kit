@@ -113,3 +113,12 @@ test('a page without a body tag still gives its content', () => {
   assert.equal(p.title, 'Bare')
   assert.match(p.mainHtml, /Only a paragraph here\./)
 })
+
+test('a page with very many links, headings and images is read in linear time', () => {
+  const group = (i) => `<div>${`<h2>H${i}</h2><a href="/a${i}">A${i}</a><img src="/i${i}.jpg" alt="">`.repeat(100)}</div>`
+  const t = Date.now()
+  const p = extractPage(shell(`<main>${Array.from({ length: 300 }, (_, i) => group(i)).join('')}</main>`), 'https://acme.no/many')
+  assert.ok(Date.now() - t < 1500, `took ${Date.now() - t} ms`)
+  assert.equal(p.headings.length, 30_000)
+  assert.equal(p.images.length, 30_000)
+})
