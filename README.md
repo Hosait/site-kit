@@ -65,3 +65,7 @@ pnpm qa:axe <url>       # accessibility report
 
 `pnpm spend:ci [owner/repo] [YYYY-MM]` counts billable GitHub Actions minutes for a month. CI runs on
 pull requests only. Record spending in the Hosait Sites spend ledger.
+
+## Licence
+
+MIT, see [LICENSE](LICENSE).
