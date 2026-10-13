@@ -38,9 +38,12 @@ the fonts in `site/fonts.ts`, and run `pnpm kit:theme-check` (every pair needs 4
 Write `seed/site-plan.json` against `schema/site-plan.schema.json`; the blocks and their fields
 are in `schema/blocks.schema.json`. Map each template once, then fill every page of it. Put
 images and PDFs in `seed/media/` (or use public https URLs). Office files (Word, Excel,
-PowerPoint), zip and SVG cannot be imported from a URL: download them into `seed/media/` too. Link with `$media`, `$page`,
-`$pageLink`, `$person`, `$document`; rich text is `$html`. Add `redirects` for every old URL that
-moves, and `gaps` for anything no block matches. Check it until it passes, then try it locally:
+PowerPoint), zip and DWG cannot be imported from a URL: download them into `seed/media/` and list
+them under `documents`. SVG is not imported: the logo goes in `public/brand/` (step 4), and other
+SVG graphics are a gap. Every file is checked by its first bytes, not its name. Link with
+`$media`, `$page`, `$pageLink`, `$person`, `$document`; rich text is `$html`. Add `redirects` for
+every old URL that moves, and `gaps` for anything no block matches. Check it until it passes,
+then try it locally:
 
     pnpm kit:check-plan seed/site-plan.json
     pnpm kit:import seed/site-plan.json --reset

@@ -41,3 +41,11 @@ test('step 7 says how a failed seed runs again and where its reason is, and that
   const step5 = guide.slice(guide.indexOf('## 5.'), guide.indexOf('## 6.')).replace(/\s+/g, ' ')
   assert.match(step5, /Office/)
 })
+
+test('step 5 says which files come from seed/, as documents, and that SVG is not imported', () => {
+  const step5 = guide.slice(guide.indexOf('## 5.'), guide.indexOf('## 6.')).replace(/\s+/g, ' ')
+  assert.match(step5, /Office files.*download them into `seed\/media\/` and list them under `documents`/)
+  assert.match(step5, /SVG is not imported/)
+  assert.match(step5, /public\/brand\//)
+  assert.doesNotMatch(step5, /and SVG cannot be imported from a URL/)
+})
