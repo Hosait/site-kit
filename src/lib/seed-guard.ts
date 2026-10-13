@@ -1,10 +1,13 @@
 /**
- * The seed replaces content: only an install nobody has signed up to yet (so nobody can have made
- * any of its pages, even if an interrupted run left some), or an explicit replace, may run it.
+ * The seed replaces content, so existing pages need an explicit replace. A plan import may also run
+ * over pages while nobody has signed up: nobody can have made them, and an interrupted run may have
+ * left them. The SQL seed may not: it starts with TRUNCATE … CASCADE, which also empties what
+ * visitors made (forms, analytics, consent), and it runs in one transaction, so pages mean it
+ * finished.
  */
-export function seedDbDecision(i: { pages: number; users: number; replace: boolean; production: boolean }) {
+export function seedDbDecision(i: { source: 'plan' | 'sql'; pages: number; users: number; replace: boolean; production: boolean }) {
   if (i.production) return 'refuse_production' as const
-  if (i.pages > 0 && i.users > 0 && !i.replace) return 'refuse_existing' as const
+  if (i.pages > 0 && !i.replace && (i.source === 'sql' || i.users > 0)) return 'refuse_existing' as const
   return 'run' as const
 }
 

@@ -209,7 +209,9 @@ async function handle(req: Request, step: string) {
       const payload = await getPayload({ config: configPromise })
       const replace = new URL(req.url).searchParams.get('replace') === '1'
       const users = (await payload.count({ collection: 'users' })).totalDocs
+      const source = seedSource(SEED_DIR) === 'plan' ? 'plan' : 'sql'
       const decision = seedDbDecision({
+        source,
         pages: (await payload.count({ collection: 'pages' })).totalDocs,
         users,
         replace,
@@ -219,7 +221,7 @@ async function handle(req: Request, step: string) {
         release()
         return seedAnswer(409, { ok: false, error: 'Nettstedet har allerede sider. Bruk ?replace=1 for å erstatte alt innhold.' })
       }
-      if (seedSource(SEED_DIR) === 'plan') {
+      if (source === 'plan') {
         const started = await seedPlan(claim, release, planReset({ replace, users }))
         if (wait && started.run) return waitForPlan(claim, started.run)
         return seedAnswer(started.status, started.body)
