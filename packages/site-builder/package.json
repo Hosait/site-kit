@@ -1,0 +1,13 @@
+{
+  "name": "@hosait/site-builder",
+  "version": "0.1.0",
+  "description": "Reads an existing website (crawl, extract, theme, report) so it can be rebuilt on Hosait Site Kit.",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "bin": { "site-builder": "bin/site-builder.js" },
+  "files": ["bin", "src", "README.md"],
+  "engines": { "node": ">=20" },
+  "scripts": { "test": "node --test test/*.test.js" },
+  "dependencies": { "cheerio": "1.2.0", "htmlparser2": "10.1.0" }
+}

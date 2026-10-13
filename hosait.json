@@ -5,8 +5,7 @@
   "web": { "service": "web", "port": 3000 },
   "storage": { "public": "public/" },
   "seed": {
-    "files": "seed/files",
-    "run": "wget -qO- --post-data= --header \"Authorization: Bearer $CRON_SECRET\" http://web:3000/next/seed/db"
+    "run": "wget -qO- -T 900 --post-data= --header \"Authorization: Bearer $CRON_SECRET\" \"http://web:3000/next/seed/db?wait=1\""
   },
   "env": [
     { "name": "DB_PASSWORD", "required": true, "generate": "hex24", "description": "Postgres password. Never change it after the first deploy." },

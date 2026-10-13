@@ -2,6 +2,7 @@ import type { CollectionConfig, ImageSize } from 'payload'
 
 import { anyone } from '@/access/anyone'
 import { authenticated } from '@/access/authenticated'
+import { MEDIA_MIME_TYPES } from '@/lib/upload-types'
 
 /**
  * Bilder og video. Alle størrelser lages som WebP ved opplasting, slik at serveren
@@ -39,7 +40,7 @@ export const Media: CollectionConfig = {
     staticDir: 'uploads/media',
     adminThumbnail: 'thumb',
     focalPoint: true,
-    mimeTypes: ['image/*', 'video/mp4', 'video/webm'],
+    mimeTypes: MEDIA_MIME_TYPES,
     imageSizes: [
       webp('thumb', 400),
       webp('sm', 768),

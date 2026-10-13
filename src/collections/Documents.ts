@@ -4,6 +4,7 @@ import { anyone } from '@/access/anyone'
 import { authenticated } from '@/access/authenticated'
 import { DEFAULT_LOCALE, LOCALE_CONFIG, LOCALES, SITE_CONFIG, SITE_OPTIONS } from '@/lib/sites'
 import { revalidateDoc, revalidateDocDelete } from '@/lib/revalidate'
+import { DOCUMENT_MIME_TYPES } from '@/lib/upload-types'
 import { indexDoc, unindexDoc } from '@/lib/search/indexer'
 
 /** Felles dokumentbank: produktblad, EPD, FDV, monteringsanvisninger, tegninger, sertifikater. */
@@ -19,17 +20,7 @@ export const Documents: CollectionConfig = {
   folders: true,
   upload: {
     staticDir: 'uploads/documents',
-    mimeTypes: [
-      'application/pdf',
-      'application/zip',
-      'application/x-zip-compressed',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.*',
-      'application/vnd.ms-excel',
-      'image/vnd.dwg',
-      'application/acad',
-      'application/octet-stream',
-    ],
+    mimeTypes: DOCUMENT_MIME_TYPES,
   },
   fields: [
     { name: 'title', type: 'text', label: 'Tittel', required: true, localized: true },

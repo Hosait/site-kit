@@ -30,6 +30,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test:unit
+      - run: npm ci --prefix packages/site-builder
+      - run: npm test --prefix packages/site-builder
       - run: pnpm kit:theme-check
       - name: Block schema up to date
         run: pnpm kit:schema && git diff --exit-code schema/

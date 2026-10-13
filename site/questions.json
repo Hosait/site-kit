@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "questions": [
+    { "id": "siteAddress", "text": "What is the address of your current website?", "type": "url", "required": true, "sets": ["report.sourceUrl"] },
+    { "id": "contentAccess", "text": "What kind of access to your content can you give: an API token from the CMS, an editor invite, or none (we then read the public pages)? Say only which kind. Secrets such as tokens and passwords never go into this chat, the repository or the report: you set them up yourself when they are needed.", "type": "text", "sets": ["report.contentAccess"] },
+    { "id": "brand", "text": "What is the organisation's name, legal name and organisation number?", "type": "text", "required": true, "sets": ["brand.name", "brand.legalName", "brand.orgNumber"] },
+    { "id": "languages", "text": "Which languages should the site have, and which one is the default?", "type": "multi", "required": true, "options": [ { "value": "no", "label": "Norwegian" }, { "value": "en", "label": "English" }, { "value": "sv", "label": "Swedish" }, { "value": "da", "label": "Danish" }, { "value": "de", "label": "German" } ], "sets": ["locales", "defaultLocale"] },
+    { "id": "analytics", "text": "How do you want to count visitors?", "help": "Built-in analytics needs no outside service and stores no IP addresses. Other tools are custom work, and always wait for consent.", "type": "choice", "options": [ { "value": "builtin", "label": "Built-in, privacy-friendly" }, { "value": "none", "label": "No analytics" }, { "value": "other", "label": "Another tool (GA4, Matomo, …)" } ], "sets": ["features.analytics", "report.analyticsTool"] },
+    { "id": "embeds", "text": "We found these third-party services on your site. Which should the new site keep?", "help": "Every kept service gets a consent category; YouTube loads from youtube-nocookie.", "type": "multi", "options": [ { "value": "keep", "label": "Keep" }, { "value": "drop", "label": "Drop" } ], "sets": ["report.embeds"] },
+    { "id": "dataController", "text": "Who is the data controller, and where is your privacy page?", "type": "text", "required": true, "sets": ["brand.legalName", "cms.privacyPage"] },
+    { "id": "search", "text": "Should the site have its own search?", "type": "boolean", "sets": ["features.search"] },
+    { "id": "forms", "text": "Which forms do you need, who should get the submissions, and for how many days should they be kept?", "type": "text", "sets": ["email.fromAddress", "cms.forms"] },
+    { "id": "accessibility", "text": "Which accessibility level should the site meet, and do you want an accessibility statement?", "type": "choice", "options": [ { "value": "wcag21aa", "label": "WCAG 2.1 AA (recommended)" }, { "value": "wcag22aa", "label": "WCAG 2.2 AA" } ], "sets": ["report.accessibilityTarget"] },
+    { "id": "contentScope", "text": "Which content should we bring over?", "type": "choice", "options": [ { "value": "all", "label": "Everything" }, { "value": "published", "label": "Only what is published" }, { "value": "recentNews", "label": "Pages, and news from the last few years" } ], "sets": ["report.contentScope"] },
+    { "id": "editors", "text": "Who will edit the site? Names, e-mail addresses and roles. Do you want Microsoft sign-in?", "type": "people", "sets": ["cms.editors"] },
+    { "id": "domain", "text": "Which domain will the site use, who controls its DNS, and when should it go live?", "type": "text", "required": true, "sets": ["sites.*.origin", "sites.*.hosts", "report.goLive"] },
+    { "id": "terms", "text": "Do you accept the data processing agreement and hosting in the EU/EEA?", "type": "boolean", "required": true, "sets": ["report.terms"] },
+    { "id": "integrations", "text": "Should the site connect to anything else, such as a newsletter, a CRM or a job feed?", "type": "text", "sets": ["report.integrations"] }
+  ]
+}
