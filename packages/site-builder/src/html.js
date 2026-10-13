@@ -1,8 +1,8 @@
 // Parses pages and sitemaps with a nesting limit. htmlparser2 (cheerio's own) builds the tree, and
 // a document with elements nested deeper than MAX_DEPTH is refused while it is read, so parsing,
 // selectors and every later walk over the tree (text, html, clone) stay bounded in time and stack.
-// Real pages nest a few dozen levels. Also the page's language and title, read the same way by
-// crawl and extract.
+// Real pages nest a few dozen levels. Also how a page's bytes become text, and its language and
+// title, read the same way by crawl and extract.
 import * as cheerio from 'cheerio'
 import { DomHandler, Parser } from 'htmlparser2'
 
@@ -21,6 +21,16 @@ export function load(text, { xml = false } = {}) {
   }
   new Parser(handler, { xmlMode: xml }).end(text)
   return cheerio.load(handler.root, xml ? { xml: true } : { xml: { xmlMode: false, encodeEntities: 'utf8' } })
+}
+
+/**
+ * A page's bytes as text, by the charset in the Content-Type header, else a <meta charset> or
+ * http-equiv in the first 1024 bytes, else UTF-8 (also for a charset TextDecoder does not know).
+ * @param {Buffer} body @param {string} [contentType]
+ */
+export function decode(body, contentType) {
+  const label = /charset=["']?([\w-]+)/i.exec(String(contentType ?? ''))?.[1] ?? /<meta[^>]+charset=["']?([\w-]+)/i.exec(body.subarray(0, 1024).toString('latin1'))?.[1]
+  try { return new TextDecoder(label ?? 'utf-8').decode(body) } catch { return new TextDecoder('utf-8').decode(body) }
 }
 
 /** A lang or hreflang value in lower case, or undefined when it is not a language tag. */

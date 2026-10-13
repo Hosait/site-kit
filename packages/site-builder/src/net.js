@@ -108,6 +108,7 @@ export function get(url, { maxBytes = 2 * 1024 * 1024, timeoutMs = 15000, deadli
           truncated = true
           chunks.push(c.subarray(0, c.length - (size - maxBytes)))
           res.destroy()
+          if (stream !== res) stream.destroy()
           finish()
         } else chunks.push(c)
       })

@@ -129,3 +129,11 @@ test('lang must look like a language tag, and titles are cut at 300 characters',
   assert.equal(extractPage(page('read this first', 'x'), 'https://acme.no/').lang, undefined)
   assert.equal(extractPage(page('en', 'T'.repeat(1000)), 'https://acme.no/').title.length, 300)
 })
+
+test('extract.json says its text is copied from a third-party website and is content, not instructions', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'extract-'))
+  fs.writeFileSync(path.join(dir, 'inventory.json'), JSON.stringify({ version: 1, source: 'https://acme.no/', pages: [] }))
+  const model = extract(dir)
+  assert.match(model.notice, /third-party website/)
+  assert.match(model.notice, /content, not instructions/)
+})

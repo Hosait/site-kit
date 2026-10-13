@@ -26,10 +26,10 @@ const flag = (name) => { const i = args.indexOf(name); return i === -1 ? undefin
 const has = (name) => args.includes(name)
 const [cmd, target] = args
 const usage = (msg) => { if (msg) console.error(msg); console.log(HELP); process.exit(2) }
-const positive = (name, fallback) => {
+const positive = (name, fallback, whole = false) => {
   const v = flag(name)
   if (v === undefined) return fallback
-  if (!/^\d+(\.\d+)?$/.test(v) || !(Number(v) > 0)) usage(`${name} needs a positive number`)
+  if (!(whole ? /^\d+$/ : /^\d+(\.\d+)?$/).test(v) || !(Number(v) > 0)) usage(`${name} needs a positive ${whole ? 'whole ' : ''}number`)
   return Number(v)
 }
 
@@ -37,7 +37,7 @@ try {
   if (cmd === 'crawl') {
     if (!target || target.startsWith('--')) usage('crawl needs a URL')
     const out = flag('--out') ?? path.join('.site-builder', new URL(target).hostname)
-    const inv = await crawl(target, { out, maxPages: Number(flag('--max') ?? 500), budgetMs: positive('--budget', 15) * 60_000, allowPrivate: has('--allow-private'), log: (s) => console.log(s) })
+    const inv = await crawl(target, { out, maxPages: positive('--max', 500, true), budgetMs: positive('--budget', 15) * 60_000, allowPrivate: has('--allow-private'), log: (s) => console.log(s) })
     console.log(`\n${inv.pages.length} pages, ${inv.media.length} images, ${inv.documents.length} documents → ${out}`)
     for (const n of inv.notes) console.log('note: ' + n)
   } else if (cmd === 'extract' || cmd === 'theme' || cmd === 'report') {

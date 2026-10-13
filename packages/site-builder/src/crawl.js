@@ -6,7 +6,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { detect } from './detect.js'
-import { language, load, title } from './html.js'
+import { decode, language, load, title } from './html.js'
 import { get as defaultGet } from './net.js'
 import { parseRobots } from './robots.js'
 
@@ -45,6 +45,7 @@ function tally(map) {
  */
 export async function crawl(start, opts) {
   const { out, maxPages = 500, budgetMs = 15 * 60_000, concurrency = 2, delayMs = 250, allowPrivate = false, log = () => {} } = opts
+  if (!(Number.isInteger(maxPages) && maxPages > 0)) throw new Error('maxPages must be a positive whole number')
   if (!(Number.isFinite(budgetMs) && budgetMs > 0)) throw new Error('budgetMs must be a positive number')
   const get = opts.get ?? defaultGet
   // After the budget no new request starts; those in flight finish and what was read is written.
@@ -162,6 +163,7 @@ export async function crawl(start, opts) {
       return
     }
     const record = { url, status: r.status, contentType: String(r.headers['content-type'] || '').split(';')[0] }
+    if (r.truncated) record.truncated = true
     pages.push(record)
     log(`${r.status} ${url}`)
     if (r.status >= 300 && r.status < 400 && r.headers.location) {
@@ -175,7 +177,7 @@ export async function crawl(start, opts) {
       return
     }
     if (r.status !== 200 || !/html/i.test(record.contentType)) return
-    const html = r.body.toString('utf8')
+    const html = decode(r.body, r.headers['content-type'])
     record.file = path.join('raw', `${sha1(url)}.html`)
     fs.writeFileSync(path.join(out, record.file), html)
     // A page that cannot be read fails alone: the error is recorded and the crawl goes on.

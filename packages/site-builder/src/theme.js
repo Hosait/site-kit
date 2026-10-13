@@ -127,10 +127,14 @@ export function themeFromCss(css, html, baseUrl) {
   }
   const googleFonts = [...new Set($('link[href*="fonts.googleapis.com"]').toArray().map((l) => [...String($(l).attr('href')).matchAll(/family=([^:&]+)/g)].map((m) => decodeURIComponent(m[1]).replace(/\+/g, ' '))).flat())]
   const logoEl = $('header img, a[class*=logo] img, img[class*=logo], img[alt*=logo i], img[src*=logo i]').first()
-  const logo = logoEl.length
-    ? { src: new URL(String(logoEl.attr('src')), baseUrl).toString(), width: Number(logoEl.attr('width')) || null, height: Number(logoEl.attr('height')) || null }
-    : null
-  if (!logo) notes.push('no logo found: add public/brand/logo.svg by hand')
+  let logo = null
+  if (logoEl.length) {
+    // Only a web address goes into theme.json: not an invalid src, and not an inline data: image.
+    let src = null
+    try { src = new URL(String(logoEl.attr('src')), baseUrl) } catch { /* noted below */ }
+    if (src?.protocol === 'http:' || src?.protocol === 'https:') logo = { src: src.toString(), width: Number(logoEl.attr('width')) || null, height: Number(logoEl.attr('height')) || null }
+    else notes.push('logo skipped: its src is not a web address (for example an inline data: image); add public/brand/logo.svg by hand')
+  } else notes.push('no logo found: add public/brand/logo.svg by hand')
 
   return {
     theme: {

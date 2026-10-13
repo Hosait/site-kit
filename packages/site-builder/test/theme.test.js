@@ -65,3 +65,11 @@ test('custom properties and font families are read in linear time, also from rul
   assert.equal(r.theme.colors.brand, '#0b5394')
   assert.equal(r.fonts.body, 'Source Sans')
 })
+
+test('a logo src that is not a web address (invalid, or an inline data: image) is skipped with a note', () => {
+  for (const src of ['http://[bad', 'data:image/png;base64,iVBORw0KGgo=']) {
+    const r = themeFromCss('', `<html><body><header><img src="${src}" alt="Acme logo"></header></body></html>`, 'https://acme.no/')
+    assert.equal(r.theme.logo, null, src)
+    assert.ok(r.notes.some((n) => /logo/.test(n)), src)
+  }
+})

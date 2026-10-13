@@ -264,3 +264,31 @@ test('a robots.txt that is not found still means everything may be read', async 
     assert.ok(inv.pages.some((p) => p.url.endsWith('/private/secret')))
   } finally { await s.close() }
 })
+
+test('pages are decoded by their charset: the Content-Type header, else <meta charset> or http-equiv', async () => {
+  const latin1 = (s) => Buffer.from(s, 'latin1')
+  const s = await serve({
+    '/': { headers: { 'content-type': 'text/html; charset=windows-1252' }, body: latin1('<html><head><title>Blåbær</title></head><body><a href="/meta">m</a> <a href="/equiv">e</a></body></html>') },
+    '/meta': { headers: { 'content-type': 'text/html' }, body: latin1('<html><head><meta charset="iso-8859-1"><title>Smørøye</title></head><body></body></html>') },
+    '/equiv': { headers: { 'content-type': 'text/html' }, body: latin1('<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252"><title>Ærlig</title></head><body></body></html>') },
+  })
+  const out = tmp()
+  try {
+    const inv = await crawl(s.url + '/', { out, allowPrivate: true, delayMs: 0 })
+    const titles = Object.fromEntries(inv.pages.map((p) => [new URL(p.url).pathname, p.title]))
+    assert.deepEqual(titles, { '/': 'Blåbær', '/meta': 'Smørøye', '/equiv': 'Ærlig' })
+    assert.match(fs.readFileSync(path.join(out, inv.pages[0].file), 'utf8'), /Blåbær/)
+  } finally { await s.close() }
+})
+
+test('a page cut at the size cap is marked as truncated', async () => {
+  const s = await serve({ '/': page('Big', `<p>${'x'.repeat(2.5 * 1024 * 1024)}</p>`), '/small': page('Small', '<p>s</p>') })
+  try {
+    const inv = await crawl(s.url + '/', { out: tmp(), allowPrivate: true, delayMs: 0 })
+    assert.equal(inv.pages.find((p) => new URL(p.url).pathname === '/').truncated, true)
+  } finally { await s.close() }
+})
+
+test('a page cap that is not a positive whole number is refused', async () => {
+  for (const maxPages of [0, -1, 2.5, NaN, '5']) await assert.rejects(crawl('http://localhost/', { out: tmp(), maxPages }), /maxPages/, String(maxPages))
+})

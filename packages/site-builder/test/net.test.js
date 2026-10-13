@@ -84,3 +84,20 @@ test('IPv6 literals that carry a private IPv4 address are refused before connect
   for (const u of ['http://[::ffff:127.0.0.1]/', 'http://[::127.0.0.1]/', 'http://[64:ff9b::127.0.0.1]/', 'http://[2002:7f00:1::]/', 'http://[fec0::1]/'])
     await assert.rejects(get(u, { deadlineMs: 2000 }), (e) => e.code === 'EPRIVATE', u)
 })
+
+test('a compressed response cut at the size cap also stops its decompressor', async () => {
+  const s = await serve({ '/zip': { headers: { 'content-encoding': 'gzip' }, body: zlib.gzipSync(Buffer.alloc(8 * 1024 * 1024, 'x')) } })
+  // Watch the decompressor get() creates (the property is read-only, but configurable).
+  const createGunzip = zlib.createGunzip
+  let made
+  Object.defineProperty(zlib, 'createGunzip', { value: (...a) => (made = createGunzip(...a)), configurable: true })
+  try {
+    const r = await get(s.url + '/zip', { allowPrivate: true, maxBytes: 64 * 1024 })
+    assert.equal(r.truncated, true)
+    assert.equal(r.body.length, 64 * 1024)
+    assert.equal(made?.destroyed, true)
+  } finally {
+    Object.defineProperty(zlib, 'createGunzip', { value: createGunzip, configurable: true })
+    await s.close()
+  }
+})

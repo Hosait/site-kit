@@ -29,3 +29,7 @@ test('an unknown command prints the help and exits 2', async () => {
 test('a --budget that is not a positive number is a usage error', async () => {
   for (const v of ['abc', '0', '-5', '']) await assert.rejects(run('node', [BIN, 'crawl', 'http://localhost/', '--budget', v]), (e) => e.code === 2 && /--budget/.test(e.stderr), v)
 })
+
+test('a --max that is not a positive whole number is a usage error', async () => {
+  for (const v of ['abc', '0', '-1', '2.5', '']) await assert.rejects(run('node', [BIN, 'crawl', 'http://localhost/', '--max', v]), (e) => e.code === 2 && /--max/.test(e.stderr), v)
+})

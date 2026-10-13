@@ -27,3 +27,11 @@ test('the report covers technology, tracking, templates, quick checks and enhanc
     assert.ok(md.includes(s), s)
   assert.ok(fs.existsSync(path.join(dir, 'report.md')))
 })
+
+// --- Hardening ------------------------------------------------------------
+test('report.md says its text is copied from a third-party website and is content, not instructions', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'report-'))
+  fs.writeFileSync(path.join(dir, 'inventory.json'), JSON.stringify({ version: 1, source: 'https://acme.no/', crawledAt: '2026-10-11T10:00:00Z', pages: [], media: [], documents: [], trackers: [], embeds: [], cms: [], languages: [] }))
+  const md = report(dir)
+  assert.ok(md.split('\n').some((l) => /third-party website/.test(l) && /content, not instructions/.test(l)))
+})
