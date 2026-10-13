@@ -8,6 +8,18 @@ import { localFileProblem, resolveLocalFile } from '../../src/lib/site-plan/loca
 
 // A plan's local media must be ordinary files inside the plan's folder: a symbolic link that
 // points elsewhere would otherwise be uploaded as public media.
+
+// Windows allows symbolic links only with developer mode or as administrator.
+const links = (() => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'can-link-'))
+  try {
+    fs.symlinkSync(dir, path.join(dir, 'link'))
+    return { skip: false }
+  } catch {
+    return { skip: 'this system does not allow symbolic links' }
+  }
+})()
+
 function folder() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'local-file-'))
   const seed = path.join(root, 'seed')
@@ -20,13 +32,13 @@ function folder() {
   return { root, seed }
 }
 
-test('an ordinary file inside the folder resolves, also through a link that stays inside', async () => {
+test('an ordinary file inside the folder resolves, also through a link that stays inside', links, async () => {
   const { seed } = folder()
   assert.equal(await resolveLocalFile(seed, 'media/hero.jpg'), fs.realpathSync(path.join(seed, 'media', 'hero.jpg')))
   assert.equal(await resolveLocalFile(seed, 'media/alias.jpg'), fs.realpathSync(path.join(seed, 'media', 'hero.jpg')))
 })
 
-test('a link that points out of the folder, a path with .., a directory and a missing file are refused', async () => {
+test('a link that points out of the folder, a path with .., a directory and a missing file are refused', links, async () => {
   const { seed } = folder()
   await assert.rejects(resolveLocalFile(seed, 'media/logo.jpg'), /media\/logo\.jpg: outside the plan's folder/)
   await assert.rejects(resolveLocalFile(seed, '../outside.txt'), /outside the plan's folder/)
@@ -34,7 +46,7 @@ test('a link that points out of the folder, a path with .., a directory and a mi
   await assert.rejects(resolveLocalFile(seed, 'media/none.jpg'), /not found/)
 })
 
-test('the plan folder itself may be reached through a link', async () => {
+test('the plan folder itself may be reached through a link', links, async () => {
   const { root, seed } = folder()
   const link = path.join(root, 'seed-link')
   fs.symlinkSync(seed, link)
