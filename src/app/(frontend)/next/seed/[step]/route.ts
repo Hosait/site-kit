@@ -208,8 +208,10 @@ async function handle(req: Request, step: string) {
     try {
       const payload = await getPayload({ config: configPromise })
       const replace = new URL(req.url).searchParams.get('replace') === '1'
+      const users = (await payload.count({ collection: 'users' })).totalDocs
       const decision = seedDbDecision({
         pages: (await payload.count({ collection: 'pages' })).totalDocs,
+        users,
         replace,
         production: process.env.SITE_ORIGINS === 'production',
       })
@@ -218,7 +220,6 @@ async function handle(req: Request, step: string) {
         return seedAnswer(409, { ok: false, error: 'Nettstedet har allerede sider. Bruk ?replace=1 for å erstatte alt innhold.' })
       }
       if (seedSource(SEED_DIR) === 'plan') {
-        const users = (await payload.count({ collection: 'users' })).totalDocs
         const started = await seedPlan(claim, release, planReset({ replace, users }))
         if (wait && started.run) return waitForPlan(claim, started.run)
         return seedAnswer(started.status, started.body)
