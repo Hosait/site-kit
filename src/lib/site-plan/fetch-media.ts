@@ -12,6 +12,8 @@ import net from 'node:net'
 export const MAX_MEDIA_BYTES = 25 * 1024 * 1024
 
 const ALLOWED_TYPES = 'JPEG, PNG, WebP, GIF, AVIF, MP4, WebM or PDF'
+// File types the import never takes from a URL; they go into seed/ as local files instead.
+const LOCAL_ONLY = new Set(['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'ods', 'odp', 'rtf', 'zip', 'csv', 'txt', 'svg', 'svgz', 'mov', 'avi', 'mkv', 'wmv', 'htm', 'html', 'json', 'xml'])
 const MP4_BRANDS = new Set(['isom', 'iso2', 'iso5', 'iso6', 'mp41', 'mp42', 'avc1', 'M4V ', 'dash'])
 
 /** The media type from a file's first bytes, or null when it is not one Site Kit imports. */
@@ -122,6 +124,8 @@ export function mediaUrlProblem(url: string): { message: string; private?: boole
   // turned decimal and hex forms into dotted ones).
   const host = u.hostname.replace(/^\[|\]$/g, '')
   if (net.isIP(host) && !isPublicAddress(host)) return { message: `${host} is a private address`, private: true }
+  const ext = /\.([a-z0-9]{1,5})$/i.exec(u.pathname)?.[1]?.toLowerCase()
+  if (ext && LOCAL_ONLY.has(ext)) return { message: `a .${ext} file cannot be imported from a URL (${ALLOWED_TYPES} only); download it into seed/media/ and use the local path` }
   return null
 }
 

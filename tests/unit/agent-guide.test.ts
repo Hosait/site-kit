@@ -32,3 +32,12 @@ test('step 7 points only where the user can look, protects the admin, and walks 
   assert.match(step7, /Variables/)
   assert.match(step7, /commit and push/i)
 })
+
+test('step 7 says how a failed seed runs again and where its reason is, and that Office files go into seed/', () => {
+  const step7 = guide.slice(guide.indexOf('## 7.')).replace(/\s+/g, ' ')
+  assert.match(step7, /Run seed again/)
+  assert.match(step7, /log/i)
+  assert.doesNotMatch(step7, /push, and it runs again/)
+  const step5 = guide.slice(guide.indexOf('## 5.'), guide.indexOf('## 6.')).replace(/\s+/g, ' ')
+  assert.match(step5, /Office/)
+})

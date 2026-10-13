@@ -37,7 +37,8 @@ the fonts in `site/fonts.ts`, and run `pnpm kit:theme-check` (every pair needs 4
 
 Write `seed/site-plan.json` against `schema/site-plan.schema.json`; the blocks and their fields
 are in `schema/blocks.schema.json`. Map each template once, then fill every page of it. Put
-images and PDFs in `seed/media/` (or use public https URLs). Link with `$media`, `$page`,
+images and PDFs in `seed/media/` (or use public https URLs). Office files (Word, Excel,
+PowerPoint), zip and SVG cannot be imported from a URL: download them into `seed/media/` too. Link with `$media`, `$page`,
 `$pageLink`, `$person`, `$document`; rich text is `$html`. Add `redirects` for every old URL that
 moves, and `gaps` for anything no block matches. Check it until it passes, then try it locally:
 
@@ -60,8 +61,10 @@ Push the repository and connect it to a blank Hosait project: the Hosait wizard,
 `connect_repository` when the hosait connection covers a blank project (the plugin's sign-in to a
 blank project, or a project token with the `source` permission). The first deploy generates the
 secrets and imports `seed/site-plan.json` into the empty database. Hosait's deploy result (and
-`nextSteps` from `get_project_status`) says whether the import worked; a failed import removes
-what it wrote and names the problem, so fix the plan, push, and it runs again.
+`nextSteps` from `get_project_status`) says whether the import worked. If it failed, the import
+removed what it wrote, and its reason is in the web service's log (`get_runtime_logs`, or Logs
+on the project page; lines starting with `[seed]`). Fix the plan and push; then the user presses
+"Run seed again" on the project page. A push alone does not run the seed again.
 Never commit `.env` or any secret.
 
 Right after the first deploy, the user creates the first admin user at `/admin` on the

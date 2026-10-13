@@ -92,3 +92,13 @@ test('duplicate refs, a parent cycle, a redirect without target and a missing de
   assert.match(errors, /\/pages .*cycle/)
   assert.match(errors, /\/pages\/2\/title needs a title/)
 })
+
+test('a document or media URL of a type the import refuses (Office files, SVG) is reported with what to do', async () => {
+  const p = plan()
+  p.documents = [{ ref: 'price', source: 'https://old.example/files/prisliste.docx', title: { no: 'Prisliste' }, docType: 'other' }]
+  p.media.push({ ref: 'logo', source: 'https://old.example/logo.svg' }, { ref: 'plain', source: 'https://cdn.example/image?id=7' })
+  const errors = (await checkPlan(p, 'tests/fixtures')).errors.join('\n')
+  assert.match(errors, /price: .*prisliste\.docx.*download it into seed\//)
+  assert.match(errors, /logo: .*logo\.svg.*download it into seed\//)
+  assert.doesNotMatch(errors, /plain:/, 'a URL without a file extension is left to the import, which reads the file type')
+})
