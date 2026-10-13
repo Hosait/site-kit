@@ -52,6 +52,7 @@
     "clsx": "^2.1.1",
     "cross-env": "^7.0.3",
     "dotenv": "16.4.7",
+    "file-type": "21.3.4",
     "graphql": "^16.8.2",
     "jsdom": "^30.1.2",
     "lucide-react": "0.563.0",
