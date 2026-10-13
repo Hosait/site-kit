@@ -16,7 +16,7 @@ try {
   console.error(`${file}: ${e instanceof Error ? e.message : String(e)}`)
   process.exit(1)
 }
-const r = checkPlan(raw, path.dirname(path.resolve(file)))
+const r = await checkPlan(raw, path.dirname(path.resolve(file)))
 const s = r.summary
 console.log(`${s.pages} pages, ${s.articles} articles, ${s.media} media, ${s.documents} documents, ${s.redirects} redirects, ${s.gaps} gaps`)
 for (const e of r.errors) console.error(e)

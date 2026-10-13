@@ -1,11 +1,13 @@
 /**
- * Checks a site plan without a database: the schema, every ref, and that every local media or
- * document file exists next to the plan. `pnpm kit:check-plan` runs it, so an agent writing a
+ * Checks a site plan without a database: the schema and what validateSitePlan adds (unique refs,
+ * no parent cycle, default-language titles), every ref, every local media or document file (an
+ * ordinary file inside the plan's folder), and every media URL by the import's own rules. `pnpm kit:check-plan` runs it, so an agent writing a
  * plan gets fast answers before `pnpm kit:import`.
  */
-import fs from 'node:fs'
 import path from 'node:path'
 
+import { mediaUrlProblem } from './fetch-media'
+import { resolveLocalFile } from './local-file'
 import { findMissingRefs } from './refs'
 import { validateSitePlan } from './validate'
 
@@ -15,7 +17,7 @@ export type PlanCheck = {
   summary: { pages: number; articles: number; media: number; documents: number; redirects: number; gaps: number }
 }
 
-export function checkPlan(raw: unknown, baseDir: string): PlanCheck {
+export async function checkPlan(raw: unknown, baseDir: string): Promise<PlanCheck> {
   const v = validateSitePlan(raw)
   if (!v.ok) return { ok: false, errors: v.errors, summary: { pages: 0, articles: 0, media: 0, documents: 0, redirects: 0, gaps: 0 } }
   const plan = v.plan
@@ -24,15 +26,23 @@ export function checkPlan(raw: unknown, baseDir: string): PlanCheck {
   for (const item of [...plan.media, ...(plan.documents ?? [])]) {
     if (/^[a-z][a-z0-9+.-]*:\/\//i.test(item.source)) {
       if (!/^https:\/\//i.test(item.source)) errors.push(`${item.ref}: ${item.source} — only https URLs or files next to the plan`)
+      else {
+        const problem = mediaUrlProblem(item.source)
+        if (problem) errors.push(`${item.ref}: ${item.source} — ${problem.message}`)
+      }
       continue
     }
     if (path.isAbsolute(item.source)) {
       errors.push(`${item.ref}: ${item.source} — use a path relative to the plan`)
       continue
     }
-    const abs = path.resolve(base, item.source)
-    if (!abs.startsWith(base + path.sep)) errors.push(`${item.ref}: ${item.source} is outside the plan's folder`)
-    else if (!fs.existsSync(abs)) errors.push(`${item.ref}: ${item.source} does not exist`)
+    try {
+      await resolveLocalFile(base, item.source)
+    } catch (e) {
+      const m = e instanceof Error ? e.message : String(e)
+      const why = /outside/.test(m) ? 'is outside the plan\'s folder' : /not found/.test(m) ? 'does not exist' : 'is not a regular file'
+      errors.push(`${item.ref}: ${item.source} ${why}`)
+    }
   }
   return {
     ok: errors.length === 0,
