@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
 
@@ -98,4 +99,16 @@ test('a run refused because the site has content deletes nothing', async () => {
   const payload = fakePayload(3)
   await assert.rejects(importPlan(payload, plan(), { baseDir: 'tests/fixtures', toLexical }), /already has content/)
   assert.equal(payload.calls.filter((c) => c.op === 'delete').length, 0)
+})
+
+test('a local SVG is refused as media before anything is written', async () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'import-svg-'))
+  mkdirSync(path.join(dir, 'media'))
+  writeFileSync(path.join(dir, 'media', 'logo.svg'), '<svg xmlns="http://www.w3.org/2000/svg"></svg>')
+  writeFileSync(path.join(dir, 'media', 'hero.jpg'), readFileSync('tests/fixtures/media/hero.jpg'))
+  const p = plan()
+  p.media.unshift({ ref: 'logo', source: 'media/logo.svg' })
+  const payload = fakePayload()
+  await assert.rejects(importPlan(payload, p, { baseDir: dir, toLexical }), /media\/logo\.svg: SVG is not imported/)
+  assert.equal(payload.calls.filter((c) => c.op === 'create').length, 0)
 })

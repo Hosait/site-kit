@@ -8,7 +8,7 @@ import type { Payload } from 'payload'
 
 import { DEFAULT_LOCALE, DEFAULT_SITE, isSiteKey, LOCALES } from '../sites'
 import { fetchMedia as defaultFetchMedia } from './fetch-media'
-import { resolveLocalFile } from './local-file'
+import { localFileProblem, resolveLocalFile } from './local-file'
 import { findMissingRefs, localeData, orderPages, resolveValue } from './refs'
 import type { SitePlan } from './types'
 
@@ -83,6 +83,8 @@ export async function importPlan(payload: Payload, plan: SitePlan, opts: ImportO
         return wrote(collection, await payload.create({ collection, data: data as never, file: { ...file, size: file.data.length }, locale: DEFAULT_LOCALE, context: ctx }))
       }
       const filePath = await resolveLocalFile(baseDir, source)
+      const problem = await localFileProblem(collection, filePath, source)
+      if (problem) throw new Error(problem)
       return wrote(collection, await payload.create({ collection, data: data as never, filePath, locale: DEFAULT_LOCALE, context: ctx }))
     }
 
