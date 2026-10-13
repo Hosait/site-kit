@@ -214,6 +214,7 @@ async function handle(req: Request, step: string) {
         source,
         pages: (await payload.count({ collection: 'pages' })).totalDocs,
         users,
+        submissions: (await payload.count({ collection: 'form-submissions' })).totalDocs,
         replace,
         production: process.env.SITE_ORIGINS === 'production',
       })
