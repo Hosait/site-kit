@@ -8,6 +8,17 @@ import { checkPlan } from '../../src/lib/site-plan/check'
 
 const plan = () => JSON.parse(readFileSync('tests/fixtures/plan-minimal.json', 'utf8'))
 
+// Windows allows symbolic links only with developer mode or as administrator.
+const links = (() => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'can-link-'))
+  try {
+    fs.symlinkSync(dir, path.join(dir, 'link'))
+    return { skip: false }
+  } catch {
+    return { skip: 'this system does not allow symbolic links' }
+  }
+})()
+
 test('a valid plan with its files in place passes, with a summary', async () => {
   const r = await checkPlan(plan(), 'tests/fixtures')
   assert.deepEqual(r.errors, [])
@@ -64,7 +75,7 @@ test('media URLs the import would refuse are reported: another port, a private a
   assert.match(errors, /mapped: .*is a private address/)
 })
 
-test('a symbolic link out of the plan folder is reported', async () => {
+test('a symbolic link out of the plan folder is reported', links, async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'check-plan-'))
   fs.mkdirSync(path.join(root, 'seed', 'media'), { recursive: true })
   fs.copyFileSync('tests/fixtures/media/hero.jpg', path.join(root, 'seed', 'media', 'hero.jpg'))
@@ -95,10 +106,34 @@ test('duplicate refs, a parent cycle, a redirect without target and a missing de
 
 test('a document or media URL of a type the import refuses (Office files, SVG) is reported with what to do', async () => {
   const p = plan()
-  p.documents = [{ ref: 'price', source: 'https://old.example/files/prisliste.docx', title: { no: 'Prisliste' }, docType: 'other' }]
+  p.documents = [
+    { ref: 'price', source: 'https://old.example/files/prisliste.docx', title: { no: 'Prisliste' }, docType: 'other' },
+    { ref: 'list', source: 'https://old.example/files/list.csv', title: { no: 'Liste' }, docType: 'other' },
+  ]
   p.media.push({ ref: 'logo', source: 'https://old.example/logo.svg' }, { ref: 'plain', source: 'https://cdn.example/image?id=7' })
   const errors = (await checkPlan(p, 'tests/fixtures')).errors.join('\n')
-  assert.match(errors, /price: .*prisliste\.docx.*download it into seed\//)
-  assert.match(errors, /logo: .*logo\.svg.*download it into seed\//)
+  assert.match(errors, /price: .*prisliste\.docx.*download it into seed\/media\/ and list it under documents/)
+  assert.match(errors, /logo: .*logo\.svg.*SVG is not imported.*public\/brand\//)
+  assert.match(errors, /list: .*list\.csv.*not a type Site Kit imports/)
   assert.doesNotMatch(errors, /plain:/, 'a URL without a file extension is left to the import, which reads the file type')
+})
+
+test('local files of a type the import refuses are reported, by their first bytes', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'check-plan-types-'))
+  const media = path.join(root, 'seed', 'media')
+  fs.mkdirSync(media, { recursive: true })
+  fs.copyFileSync('tests/fixtures/media/hero.jpg', path.join(media, 'hero.jpg'))
+  fs.writeFileSync(path.join(media, 'logo.svg'), '<svg xmlns="http://www.w3.org/2000/svg"></svg>')
+  fs.writeFileSync(path.join(media, 'notes.txt'), 'plain text')
+  fs.writeFileSync(path.join(media, 'report.docx'), Buffer.from('PK\x03\x04\x14\x00', 'latin1'))
+  const p = plan()
+  p.media.push({ ref: 'logo', source: 'media/logo.svg' })
+  p.documents = [
+    { ref: 'notes', source: 'media/notes.txt', title: { no: 'Notater' }, docType: 'other' },
+    { ref: 'report', source: 'media/report.docx', title: { no: 'Rapport' }, docType: 'other' },
+  ]
+  const errors = (await checkPlan(p, path.join(root, 'seed'))).errors
+  assert.equal(errors.length, 2, errors.join('\n'))
+  assert.match(errors.join('\n'), /logo: media\/logo\.svg: SVG is not imported/)
+  assert.match(errors.join('\n'), /notes: media\/notes\.txt: not an allowed file type for documents/)
 })

@@ -13,7 +13,9 @@ export const MAX_MEDIA_BYTES = 25 * 1024 * 1024
 
 const ALLOWED_TYPES = 'JPEG, PNG, WebP, GIF, AVIF, MP4, WebM or PDF'
 // File types the import never takes from a URL; they go into seed/ as local files instead.
-const LOCAL_ONLY = new Set(['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'ods', 'odp', 'rtf', 'zip', 'csv', 'txt', 'svg', 'svgz', 'mov', 'avi', 'mkv', 'wmv', 'htm', 'html', 'json', 'xml'])
+// By a URL's extension: documents the import takes only from seed/, and types it never imports.
+const LOCAL_ONLY = new Set(['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'dwg'])
+const NOT_IMPORTED = new Set(['odt', 'ods', 'odp', 'rtf', 'csv', 'txt', 'mov', 'avi', 'mkv', 'wmv', 'htm', 'html', 'json', 'xml'])
 const MP4_BRANDS = new Set(['isom', 'iso2', 'iso5', 'iso6', 'mp41', 'mp42', 'avc1', 'M4V ', 'dash'])
 
 /** The media type from a file's first bytes, or null when it is not one Site Kit imports. */
@@ -125,7 +127,9 @@ export function mediaUrlProblem(url: string): { message: string; private?: boole
   const host = u.hostname.replace(/^\[|\]$/g, '')
   if (net.isIP(host) && !isPublicAddress(host)) return { message: `${host} is a private address`, private: true }
   const ext = /\.([a-z0-9]{1,5})$/i.exec(u.pathname)?.[1]?.toLowerCase()
-  if (ext && LOCAL_ONLY.has(ext)) return { message: `a .${ext} file cannot be imported from a URL (${ALLOWED_TYPES} only); download it into seed/media/ and use the local path` }
+  if (ext === 'svg' || ext === 'svgz') return { message: 'SVG is not imported; put the logo in public/brand/ by hand' }
+  if (ext && LOCAL_ONLY.has(ext)) return { message: `a .${ext} file cannot be imported from a URL; download it into seed/media/ and list it under documents` }
+  if (ext && NOT_IMPORTED.has(ext)) return { message: `a .${ext} file is not a type Site Kit imports (media: JPEG, PNG, WebP, GIF, AVIF, MP4 or WebM; documents: PDF, Word, Excel, PowerPoint, zip or DWG)` }
   return null
 }
 
