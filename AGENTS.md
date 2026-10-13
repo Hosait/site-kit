@@ -59,14 +59,23 @@ After the preview is up: copy `.site-builder/<host>/urls.json` to `import-data/u
 Push the repository and connect it to a blank Hosait project: the Hosait wizard, or the MCP tool
 `connect_repository` when the hosait connection covers a blank project (the plugin's sign-in to a
 blank project, or a project token with the `source` permission). The first deploy generates the
-secrets and imports `seed/site-plan.json` into the empty database; `/next/seed/status` shows
-progress. Then create the first admin user.
+secrets and imports `seed/site-plan.json` into the empty database. Hosait's deploy result (and
+`nextSteps` from `get_project_status`) says whether the import worked; a failed import removes
+what it wrote and names the problem, so fix the plan, push, and it runs again.
 Never commit `.env` or any secret.
 
-When the site's own domain points here, check that `origin` and `hosts` in `site/config.ts` name
-it, then set the variable `SITE_ORIGINS` to `production` and redeploy. Until then every page is
-`noindex`, `robots.txt` blocks search engines, and the sitemap uses the hosait.com address.
+Right after the first deploy, the user creates the first admin user at `/admin` on the
+hosait.com address: until someone has, that page lets anyone create one.
 
+When the site moves to its own domain:
+
+1. In `site/config.ts`, `origin` and `hosts` name the domain (and `www.` if it is used). Commit
+   and push the change.
+2. In Hosait, the user adds the domain under Settings → Domains and follows the DNS steps there.
+   Each extra name (the bare domain next to `www.`, an old domain) gets "Serve the site here".
+3. The user sets the variable `SITE_ORIGINS` to `production` under the project's Variables in
+   Hosait (the plugin's sign-in cannot change variables) and redeploys. Until then every page is
+   `noindex`, `robots.txt` blocks search engines, and the sitemap uses the hosait.com address.
 ---
 
 <!-- BEGIN:nextjs-agent-rules -->

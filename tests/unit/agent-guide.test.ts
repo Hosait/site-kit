@@ -22,3 +22,13 @@ test('CLAUDE.md scopes the staff-only rules to the Hosait/site-kit repository it
   assert.match(claude.split('\n').slice(0, 12).join('\n'), /AGENTS\.md/)
   assert.match(claude, /Hosait\/site-kit/)
 })
+
+test('step 7 points only where the user can look, protects the admin, and walks the domain move', () => {
+  const step7 = guide.slice(guide.indexOf('## 7.')).replace(/\s+/g, ' ')
+  assert.doesNotMatch(step7, /\/next\/seed\/status/)
+  assert.match(step7, /right after the first deploy/i)
+  assert.match(step7, /Settings → Domains/)
+  assert.match(step7, /Serve the site here/)
+  assert.match(step7, /Variables/)
+  assert.match(step7, /commit and push/i)
+})
