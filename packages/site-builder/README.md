@@ -15,7 +15,8 @@ In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-buil
   in `inventory.json`, and writes `urls.json` for Site Kit's `pnpm qa:urls`.
 - **extract** writes `extract.json`: per page the title, meta, headings, main content, images
   and links, plus a template fingerprint, the navigation and the footer. This is what you (or
-  your AI) map to Site Kit blocks in `seed/site-plan.json`.
+  your AI) map to Site Kit blocks in `seed/site-plan.json`. A page that cannot be read (for
+  example nested more than 256 levels deep) is listed under `errors`, and the others go on.
 - **theme** writes `theme.draft.json`. Copy `theme` into `site/theme.json`, use `fonts` in
   `site/fonts.ts`, and save the logo under `public/brand/`. Colours are already darkened where
   Site Kit's 4.5:1 contrast check needs it; `notes` lists each change.

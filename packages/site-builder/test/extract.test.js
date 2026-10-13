@@ -80,3 +80,36 @@ test('the template fingerprint looks past single wrapper elements, and ignores h
   const b = extractPage(wrapped('<h1>B</h1><p>1</p><p>2</p><p>3</p><p>4</p>'), 'https://acme.no/news/b')
   assert.equal(a.template, b.template)
 })
+
+// --- Hardening ------------------------------------------------------------
+const deep = (levels) => shell('<main>' + '<div>'.repeat(levels) + '<p>Deep</p>' + '</div>'.repeat(levels) + '</main>', 'Deep')
+
+test('a page nested far too deep fails alone, quickly, and the other pages are extracted', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'extract-'))
+  fs.mkdirSync(path.join(dir, 'raw'))
+  fs.writeFileSync(path.join(dir, 'raw', 'deep.html'), deep(50_000))
+  fs.writeFileSync(path.join(dir, 'raw', 'ok.html'), shell('<main><h1>Fine</h1><p>Text</p></main>'))
+  const pages = [{ url: 'https://acme.no/deep', status: 200, file: 'raw/deep.html' }, { url: 'https://acme.no/ok', status: 200, file: 'raw/ok.html' }]
+  fs.writeFileSync(path.join(dir, 'inventory.json'), JSON.stringify({ version: 1, source: 'https://acme.no/', pages }))
+  const t = Date.now()
+  const model = extract(dir)
+  assert.ok(Date.now() - t < 1000, `took ${Date.now() - t} ms`)
+  assert.deepEqual(model.pages.map((p) => p.url), ['https://acme.no/ok'])
+  assert.equal(model.errors.length, 1)
+  assert.equal(model.errors[0].url, 'https://acme.no/deep')
+  assert.match(model.errors[0].error, /nested/)
+})
+
+test('without a landmark, deep but allowed nesting is searched for the content in one pass', () => {
+  const chain = (i) => '<div>'.repeat(250) + `<p>Chain ${i} ${'text '.repeat(i + 1)}</p>` + '</div>'.repeat(250)
+  const t = Date.now()
+  const p = extractPage(shell(Array.from({ length: 32 }, (_, i) => chain(i)).join('')), 'https://acme.no/x')
+  assert.ok(Date.now() - t < 1000, `took ${Date.now() - t} ms`)
+  assert.match(p.mainHtml, /Chain 31/)
+})
+
+test('a page without a body tag still gives its content', () => {
+  const p = extractPage('<!doctype html><title>Bare</title><div class="content"><p>Only a paragraph here.</p></div>', 'https://acme.no/bare')
+  assert.equal(p.title, 'Bare')
+  assert.match(p.mainHtml, /Only a paragraph here\./)
+})

@@ -4,7 +4,8 @@
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
-import * as cheerio from 'cheerio'
+
+import { load } from './html.js'
 
 // Page chrome: never the main content. Inside the main content only code, forms, navigation and
 // icons are dropped; an article's own header (lead, date) and embedded videos are content.
@@ -13,6 +14,8 @@ const DROP_IN_MAIN = 'script, style, noscript, template, svg, form, nav, [role=n
 const MAX_MAIN = 50_000
 
 const abs = (href, base) => { try { return new URL(href, base).toString() } catch { return null } }
+// htmlparser2 adds no <body> a page leaves out; the document itself stands in for it.
+const bodyOf = ($) => ($('body').first().length ? $('body').first() : $.root())
 
 /** The largest candidate in srcset, else src (or data-src). */
 function imageSrc($img, base) {
@@ -33,16 +36,20 @@ function mainElement($) {
     const m = $(sel).first()
     if (m.length) return m
   }
-  // No landmark: the element with the most direct paragraph text that is not page chrome.
+  // No landmark: the element with the most direct paragraph text that is not page chrome, found
+  // in one walk in document order that skips chrome and everything inside it.
+  const body = bodyOf($)
   let best = null
   let bestLen = 0
-  $('body *').each((_, el) => {
-    const $el = $(el)
-    if ($el.is(CHROME) || $el.closest(CHROME).length) return
+  const stack = body.children().get().reverse()
+  while (stack.length) {
+    const $el = $(stack.pop())
+    if ($el.is(CHROME)) continue
     const len = $el.children('p').text().trim().length
     if (len > bestLen) { best = $el; bestLen = len }
-  })
-  return best ?? $('body')
+    stack.push(...$el.children().get().reverse())
+  }
+  return best ?? body
 }
 
 function signature($, el) {
@@ -57,7 +64,7 @@ function signature($, el) {
  */
 function template($, $main) {
   const parts = []
-  $('body').children().each((_, a) => { parts.push(signature($, a)); $(a).children().each((__, b) => parts.push(' ' + signature($, b))) })
+  bodyOf($).children().each((_, a) => { parts.push(signature($, a)); $(a).children().each((__, b) => parts.push(' ' + signature($, b))) })
   let level = $main
   for (let i = 0; i < 6 && level.children().length === 1; i++) level = level.children().first()
   let last = null
@@ -75,7 +82,7 @@ function links($, $scope, base) {
 
 /** @param {string} html @param {string} url */
 export function extractPage(html, url) {
-  const $ = cheerio.load(html)
+  const $ = load(html)
   const navEl = $('header nav').first().length ? $('header nav').first() : $('nav, [role=navigation]').first()
   const footerEl = $('footer, [role=contentinfo]').first()
   const $main = mainElement($)
@@ -113,9 +120,12 @@ function mostCommon(items, key) {
 /** @param {string} dir a crawl folder (inventory.json + raw/) */
 export function extract(dir) {
   const inventory = JSON.parse(fs.readFileSync(path.join(dir, 'inventory.json'), 'utf8'))
-  const pages = inventory.pages
-    .filter((p) => p.status === 200 && p.file)
-    .map((p) => extractPage(fs.readFileSync(path.join(dir, p.file), 'utf8'), p.url))
+  // A page that cannot be read fails alone: it is listed in errors and the others go on.
+  const pages = []
+  const errors = []
+  for (const p of inventory.pages.filter((p) => p.status === 200 && p.file)) {
+    try { pages.push(extractPage(fs.readFileSync(path.join(dir, p.file), 'utf8'), p.url)) } catch (e) { errors.push({ url: p.url, error: e.message }) }
+  }
   const byTemplate = new Map()
   for (const p of pages) { const t = byTemplate.get(p.template) || { id: p.template, count: 0, examples: [] }; t.count++; if (t.examples.length < 3) t.examples.push(p.url); byTemplate.set(p.template, t) }
   const model = {
@@ -125,6 +135,7 @@ export function extract(dir) {
     templates: [...byTemplate.values()].sort((a, b) => b.count - a.count),
     nav: mostCommon(pages.filter((p) => p.nav.length), (p) => JSON.stringify(p.nav))?.nav ?? [],
     footer: mostCommon(pages, (p) => p.footer.text)?.footer ?? { text: '', links: [] },
+    errors,
   }
   fs.writeFileSync(path.join(dir, 'extract.json'), JSON.stringify(model, null, 2))
   return model

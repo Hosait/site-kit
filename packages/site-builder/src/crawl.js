@@ -3,9 +3,9 @@
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
-import * as cheerio from 'cheerio'
 
 import { detect } from './detect.js'
+import { load } from './html.js'
 import { get as defaultGet } from './net.js'
 import { parseRobots } from './robots.js'
 
@@ -115,11 +115,11 @@ export async function crawl(start, opts) {
     if (r.status !== 200) return
     let subs
     let locs
-    {
-      const $ = cheerio.load(r.body.toString('utf8'), { xmlMode: true })
+    try {
+      const $ = load(r.body.toString('utf8'), { xml: true })
       subs = $('sitemap > loc').map((_, e) => $(e).text().trim()).get()
       locs = $('url > loc').map((_, e) => $(e).text().trim()).get()
-    }
+    } catch { return }
     for (const l of locs) enqueue(l, url)
     for (const s of subs) await readSitemap(s)
   }
@@ -153,7 +153,12 @@ export async function crawl(start, opts) {
     const html = r.body.toString('utf8')
     record.file = path.join('raw', `${sha1(url)}.html`)
     fs.writeFileSync(path.join(out, record.file), html)
-    const $ = cheerio.load(html)
+    // A page that cannot be read fails alone: the error is recorded and the crawl goes on.
+    try { readPage(html, url, record) } catch (e) { record.error = e.message }
+  }
+
+  function readPage(html, url, record) {
+    const $ = load(html)
     record.title = $('title').first().text().trim()
     record.lang = ($('html').attr('lang') || '').trim().toLowerCase() || undefined
     if (record.lang) languages.add(record.lang.split('-')[0])

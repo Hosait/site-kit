@@ -129,3 +129,20 @@ test('a malformed Location header is recorded, and the crawl goes on', async () 
     assert.ok(inv.pages.some((p) => p.url.endsWith('/ok')))
   } finally { await s.close() }
 })
+
+// --- Hardening ------------------------------------------------------------
+test('a page nested far too deep is recorded with an error, quickly, and the crawl goes on', async () => {
+  const s = await serve({
+    '/': page('Home', '<a href="/deep">deep</a> <a href="/ok">ok</a>'),
+    '/deep': page('Deep', '<div>'.repeat(50_000) + '<a href="/hidden">x</a>'),
+    '/ok': page('OK', '<p>ok</p>'),
+  })
+  try {
+    const t = Date.now()
+    const inv = await crawl(s.url + '/', { out: tmp(), allowPrivate: true, delayMs: 0 })
+    assert.ok(Date.now() - t < 2000, `took ${Date.now() - t} ms`)
+    const deep = inv.pages.find((p) => p.url.endsWith('/deep'))
+    assert.match(deep.error, /nested/)
+    assert.ok(inv.pages.some((p) => p.url.endsWith('/ok') && p.status === 200))
+  } finally { await s.close() }
+})

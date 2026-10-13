@@ -3,8 +3,7 @@
 // Kit checks reaches 4.5:1, and each change is noted, so `pnpm kit:theme-check` passes as is.
 import fs from 'node:fs'
 import path from 'node:path'
-import * as cheerio from 'cheerio'
-
+import { load } from './html.js'
 import { get as defaultGet } from './net.js'
 
 /** Mirrors PAIRS in site-kit src/lib/theme.ts. */
@@ -117,7 +116,7 @@ export function themeFromCss(css, html, baseUrl) {
   highlight = darkenUntil(highlight, [background])
   for (const [k, v] of Object.entries({ brand, ink, highlight })) if (v !== original[k]) notes.push(`${k} darkened from ${original[k]} to ${v} for 4.5:1 contrast`)
 
-  const $ = cheerio.load(html)
+  const $ = load(html)
   const families = (sel) => {
     const re = new RegExp(`\\b(?:${sel})\\b`)
     for (const { selector, decls } of rules) {
@@ -150,7 +149,7 @@ export async function theme(dir, opts = {}) {
   const inventory = JSON.parse(fs.readFileSync(path.join(dir, 'inventory.json'), 'utf8'))
   const home = inventory.pages.find((p) => p.status === 200 && p.file && new URL(p.url).pathname === new URL(inventory.source).pathname) ?? inventory.pages.find((p) => p.status === 200 && p.file)
   const html = home ? fs.readFileSync(path.join(dir, home.file), 'utf8') : ''
-  const $ = cheerio.load(html)
+  const $ = load(html)
   let css = $('style').map((_, s) => $(s).text()).get().join('\n')
   for (const href of $('link[rel="stylesheet"][href]').map((_, l) => String($(l).attr('href'))).get().slice(0, 10)) {
     if (css.length > MAX_CSS) break
