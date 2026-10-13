@@ -2,19 +2,13 @@ import Ajv, { type ErrorObject } from 'ajv'
 
 import blocks from '../../../schema/blocks.schema.json'
 import planSchema from '../../../schema/site-plan.schema.json'
-import { DEFAULT_LOCALE, LOCALES, SITE_CONFIG } from '../sites'
+import { DEFAULT_LOCALE, LOCALES } from '../sites'
+import { PLAN_CHOICES } from './choices'
 import { orderPages } from './refs'
 import { stampSchema } from './stamp-schema'
 import type { SitePlan } from './types'
 
 const BLOCK_TYPES: string[] = blocks.blockTypes
-
-/** The values Payload stores as selects, so a plan can only use what the site offers. */
-export const PLAN_CHOICES = {
-  articleKind: Object.keys(SITE_CONFIG.articleKinds),
-  documentType: Object.keys(SITE_CONFIG.documentTypes),
-  documentLanguage: [...LOCALES, 'multi'],
-}
 
 const ajv = new Ajv({ allErrors: true, strict: false })
 const check = ajv.compile(stampSchema(planSchema, LOCALES, BLOCK_TYPES, PLAN_CHOICES) as object)

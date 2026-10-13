@@ -6,7 +6,7 @@ import { configToJSONSchema } from 'payload'
 
 import { pageBlocks } from '../../src/blocks/configs'
 import { stampSchema } from '../../src/lib/site-plan/stamp-schema'
-import { PLAN_CHOICES } from '../../src/lib/site-plan/validate'
+import { PLAN_CHOICES } from '../../src/lib/site-plan/choices'
 import { LOCALES } from '../../src/lib/sites'
 import configPromise from '../../src/payload.config'
 
