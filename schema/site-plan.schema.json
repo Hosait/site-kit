@@ -459,7 +459,19 @@
           "permanent": {
             "type": "boolean"
           }
-        }
+        },
+        "anyOf": [
+          {
+            "required": [
+              "toPage"
+            ]
+          },
+          {
+            "required": [
+              "toUrl"
+            ]
+          }
+        ]
       }
     },
     "gaps": {
