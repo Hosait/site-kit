@@ -156,7 +156,7 @@ async function seedMedia(only: string | null) {
  * Imports seed/site-plan.json in the background: media come one by one, which can take minutes.
  * `progress` is the slot the db step already claimed; `release` gives it back on failure.
  */
-async function seedPlan(replace: boolean, progress: PlanSeedProgress, release: () => void) {
+async function seedPlan(progress: PlanSeedProgress, release: () => void) {
   const loaded = loadSeedPlan(SEED_DIR)
   if (!loaded.ok) {
     release()
@@ -164,7 +164,9 @@ async function seedPlan(replace: boolean, progress: PlanSeedProgress, release: (
   }
   const payload = await getPayload({ config: configPromise })
   const run = runPlanSeed(payload, loaded.plan, SEED_DIR, progress, {
-    reset: replace,
+    // Only reached when the site has no pages, or the admin chose replace: clear what a run that
+    // was stopped before it could clean up (a restart, a killed container) left behind.
+    reset: true,
     after: async () => {
       flushCache()
       await reindexAll(payload)
@@ -216,7 +218,7 @@ async function handle(req: Request, step: string) {
         return Response.json({ ok: false, error: 'Nettstedet har allerede sider. Bruk ?replace=1 for å erstatte alt innhold.' }, { status: 409 })
       }
       if (seedSource(SEED_DIR) === 'plan') {
-        const started = await seedPlan(replace, claim, release)
+        const started = await seedPlan(claim, release)
         if (wait && started.run) return waitForPlan(claim, started.run)
         return Response.json(started.body, { status: started.status })
       }

@@ -71,3 +71,21 @@ test('a refused download names the whole media URL, even when the error itself n
   const fetchMedia = async () => { throw Object.assign(new Error('evil.example resolves to a private address'), { code: 'EPRIVATE' }) }
   await assert.rejects(importPlan(fakePayload(), p, { baseDir: 'tests/fixtures', toLexical, fetchMedia }), /https:\/\/evil\.example\/path\/x\.jpg/)
 })
+
+test('an import that fails part-way removes what it wrote, so the next run starts on an empty site', async () => {
+  const p = plan()
+  p.media.push({ ref: 'gone', source: 'https://cdn.example/gone.jpg' })
+  const payload = fakePayload()
+  const fetchMedia = async (u: string) => { throw new Error(`${u}: HTTP 404`) }
+  await assert.rejects(importPlan(payload, p, { baseDir: 'tests/fixtures', toLexical, fetchMedia }), /gone\.jpg: HTTP 404.*removed/)
+  const firstCreate = payload.calls.findIndex((c) => c.op === 'create')
+  const deletes = payload.calls.map((c, i) => ({ ...c, i })).filter((c) => c.op === 'delete')
+  assert.ok(firstCreate >= 0 && deletes.every((d) => d.i > firstCreate), 'cleanup runs after the writes')
+  assert.deepEqual(deletes.map((d) => d.collection), [...CONTENT_COLLECTIONS])
+})
+
+test('a run refused because the site has content deletes nothing', async () => {
+  const payload = fakePayload(3)
+  await assert.rejects(importPlan(payload, plan(), { baseDir: 'tests/fixtures', toLexical }), /already has content/)
+  assert.equal(payload.calls.filter((c) => c.op === 'delete').length, 0)
+})
