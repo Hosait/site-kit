@@ -43,3 +43,56 @@ test('a download that never finishes is stopped by the overall deadline', async 
   }) as never
   await assert.rejects(fetchMedia('https://example.com/a.jpg', { deadlineMs: 50, request }), /took longer/)
 })
+
+// --- Second review ---------------------------------------------------------
+import { sniffMediaType } from '../../src/lib/site-plan/fetch-media'
+
+test('IPv6 forms that carry a private IPv4 address, and deprecated site-local addresses, are refused', () => {
+  for (const ip of ['::ffff:7f00:1', '::7f00:1', '::0.0.0.1', '64:ff9b::7f00:1', '64:ff9b::a00:1', '2002:7f00:1::1', '2002:a00:1::', 'fec0::1', 'feff::1', 'ff02::1'])
+    assert.equal(isPublicAddress(ip), false, ip)
+  for (const ip of ['64:ff9b::808:808', '2002:808:808::1', '2001:4860:4860::8888', '2606:4700::1111', '::ffff:808:808'])
+    assert.equal(isPublicAddress(ip), true, ip)
+})
+
+const bytes = (...parts: (string | number[])[]) => Buffer.concat(parts.map((p) => (typeof p === 'string' ? Buffer.from(p, 'latin1') : Buffer.from(p))))
+
+test('the file type is read from the first bytes, and only images, video and PDF are allowed', () => {
+  const cases: [Buffer, string | null][] = [
+    [bytes([0xff, 0xd8, 0xff, 0xe0], 'JFIF'), 'image/jpeg'],
+    [bytes([0x89], 'PNG\r\n\x1a\n', 'rest'), 'image/png'],
+    [bytes('GIF89a...'), 'image/gif'],
+    [bytes('RIFF', [1, 2, 3, 4], 'WEBPVP8 '), 'image/webp'],
+    [bytes([0, 0, 0, 28], 'ftypavif', [0, 0, 0, 0]), 'image/avif'],
+    [bytes([0, 0, 0, 24], 'ftypisom', [0, 0, 0, 0]), 'video/mp4'],
+    [bytes([0x1a, 0x45, 0xdf, 0xa3], 'webm'), 'video/webm'],
+    [bytes('%PDF-1.7\n'), 'application/pdf'],
+    [bytes('<svg xmlns="http://www.w3.org/2000/svg"></svg>'), null],
+    [bytes('<!doctype html><html></html>'), null],
+    [bytes('PK', [3, 4], 'zip'), null],
+    [Buffer.alloc(0), null],
+  ]
+  for (const [b, want] of cases) assert.equal(sniffMediaType(b), want, `${b.toString('latin1', 0, 12)} → ${want}`)
+})
+
+/** A fake https.get that answers 200 with the given body and headers. */
+function answering(body: Buffer, headers: Record<string, string>) {
+  return ((_u: URL, _o: unknown, cb: (res: unknown) => void) => {
+    const req = new EventEmitter() as EventEmitter & { destroy: (e?: Error) => void }
+    req.destroy = (e?: Error) => { req.emit('error', e) }
+    const res = Object.assign(new EventEmitter(), { statusCode: 200, headers, resume() {}, destroy() {} })
+    setImmediate(() => {
+      cb(res)
+      res.emit('data', body)
+      res.emit('end')
+    })
+    return req
+  }) as never
+}
+
+test("a server's Content-Type does not decide: an SVG sent as image/png is refused, a PNG sent as octet-stream is a PNG", async () => {
+  const svg = bytes('<svg xmlns="http://www.w3.org/2000/svg"></svg>')
+  await assert.rejects(fetchMedia('https://example.com/a.png', { request: answering(svg, { 'content-type': 'image/png' }) }), /a\.png: not an allowed file type/)
+  const png = bytes([0x89], 'PNG\r\n\x1a\n', 'rest')
+  const got = await fetchMedia('https://example.com/b', { request: answering(png, { 'content-type': 'application/octet-stream' }) })
+  assert.equal(got.mimetype, 'image/png')
+})

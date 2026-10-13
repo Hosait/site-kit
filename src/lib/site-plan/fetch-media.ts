@@ -2,12 +2,34 @@
  * Downloads one media file named in a site plan. Plans can be written by an AI from a crawled
  * site, so every URL is untrusted: https only, port 443, public addresses only (checked when
  * connecting, so a second DNS answer cannot point elsewhere), at most 3 redirects and 25 MB.
+ * The file type is read from the file's first bytes, not from the server's Content-Type, and
+ * only images, video and PDF are accepted.
  */
 import dns from 'node:dns'
 import https from 'node:https'
 import net from 'node:net'
 
 export const MAX_MEDIA_BYTES = 25 * 1024 * 1024
+
+const ALLOWED_TYPES = 'JPEG, PNG, WebP, GIF, AVIF, MP4, WebM or PDF'
+const MP4_BRANDS = new Set(['isom', 'iso2', 'iso5', 'iso6', 'mp41', 'mp42', 'avc1', 'M4V ', 'dash'])
+
+/** The media type from a file's first bytes, or null when it is not one Site Kit imports. */
+export function sniffMediaType(b: Buffer): string | null {
+  const at = (offset: number, s: string) => b.length >= offset + s.length && b.toString('latin1', offset, offset + s.length) === s
+  if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg'
+  if (at(0, '\x89PNG\r\n\x1a\n')) return 'image/png'
+  if (at(0, 'GIF87a') || at(0, 'GIF89a')) return 'image/gif'
+  if (at(0, 'RIFF') && at(8, 'WEBP')) return 'image/webp'
+  if (at(4, 'ftyp')) {
+    const brand = b.toString('latin1', 8, 12)
+    if (brand === 'avif' || brand === 'avis') return 'image/avif'
+    if (MP4_BRANDS.has(brand)) return 'video/mp4'
+  }
+  if (b.length >= 4 && b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) return 'video/webm'
+  if (at(0, '%PDF-')) return 'application/pdf'
+  return null
+}
 
 export function isPublicAddress(ip: string): boolean {
   if (net.isIPv4(ip)) {
@@ -21,14 +43,36 @@ export function isPublicAddress(ip: string): boolean {
     return true
   }
   if (net.isIPv6(ip)) {
-    const v = ip.toLowerCase()
-    if (v === '::' || v === '::1') return false
-    const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(v)
-    if (mapped) return isPublicAddress(mapped[1])
-    if (/^f[cd]/.test(v) || /^fe[89ab]/.test(v) || /^ff/.test(v)) return false
+    const h = ipv6Hextets(ip)
+    const v4 = (hi: number, lo: number) => `${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`
+    const zero = (from: number, to: number) => h.slice(from, to).every((x) => x === 0)
+    if (zero(0, 8) || (zero(0, 7) && h[7] === 1)) return false // :: and ::1
+    // Forms that carry an IPv4 address: the IPv4 rules decide.
+    if (zero(0, 5) && h[5] === 0xffff) return isPublicAddress(v4(h[6], h[7])) // ::ffff:a.b.c.d
+    if (zero(0, 6)) return isPublicAddress(v4(h[6], h[7])) // ::a.b.c.d (compatible)
+    if (h[0] === 0x64 && h[1] === 0xff9b && zero(2, 6)) return isPublicAddress(v4(h[6], h[7])) // NAT64 64:ff9b::/96
+    if (h[0] === 0x2002) return isPublicAddress(v4(h[1], h[2])) // 6to4 2002::/16
+    if ((h[0] & 0xfe00) === 0xfc00) return false // unique local fc00::/7
+    if ((h[0] & 0xffc0) === 0xfe80 || (h[0] & 0xffc0) === 0xfec0) return false // link-local, site-local
+    if ((h[0] & 0xff00) === 0xff00) return false // multicast
     return true
   }
   return false
+}
+
+/** The eight 16-bit groups of an IPv6 address (a trailing dotted IPv4 part included). */
+function ipv6Hextets(ip: string): number[] {
+  let s = ip.toLowerCase().split('%')[0]
+  const dotted = /(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(s)
+  if (dotted) {
+    const [a, b, c, d] = dotted.slice(1).map(Number)
+    s = s.slice(0, dotted.index) + `${((a << 8) | b).toString(16)}:${((c << 8) | d).toString(16)}`
+  }
+  const [head, tail] = s.split('::')
+  const part = (x: string | undefined) => (x ? x.split(':').map((g) => parseInt(g, 16)) : [])
+  const left = part(head)
+  const right = part(tail)
+  return tail === undefined ? left : [...left, ...new Array(8 - left.length - right.length).fill(0), ...right]
 }
 
 // Node calls this with { all: true } when it wants every address (happy eyeballs).
@@ -100,9 +144,12 @@ export async function fetchMedia(url: string, opts: FetchOptions = {}): Promise<
           done(reject, new Error(`${url}: larger than 25 MB`))
         } else chunks.push(c)
       })
-      res.on('end', () =>
-        done(resolve, { data: Buffer.concat(chunks), mimetype: String(res.headers['content-type'] || 'application/octet-stream').split(';')[0].trim(), name }),
-      )
+      res.on('end', () => {
+        const data = Buffer.concat(chunks)
+        const mimetype = sniffMediaType(data)
+        if (!mimetype) return done(reject, new Error(`${url}: not an allowed file type (${ALLOWED_TYPES})`))
+        done(resolve, { data, mimetype, name })
+      })
       res.on('error', (e: Error) => done(reject, e))
     })
     // Whatever was resolved, the address actually connected to must be public.
