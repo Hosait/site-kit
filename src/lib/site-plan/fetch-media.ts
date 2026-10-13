@@ -12,6 +12,10 @@ import net from 'node:net'
 export const MAX_MEDIA_BYTES = 25 * 1024 * 1024
 
 const ALLOWED_TYPES = 'JPEG, PNG, WebP, GIF, AVIF, MP4, WebM or PDF'
+// File types the import never takes from a URL; they go into seed/ as local files instead.
+// By a URL's extension: documents the import takes only from seed/, and types it never imports.
+const LOCAL_ONLY = new Set(['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'dwg'])
+const NOT_IMPORTED = new Set(['odt', 'ods', 'odp', 'rtf', 'csv', 'txt', 'mov', 'avi', 'mkv', 'wmv', 'htm', 'html', 'json', 'xml'])
 const MP4_BRANDS = new Set(['isom', 'iso2', 'iso5', 'iso6', 'mp41', 'mp42', 'avc1', 'M4V ', 'dash'])
 
 /** The media type from a file's first bytes, or null when it is not one Site Kit imports. */
@@ -105,15 +109,35 @@ export function mediaName(u: URL): string {
 type FetchOptions = { redirects?: number; deadlineMs?: number; request?: typeof https.get }
 const privateError = (url: string, what: string) => Object.assign(new Error(`${url}: ${what} is a private address`), { code: 'EPRIVATE' })
 
-export async function fetchMedia(url: string, opts: FetchOptions = {}): Promise<{ data: Buffer; mimetype: string; name: string }> {
-  const { redirects = 3, deadlineMs = 120_000, request = https.get } = opts
-  const u = new URL(url)
-  if (u.protocol !== 'https:') throw new Error(`${url}: only https media can be imported`)
-  if (u.port && u.port !== '443') throw new Error(`${url}: only the standard https port`)
+/**
+ * Why the import would refuse this media URL before connecting, or null. Also used by
+ * kit:check-plan, so a plan learns it before anything is uploaded.
+ */
+export function mediaUrlProblem(url: string): { message: string; private?: boolean } | null {
+  let u: URL
+  try {
+    u = new URL(url)
+  } catch {
+    return { message: 'not a valid URL' }
+  }
+  if (u.protocol !== 'https:') return { message: 'only https media can be imported' }
+  if (u.port && u.port !== '443') return { message: 'only the standard https port' }
   // An IP address in the URL never reaches the lookup, so it is checked here (URL has already
   // turned decimal and hex forms into dotted ones).
   const host = u.hostname.replace(/^\[|\]$/g, '')
-  if (net.isIP(host) && !isPublicAddress(host)) throw privateError(url, host)
+  if (net.isIP(host) && !isPublicAddress(host)) return { message: `${host} is a private address`, private: true }
+  const ext = /\.([a-z0-9]{1,5})$/i.exec(u.pathname)?.[1]?.toLowerCase()
+  if (ext === 'svg' || ext === 'svgz') return { message: 'SVG is not imported; put the logo in public/brand/ by hand' }
+  if (ext && LOCAL_ONLY.has(ext)) return { message: `a .${ext} file cannot be imported from a URL; download it into seed/media/ and list it under documents` }
+  if (ext && NOT_IMPORTED.has(ext)) return { message: `a .${ext} file is not a type Site Kit imports (media: JPEG, PNG, WebP, GIF, AVIF, MP4 or WebM; documents: PDF, Word, Excel, PowerPoint, zip or DWG)` }
+  return null
+}
+
+export async function fetchMedia(url: string, opts: FetchOptions = {}): Promise<{ data: Buffer; mimetype: string; name: string }> {
+  const { redirects = 3, deadlineMs = 120_000, request = https.get } = opts
+  const problem = mediaUrlProblem(url)
+  if (problem) throw Object.assign(new Error(`${url}: ${problem.message}`), problem.private ? { code: 'EPRIVATE' } : {})
+  const u = new URL(url)
   const name = mediaName(u)
   return new Promise((resolve, reject) => {
     let settled = false

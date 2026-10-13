@@ -103,3 +103,7 @@ test('SIIT, Teredo, local-use NAT64 and documentation IPv6 ranges are refused', 
   for (const ip of ['2001:4860:4860::8888', '2001:1::1', '64:ff9b::808:808'])
     assert.equal(isPublicAddress(ip), true, ip)
 })
+
+test('a URL of a type the import refuses is refused before connecting', async () => {
+  await assert.rejects(fetchMedia('https://example.com/files/a.docx'), /download it into seed\//)
+})
