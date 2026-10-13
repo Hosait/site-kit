@@ -29,3 +29,12 @@ test('* in a path matches any key, and report./cms. paths are always allowed', (
   const q = { version: 1, questions: [{ id: 'domain', text: 'x', type: 'text', sets: ['sites.*.origin', 'report.goLive', 'cms.privacyPage'] }] }
   assert.deepEqual(checkQuestions(q, cfg), [])
 })
+
+// The answer goes into a chat, a report and possibly the repository: ask what kind of access the
+// customer can give, never for the secret itself.
+test('the content-access question asks for the kind of access, not for a password or token', () => {
+  const q = shipped().questions.find((x: { id: string }) => x.id === 'contentAccess')
+  assert.ok(q)
+  assert.doesNotMatch(q.text, /username|user name|brukernavn|last resort/i)
+  assert.match(q.text, /never go into this chat, the repository or the report/i)
+})
