@@ -37,15 +37,19 @@ the fonts in `site/fonts.ts`, and run `pnpm kit:theme-check` (every pair needs 4
 
 Write `seed/site-plan.json` against `schema/site-plan.schema.json`; the blocks and their fields
 are in `schema/blocks.schema.json`. Map each template once, then fill every page of it. Put
-images and PDFs in `seed/media/` (or use public https URLs). Link with `$media`, `$page`,
-`$pageLink`, `$person`, `$document`, `$form`; rich text is `$html`. Forms go in `forms`: their
-fields, the button text, the message shown after sending, and `retention` (days, or `"keep"`)
-from the intake answer; left out, the site default in `site/config.ts` applies. A `formBlock`
-points at one with `{ "$form": "<ref>" }`. Submissions are read in the admin and deleted each
-night once older than the period. Add `redirects` for every old URL that moves, and `gaps` for
-anything no block matches (a form that must send e-mail or take payment is still a gap). Check
-it locally:
+images and PDFs in `seed/media/` (or use public https URLs). Office files (Word, Excel,
+PowerPoint), zip and DWG cannot be imported from a URL: download them into `seed/media/` and list
+them under `documents`. SVG is not imported: the logo goes in `public/brand/` (step 4), and other
+SVG graphics are a gap. Every file is checked by its first bytes, not its name. Link with
+`$media`, `$page`, `$pageLink`, `$person`, `$document`, `$form`; rich text is `$html`. Forms go in
+`forms`: their fields, the button text, the message shown after sending, and `retention` (days,
+or `"keep"`) from the intake answer; left out, the site default in `site/config.ts` applies. A
+`formBlock` points at one with `{ "$form": "<ref>" }`. Submissions are read in the admin and
+deleted each night once older than the period. Add `redirects` for every old URL that moves, and
+`gaps` for anything no block matches (a form that must send e-mail or take payment is still a
+gap). Check it until it passes, then try it locally:
 
+    pnpm kit:check-plan seed/site-plan.json
     pnpm kit:import seed/site-plan.json --reset
     pnpm dev
 
@@ -60,11 +64,31 @@ After the preview is up: copy `.site-builder/<host>/urls.json` to `import-data/u
 
 ## 7. Publish on Hosait
 
-Push the repository and connect it to a blank Hosait project (the Hosait wizard, or the MCP tool
-`connect_repository`). The first deploy generates the secrets and imports `seed/site-plan.json`
-into the empty database; `/next/seed/status` shows progress. Then create the first admin user.
+Push the repository and connect it to a blank Hosait project: the Hosait wizard, or the MCP tool
+`connect_repository` when the hosait connection covers a blank project (the plugin's sign-in to a
+blank project, or a project token with the `source` permission). The first deploy generates the
+secrets and imports `seed/site-plan.json` into the empty database. Hosait's deploy result (and
+`nextSteps` from `get_project_status`) says whether the import worked. If it failed, the import
+removed what it wrote, and its reason is in the web service's log (`get_runtime_logs`, or Logs
+on the project page; lines starting with `[seed]`). Fix the plan and push; then the user presses
+"Run seed again" on the project page. A push alone does not run the seed again.
 Never commit `.env` or any secret.
 
+Right after the first deploy, the user creates the first admin user at `/admin` on the
+hosait.com address: until someone has, that page lets anyone create one. Once a user exists, an
+import cut off part-way (the web service restarted during it) leaves pages that make "Run seed
+again" refuse; the admin then replaces the content with "Legg inn innhold" in the Testinnhold
+panel on the admin dashboard.
+
+When the site moves to its own domain:
+
+1. In `site/config.ts`, `origin` and `hosts` name the domain (and `www.` if it is used). Commit
+   and push the change.
+2. In Hosait, the user adds the domain under Settings → Domains and follows the DNS steps there.
+   Each extra name (the bare domain next to `www.`, an old domain) gets "Serve the site here".
+3. The user sets the variable `SITE_ORIGINS` to `production` under the project's Variables in
+   Hosait (the plugin's sign-in cannot change variables) and redeploys. Until then every page is
+   `noindex`, `robots.txt` blocks search engines, and the sitemap uses the hosait.com address.
 ---
 
 <!-- BEGIN:nextjs-agent-rules -->
