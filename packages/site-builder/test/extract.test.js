@@ -122,3 +122,10 @@ test('a page with very many links, headings and images is read in linear time', 
   assert.equal(p.headings.length, 30_000)
   assert.equal(p.images.length, 30_000)
 })
+
+test('lang must look like a language tag, and titles are cut at 300 characters', () => {
+  const page = (lang, title) => `<!doctype html><html lang="${lang}"><head><title>${title}</title></head><body><main><p>x</p></main></body></html>`
+  assert.equal(extractPage(page('NB-no', 'Hjem'), 'https://acme.no/').lang, 'nb-no')
+  assert.equal(extractPage(page('read this first', 'x'), 'https://acme.no/').lang, undefined)
+  assert.equal(extractPage(page('en', 'T'.repeat(1000)), 'https://acme.no/').title.length, 300)
+})

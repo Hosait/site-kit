@@ -1,11 +1,14 @@
 // Parses pages and sitemaps with a nesting limit. htmlparser2 (cheerio's own) builds the tree, and
 // a document with elements nested deeper than MAX_DEPTH is refused while it is read, so parsing,
 // selectors and every later walk over the tree (text, html, clone) stay bounded in time and stack.
-// Real pages nest a few dozen levels.
+// Real pages nest a few dozen levels. Also the page's language and title, read the same way by
+// crawl and extract.
 import * as cheerio from 'cheerio'
 import { DomHandler, Parser } from 'htmlparser2'
 
 export const MAX_DEPTH = 256
+const MAX_TITLE = 300
+const LANGUAGE = /^[a-z]{2,3}(-[a-z0-9]{1,8})*$/
 
 /** @param {string} text @param {{ xml?: boolean }} [opts] */
 export function load(text, { xml = false } = {}) {
@@ -19,3 +22,12 @@ export function load(text, { xml = false } = {}) {
   new Parser(handler, { xmlMode: xml }).end(text)
   return cheerio.load(handler.root, xml ? { xml: true } : { xml: { xmlMode: false, encodeEntities: 'utf8' } })
 }
+
+/** A lang or hreflang value in lower case, or undefined when it is not a language tag. */
+export function language(value) {
+  const v = String(value ?? '').trim().toLowerCase()
+  return LANGUAGE.test(v) ? v : undefined
+}
+
+/** The page title, cut at MAX_TITLE characters. */
+export const title = ($) => $('title').first().text().trim().slice(0, MAX_TITLE)

@@ -6,7 +6,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { detect } from './detect.js'
-import { load } from './html.js'
+import { language, load, title } from './html.js'
 import { get as defaultGet } from './net.js'
 import { parseRobots } from './robots.js'
 
@@ -14,6 +14,8 @@ const IMAGE = /\.(jpe?g|png|gif|webp|svg|avif|ico|bmp|tiff?)$/i
 const DOCUMENT = /\.(pdf|docx?|xlsx?|pptx?|zip|csv|txt|mp4|mov|webm)$/i
 const SKIP = /\.(css|js|mjs|json|xml|rss|atom|woff2?|ttf|otf|eot|map)$/i
 const MAX_SITEMAPS = 50
+const MAX_MEDIA = 5000
+const MAX_DOCUMENTS = 2000
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const sha1 = (s) => crypto.createHash('sha1').update(s).digest('hex')
 
@@ -90,7 +92,13 @@ export async function crawl(start, opts) {
   const embeds = new Map()
   const cms = new Map()
   const languages = new Set()
-  const note = (map, key, from) => map.set(key, (map.get(key) || new Set()).add(from))
+  // Media and documents are listed up to a cap; a full list is noted at the end.
+  const caps = new Map([[media, MAX_MEDIA], [documents, MAX_DOCUMENTS]])
+  const full = new Set()
+  const note = (map, key, from) => {
+    if (!map.has(key) && map.size >= caps.get(map)) return full.add(map)
+    map.set(key, (map.get(key) || new Set()).add(from))
+  }
   const count = (map, names) => names.forEach((n) => map.set(n, (map.get(n) || 0) + 1))
   // Only so many addresses are worth remembering when only maxPages are read.
   const maxSeen = maxPages * 3
@@ -166,10 +174,11 @@ export async function crawl(start, opts) {
 
   function readPage(html, url, record) {
     const $ = load(html)
-    record.title = $('title').first().text().trim()
-    record.lang = ($('html').attr('lang') || '').trim().toLowerCase() || undefined
+    record.title = title($)
+    record.lang = language($('html').attr('lang'))
     if (record.lang) languages.add(record.lang.split('-')[0])
-    record.alternates = $('link[rel="alternate"][hreflang]').toArray().map((e) => ({ lang: String($(e).attr('hreflang')).toLowerCase(), href: normalize(String($(e).attr('href')), url) })).filter((a) => a.href)
+    const hreflang = (e) => { const v = String($(e).attr('hreflang')).trim().toLowerCase(); return v === 'x-default' ? v : language(v) }
+    record.alternates = $('link[rel="alternate"][hreflang]').toArray().map((e) => ({ lang: hreflang(e), href: normalize(String($(e).attr('href')), url) })).filter((a) => a.lang && a.href)
     for (const a of record.alternates) { if (a.lang !== 'x-default') languages.add(a.lang.split('-')[0]); enqueue(a.href, url) }
     count(trackers, detect.trackers(html))
     count(embeds, detect.embeds(html))
@@ -193,6 +202,8 @@ export async function crawl(start, opts) {
     }
   }
   await Promise.all(Array.from({ length: concurrency }, worker))
+  if (full.has(media)) notes.push(`Only the first ${MAX_MEDIA} images are listed.`)
+  if (full.has(documents)) notes.push(`Only the first ${MAX_DOCUMENTS} documents are listed.`)
   if (budgetReached) notes.push(`Stopped at the ${Math.round(budgetMs / 6000) / 10}-minute time budget; ${queue.length} queued addresses were not read.`)
 
   const inventory = {

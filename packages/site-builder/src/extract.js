@@ -5,7 +5,7 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 
-import { load } from './html.js'
+import { language, load, title } from './html.js'
 
 // Page chrome: never the main content. Inside the main content only code, forms, navigation and
 // icons are dropped; an article's own header (lead, date) and embedded videos are content.
@@ -94,8 +94,8 @@ export function extractPage(html, url) {
   return {
     url,
     path: new URL(url).pathname,
-    lang: String($('html').attr('lang') || '').toLowerCase() || undefined,
-    title: $('title').first().text().trim(),
+    lang: language($('html').attr('lang')),
+    title: title($),
     description: $('meta[name="description"]').attr('content')?.trim() || undefined,
     ogImage: abs($('meta[property="og:image"]').attr('content') || '', url) || undefined,
     canonical: abs($('link[rel="canonical"]').attr('href') || '', url) || undefined,

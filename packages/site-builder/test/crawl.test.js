@@ -187,3 +187,28 @@ test('a crawl that finishes within its budget has no budget note', async () => {
 test('a budget that is not a positive number is refused', async () => {
   for (const budgetMs of [0, -1, NaN, '5', Infinity]) await assert.rejects(crawl('http://localhost/', { out: tmp(), budgetMs }), /budgetMs/, String(budgetMs))
 })
+
+test('media and document lists are capped with a note; languages must look like language tags; titles are cut', async () => {
+  const imgs = Array.from({ length: 6000 }, (_, i) => `<img src="/i/${i}.jpg">`).join('')
+  const docs = Array.from({ length: 2500 }, (_, i) => `<a href="/d/${i}.pdf">d</a>`).join('')
+  const head = `<title>${'T'.repeat(1000)}</title><link rel="alternate" hreflang="nb" href="/nb/"><link rel="alternate" hreflang="not a language" href="/x/"><link rel="alternate" hreflang="x-default" href="/">`
+  const s = await serve({
+    '/': { body: `<!doctype html><html lang=" EN-GB "><head>${head}</head><body><a href="/x/">x</a>${imgs}${docs}</body></html>` },
+    '/nb/': page('Hjem', '<p>Hei</p>', 'nb'),
+    '/x/': page('X', '<p>x</p>', 'see the list below'),
+  })
+  try {
+    const inv = await crawl(s.url + '/', { out: tmp(), allowPrivate: true, delayMs: 0 })
+    assert.equal(inv.media.length, 5000)
+    assert.equal(inv.documents.length, 2000)
+    assert.ok(inv.notes.some((n) => /5000 images/.test(n)), JSON.stringify(inv.notes))
+    assert.ok(inv.notes.some((n) => /2000 documents/.test(n)), JSON.stringify(inv.notes))
+    const home = inv.pages.find((p) => new URL(p.url).pathname === '/')
+    assert.equal(home.lang, 'en-gb')
+    assert.equal(home.title.length, 300)
+    assert.deepEqual(home.alternates.map((a) => a.lang), ['nb', 'x-default'])
+    const x = inv.pages.find((p) => p.url.endsWith('/x/'))
+    assert.ok(x && x.status === 200 && x.lang === undefined)
+    assert.deepEqual(inv.languages.sort(), ['en', 'nb'])
+  } finally { await s.close() }
+})
