@@ -9,12 +9,13 @@ Reads an existing website so it can be rebuilt on Hosait Site Kit. The steps tha
 
 In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-builder crawl <url>`.
 
-- **crawl** reads robots.txt and obeys it, reads the sitemap, follows links on the same site
-  (www and apex count as one), and stops at 500 pages or after 15 minutes (`--max`,
-  `--budget <minutes>`), keeping what it has read. Two requests at a time, with a pause.
-  It caches each page's HTML in `raw/`, lists media (up to 5,000), documents (up to 2,000),
-  trackers, embeds and the CMS in `inventory.json`, and writes `urls.json` for Site Kit's
-  `pnpm qa:urls`. `notes` in `inventory.json` says when a cap or the time budget was reached.
+- **crawl** reads robots.txt and obeys it (when it answers with a server error, nothing is
+  read), reads the sitemap, follows links on the same site (www and apex count as one), and
+  stops at 500 pages or after 15 minutes (`--max`, `--budget <minutes>`), keeping what it has
+  read. Two requests at a time, with a pause. It caches each page's HTML in `raw/`, lists media
+  (up to 5,000), documents (up to 2,000), trackers, embeds and the CMS in `inventory.json`, and
+  writes `urls.json` for Site Kit's `pnpm qa:urls`. `notes` in `inventory.json` says when a cap
+  or the time budget was reached.
 - **extract** writes `extract.json`: per page the title, meta, headings, main content, images
   and links, plus a template fingerprint, the navigation and the footer. This is what you (or
   your AI) map to Site Kit blocks in `seed/site-plan.json`. A page that cannot be read (for

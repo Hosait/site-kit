@@ -232,3 +232,35 @@ test('sitemaps are read only from the same site, whether robots.txt or a sitemap
     assert.ok(inv.pages.some((p) => p.url.endsWith('/listed')), 'same-site sitemaps still read')
   } finally { await s.close() }
 })
+
+test('robots.txt rules with a query are matched against the path and query', async () => {
+  const s = await serve({
+    '/robots.txt': { headers: { 'content-type': 'text/plain' }, body: 'User-agent: *\nDisallow: /*?print=\n' },
+    '/': page('Home', '<a href="/page?print=1">print</a> <a href="/page">page</a>'),
+    '/page': page('Page', '<p>p</p>'),
+  })
+  try {
+    const inv = await crawl(s.url + '/', { out: tmp(), allowPrivate: true, delayMs: 0 })
+    assert.ok(!s.requests.includes('/page?print=1'), 'disallowed query not requested')
+    assert.ok(s.requests.includes('/page'))
+    assert.ok(inv.robots.blocked.some((u) => u.endsWith('/page?print=1')))
+  } finally { await s.close() }
+})
+
+test('a robots.txt that answers with a server error means nothing is read', async () => {
+  const s = await site({ '/robots.txt': { status: 503, body: 'busy' } })
+  try {
+    const inv = await crawl(s.url + '/', { out: tmp(), allowPrivate: true, delayMs: 0 })
+    assert.deepEqual(s.requests, ['/robots.txt'])
+    assert.equal(inv.pages.length, 0)
+    assert.ok(inv.notes.some((n) => /robots\.txt answered 503/.test(n)), JSON.stringify(inv.notes))
+  } finally { await s.close() }
+})
+
+test('a robots.txt that is not found still means everything may be read', async () => {
+  const s = await site({ '/robots.txt': { status: 404, body: 'none' } })
+  try {
+    const inv = await crawl(s.url + '/', { out: tmp(), allowPrivate: true, delayMs: 0 })
+    assert.ok(inv.pages.some((p) => p.url.endsWith('/private/secret')))
+  } finally { await s.close() }
+})

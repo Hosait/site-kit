@@ -31,3 +31,20 @@ test('a pathological wildcard rule is matched in linear time', () => {
   assert.equal(r.allowed('/aaaaaaaab'), false)
   assert.ok(Date.now() - t < 100, `took ${Date.now() - t} ms`)
 })
+
+// --- Hardening ------------------------------------------------------------
+test('CR-only line endings are line breaks too', () => {
+  const r = parseRobots('User-agent: *\rDisallow: /private\rSitemap: https://x.no/s.xml\r')
+  assert.equal(r.allowed('/private/x'), false)
+  assert.deepEqual(r.sitemaps, ['https://x.no/s.xml'])
+})
+
+test('only an exact product token (any case) or * selects a group; an empty User-agent selects nothing', () => {
+  assert.equal(parseRobots('User-agent:\nDisallow: /\n').allowed('/x'), true)
+  assert.equal(parseRobots('User-agent: Hosait\nDisallow: /\n').allowed('/x'), true)
+  assert.equal(parseRobots('User-agent: hosaitsitebuilder\nDisallow: /\n').allowed('/x'), false)
+  assert.equal(parseRobots('User-agent: HosaitSiteBuilder/0.1\nDisallow: /\n').allowed('/x'), false)
+  assert.equal(parseRobots('User-agent: HosaitSiteBuilderX\nDisallow: /\n').allowed('/x'), true)
+  const r = parseRobots('User-agent:\nDisallow: /a\n\nUser-agent: *\nDisallow: /b\n')
+  assert.deepEqual([r.allowed('/a'), r.allowed('/b')], [true, false])
+})

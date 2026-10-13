@@ -72,11 +72,18 @@ export async function crawl(start, opts) {
     return { status: 0, headers: {}, body: Buffer.alloc(0), truncated: false }
   }
 
-  // robots.txt decides what we may read. A refused (private) host stops everything here.
+  // robots.txt decides what we may read. A refused (private) host stops everything here. A
+  // missing one (4xx) allows everything; a server error (5xx) allows nothing.
   let robotsText = ''
+  let unavailable = false
   try {
     const r = await getFollowing(new URL('/robots.txt', root).toString(), { maxBytes: 512 * 1024 })
     if (r.status === 200) robotsText = r.body.toString('utf8')
+    if (r.status >= 500) {
+      unavailable = true
+      robotsText = 'User-agent: *\nDisallow: /\n'
+      notes.push(`robots.txt answered ${r.status}, so nothing was read. Try again when the site answers normally.`)
+    }
   } catch (e) {
     if (e.code === 'EPRIVATE') throw e
   }
@@ -115,7 +122,7 @@ export async function crawl(start, opts) {
     if (seen.has(n)) return
     if (seen.size >= maxSeen) { notQueued++; return }
     seen.add(n)
-    if (!robots.allowed(u.pathname)) return blocked.add(n)
+    if (!robots.allowed(u.pathname + u.search)) return blocked.add(n)
     queue.push(n)
   }
 
@@ -142,7 +149,7 @@ export async function crawl(start, opts) {
     for (const s of subs) await readSitemap(s)
   }
   enqueue(root.toString(), root.toString())
-  for (const s of [...robots.sitemaps, ...['/sitemap.xml', '/sitemap_index.xml', '/sitemap-index.xml'].map((p) => new URL(p, root).toString())]) await readSitemap(s)
+  if (!unavailable) for (const s of [...robots.sitemaps, ...['/sitemap.xml', '/sitemap_index.xml', '/sitemap-index.xml'].map((p) => new URL(p, root).toString())]) await readSitemap(s)
 
   // A slot is reserved before the request, so two workers can never pass the cap together.
   let reserved = 0
