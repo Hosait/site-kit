@@ -97,7 +97,6 @@ test('a removal the database refuses is reported, not called removed', async () 
   const p = plan()
   p.media.push({ ref: 'gone', source: 'https://cdn.example/gone.jpg' })
   const payload = fakePayload()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- replace one method of the fake
   ;(payload as any).delete = async () => ({ docs: [], errors: [{ id: 1, message: 'locked' }] })
   const fetchMedia = async (u: string) => { throw new Error(`${u}: HTTP 404`) }
   await assert.rejects(importPlan(payload, p, { baseDir: 'tests/fixtures', toLexical, fetchMedia }), /removing what this import wrote also failed/)
@@ -227,7 +226,6 @@ test('an import that fails after the forms removes the forms it created too', as
   p.forms = [contactForm()]
   const payload = fakePayload()
   const create = payload.create.bind(payload)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- replace one method of the fake
   ;(payload as any).create = async (a: any) => {
     if (a.collection === 'pages') throw new Error('pages refused')
     return create(a)
