@@ -8,6 +8,7 @@ import type { Payload } from 'payload'
 
 import { DEFAULT_LOCALE, DEFAULT_SITE, isSiteKey, LOCALES } from '../sites'
 import { fetchMedia as defaultFetchMedia } from './fetch-media'
+import { resolveLocalFile } from './local-file'
 import { findMissingRefs, localeData, orderPages, resolveValue } from './refs'
 import type { SitePlan } from './types'
 
@@ -76,9 +77,8 @@ export async function importPlan(payload: Payload, plan: SitePlan, opts: ImportO
         }
         return payload.create({ collection, data: data as never, file: { ...file, size: file.data.length }, locale: DEFAULT_LOCALE, context: ctx })
       }
-      const abs = path.resolve(baseDir, source)
-      if (!abs.startsWith(baseDir + path.sep)) throw new Error(`${source}: outside the plan's folder`)
-      return payload.create({ collection, data: data as never, filePath: abs, locale: DEFAULT_LOCALE, context: ctx })
+      const filePath = await resolveLocalFile(baseDir, source)
+      return payload.create({ collection, data: data as never, filePath, locale: DEFAULT_LOCALE, context: ctx })
     }
 
     async function localized(collection: string, id: number, item: Record<string, unknown>, fields: string[], resolve = false) {
