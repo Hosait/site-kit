@@ -24,6 +24,7 @@
     "kit:theme-check": "tsx scripts/kit/theme-check.ts",
     "kit:schema": "tsx scripts/kit/schema.ts",
     "kit:import": "tsx scripts/kit/import-plan.ts",
+    "kit:check-plan": "tsx scripts/kit/check-plan.ts",
     "kit:export-seed": "node scripts/deploy/export-seed.mjs",
     "spend:ci": "tsx scripts/kit/ci-minutes.ts",
     "site-builder": "node packages/site-builder/bin/site-builder.js",
