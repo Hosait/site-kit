@@ -74,10 +74,10 @@ const privateError = (url, what) => Object.assign(new Error(`${url}: ${what} is 
 
 /**
  * @param {string} url
- * @param {{ maxBytes?: number, timeoutMs?: number, deadlineMs?: number, allowPrivate?: boolean, accept?: string }} [opts]
+ * @param {{ maxBytes?: number, timeoutMs?: number, deadlineMs?: number, allowPrivate?: boolean, accept?: string, method?: 'GET' | 'HEAD' }} [opts]
  * @returns {Promise<{ status: number, headers: import('node:http').IncomingHttpHeaders, body: Buffer, truncated: boolean }>}
  */
-export function get(url, { maxBytes = 2 * 1024 * 1024, timeoutMs = 15000, deadlineMs = 30000, allowPrivate = false, accept = '*/*' } = {}) {
+export function get(url, { maxBytes = 2 * 1024 * 1024, timeoutMs = 15000, deadlineMs = 30000, allowPrivate = false, accept = '*/*', method = 'GET' } = {}) {
   let u
   try { u = new URL(url) } catch { return Promise.reject(new Error(`${url}: not a URL`)) }
   if (u.protocol !== 'http:' && u.protocol !== 'https:') return Promise.reject(new Error(`${url}: only http and https`))
@@ -93,8 +93,9 @@ export function get(url, { maxBytes = 2 * 1024 * 1024, timeoutMs = 15000, deadli
     const done = (fn, v) => { if (settled) return; settled = true; clearTimeout(timer); fn(v) }
     const options = { headers: { 'User-Agent': USER_AGENT, Accept: accept, 'Accept-Encoding': 'gzip, br' }, timeout: timeoutMs }
     if (!allowPrivate) options.lookup = publicOnlyLookup
-    const req = mod.get(u, options, (res) => {
-      const enc = String(res.headers['content-encoding'] || '')
+    const req = mod.request(u, { ...options, method }, (res) => {
+      // A HEAD answer has no body, so there is nothing to decompress.
+      const enc = method === 'HEAD' ? '' : String(res.headers['content-encoding'] || '')
       const stream = enc.includes('br') ? res.pipe(zlib.createBrotliDecompress()) : enc.includes('gzip') ? res.pipe(zlib.createGunzip()) : res
       const chunks = []
       let size = 0
@@ -128,5 +129,6 @@ export function get(url, { maxBytes = 2 * 1024 * 1024, timeoutMs = 15000, deadli
     timer = setTimeout(() => req.destroy(new Error(`${url}: took longer than ${deadlineMs / 1000} s`)), deadlineMs)
     req.on('timeout', () => req.destroy(new Error(`${url}: timed out`)))
     req.on('error', (e) => done(reject, e))
+    req.end()
   })
 }

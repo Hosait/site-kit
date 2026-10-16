@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
-import { DEFAULT_SITE, FEATURES, isLocale, isSiteKey, SITE_CONFIG, siteFromHost, type SiteKey } from '@/lib/sites'
+import { DEFAULT_SITE, FEATURES, isLocale, isSiteKey, type Locale, LOCALES, SITE_CONFIG, siteFromHost, type SiteKey } from '@/lib/sites'
 import { negotiateLocale, searchRewrite } from '@/lib/locales'
+import { claimNeededPage, firstUserAllowed } from '@/lib/admin-claim'
 
 /**
  * Host → nettsted. Offentlige stier skrives internt om til /{site}/{locale}/...
@@ -14,6 +15,12 @@ import { negotiateLocale, searchRewrite } from '@/lib/locales'
  * sender dobbel Location-header når en ISR-side omdirigerer).
  */
 const SITE_COOKIE = `${SITE_CONFIG.cookiePrefix}-site`
+
+/**
+ * Dokumenter et gammelt nettsted lenket til (som crawlerens liste i site-builder). De går gjennom
+ * proxyen bare for å finne en omdirigering; uten treff serveres de som statiske filer (eller 404).
+ */
+const DOCUMENT = /\.(pdf|docx?|xlsx?|pptx?|zip|csv)$/i
 
 type Redirect = { from: string; to: string; site: SiteKey | null; permanent: boolean }
 let redirectCache: { at: number; list: Redirect[] } | null = null
@@ -32,6 +39,22 @@ async function loadRedirects(): Promise<Redirect[]> {
   return redirectCache?.list ?? []
 }
 
+let homeCache: { at: number; map: Partial<Record<SiteKey, Locale[]>> } | null = null
+
+/** Språkene der nettstedet har en publisert forside. Ved feil: alle språk, som før. */
+async function loadHomeLocales(site: SiteKey): Promise<readonly Locale[]> {
+  if (!homeCache || Date.now() - homeCache.at >= REDIRECT_TTL_MS) {
+    try {
+      const port = process.env.PORT || '3000'
+      const res = await fetch(`http://127.0.0.1:${port}/next/home-locales`, { cache: 'no-store' })
+      if (res.ok) homeCache = { at: Date.now(), map: (await res.json()) as Partial<Record<SiteKey, Locale[]>> }
+    } catch {
+      // Forrige svar brukes.
+    }
+  }
+  return homeCache?.map[site] ?? LOCALES
+}
+
 /** Første verdi i en header som kan inneholde en kommaliste (flere proxyer). */
 const firstHeader = (req: NextRequest, name: string) => req.headers.get(name)?.split(',')[0]?.trim() || null
 
@@ -47,6 +70,18 @@ function publicUrl(req: NextRequest, pathAndQuery: string): URL {
 
 export async function proxy(req: NextRequest) {
   const { pathname, searchParams } = req.nextUrl
+
+  // Den første brukeren opprettes bare via lenken fra Hosait (src/lib/admin-claim.ts). Uten
+  // den svarer API-et 403 uten melding i skjemaet, så siden forklarer hvor lenken er.
+  if (pathname === '/admin/create-first-user') {
+    if (firstUserAllowed({ secret: process.env.ADMIN_CLAIM_SECRET, cookieHeader: req.headers.get('cookie'), nowMs: Date.now() })) {
+      return NextResponse.next()
+    }
+    return new NextResponse(claimNeededPage(SITE_CONFIG.admin.language), {
+      status: 403,
+      headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+    })
+  }
 
   let site: SiteKey | null = siteFromHost(req.headers.get('x-forwarded-host') || req.headers.get('host'))
   let setCookie: SiteKey | null = null
@@ -73,7 +108,8 @@ export async function proxy(req: NextRequest) {
   }
 
   if (pathname === '/') {
-    const locale = negotiateLocale(req.headers.get('accept-language'))
+    // Språk uten publisert forside gir standardspråket (ellers 404 på f.eks. /en).
+    const locale = negotiateLocale(req.headers.get('accept-language'), await loadHomeLocales(site))
     return withCookie(NextResponse.redirect(publicUrl(req, `/${locale}${req.nextUrl.search}`), 302))
   }
 
@@ -87,6 +123,7 @@ export async function proxy(req: NextRequest) {
     const target = /^https?:\/\//.test(hit.to) ? new URL(hit.to) : publicUrl(req, hit.to)
     return withCookie(NextResponse.redirect(target, hit.permanent ? 308 : 307))
   }
+  if (DOCUMENT.test(pathname)) return NextResponse.next()
 
   const search = FEATURES.search ? searchRewrite(pathname) : null
   if (search) {
@@ -104,6 +141,7 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  // Alt unntatt admin, API, Next-interne filer, forhåndsvisningsruter og statiske filer.
-  matcher: ['/((?!admin|api|_next|next/|brand/|fonts/|media/|sequences/|favicon|.*\\.(?:svg|png|jpg|jpeg|webp|avif|ico|woff2?|pdf|txt|js|css|map)$).*)', '/robots.txt'],
+  // Alt unntatt admin, API, Next-interne filer, forhåndsvisningsruter og statiske filer; av
+  // admin bare siden for den første brukeren.
+  matcher: ['/((?!admin|api|_next|next/|brand/|fonts/|media/|sequences/|favicon|.*\\.(?:svg|png|jpg|jpeg|webp|avif|ico|woff2?|txt|js|css|map)$).*)', '/robots.txt', '/admin/create-first-user'],
 }

@@ -13432,8 +13432,7 @@
           "name": "legal_name",
           "type": "varchar",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'Nordlys Demo AS'"
+          "notNull": false
         },
         "org_number": {
           "name": "org_number",
@@ -13475,8 +13474,7 @@
           "name": "address_country",
           "type": "varchar",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'NO'"
+          "notNull": false
         },
         "updated_at": {
           "name": "updated_at",
@@ -20505,6 +20503,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "a8621fcf-482a-40e2-8990-a2e89ba8b792",
+  "id": "c06df9e5-e0cd-44e3-8f99-0b89ec659693",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

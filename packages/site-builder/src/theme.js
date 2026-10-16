@@ -140,11 +140,32 @@ export function themeFromCss(css, html, baseUrl) {
     else notes.push('logo skipped: its src is not a web address (for example an inline data: image); add public/brand/logo.svg by hand')
   } else notes.push('no logo found: add public/brand/logo.svg by hand')
 
+  // The site's icon: an SVG first, then the largest size (an apple-touch-icon is 180 px), else
+  // the /favicon.ico every browser asks for.
+  let icon = null
+  let best = -1
+  for (const el of $('link[rel][href]').toArray()) {
+    const rel = String($(el).attr('rel')).toLowerCase().split(/[ \t]+/)
+    if (!rel.includes('icon') && !rel.includes('apple-touch-icon')) continue
+    let src = null
+    try { src = new URL(String($(el).attr('href')), baseUrl) } catch { continue }
+    if (src.protocol !== 'http:' && src.protocol !== 'https:') continue
+    const sizes = String($(el).attr('sizes') ?? '').match(/\d+/g)?.map(Number) ?? []
+    const score = /\.svg$/i.test(src.pathname) || String($(el).attr('type') ?? '').includes('svg') ? Infinity
+      : sizes.length ? Math.max(...sizes) : rel.includes('apple-touch-icon') ? 180 : 16
+    if (score > best) { best = score; icon = { src: src.toString() } }
+  }
+  if (!icon) {
+    icon = { src: new URL('/favicon.ico', baseUrl).toString() }
+    notes.push('no icon link found: assumed /favicon.ico; check that it exists before copying it to public/brand/')
+  }
+
   return {
     theme: {
       colors: { ink, brand, brandText, brandDark, tint, muted, highlight, background },
       radius: { button: radius ?? '9999px', card: '1rem' },
       logo,
+      icon,
     },
     fonts: { body: families('body|html'), heading: families('h1|h2') ?? families('body|html'), googleFonts },
     notes,

@@ -10,10 +10,11 @@ import { decode, language, load, title } from './html.js'
 import { get as defaultGet } from './net.js'
 import { parseRobots } from './robots.js'
 
-const IMAGE = /\.(jpe?g|png|gif|webp|svg|avif|ico|bmp|tiff?)$/i
+export const IMAGE = /\.(jpe?g|png|gif|webp|svg|avif|ico|bmp|tiff?)$/i
 const DOCUMENT = /\.(pdf|docx?|xlsx?|pptx?|zip|csv|txt|mp4|mov|webm)$/i
-const SKIP = /\.(css|js|mjs|json|xml|rss|atom|woff2?|ttf|otf|eot|map)$/i
-const MAX_SITEMAPS = 50
+export const SKIP = /\.(css|js|mjs|json|xml|rss|atom|woff2?|ttf|otf|eot|map)$/i
+export const MAX_SITEMAPS = 50
+const SITEMAP_PATHS = ['/sitemap.xml', '/sitemap_index.xml', '/sitemap-index.xml']
 const MAX_MEDIA = 5000
 const MAX_DOCUMENTS = 2000
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -40,6 +41,85 @@ function tally(map) {
 }
 
 /**
+ * A GET that follows up to 3 redirects on the same site: robots.txt and sitemaps often redirect
+ * (http→https, apex→www).
+ * @param {typeof defaultGet} get @param {URL} root @param {boolean} allowPrivate
+ */
+export function followingGet(get, root, allowPrivate) {
+  return async function getFollowing(url, extra) {
+    let current = url
+    for (let hop = 0; hop <= 3; hop++) {
+      const r = await get(current, { allowPrivate, ...extra })
+      if (r.status < 300 || r.status >= 400 || !r.headers.location) return r
+      let next
+      try { next = new URL(r.headers.location, current) } catch { return r }
+      if (!sameSite(next.hostname, root.hostname)) return r
+      current = next.toString()
+    }
+    return { status: 0, headers: {}, body: Buffer.alloc(0), truncated: false }
+  }
+}
+
+/**
+ * robots.txt decides what may be read. A refused (private) host throws. A missing one (4xx)
+ * allows everything; a server error (5xx) allows nothing and says so in `note`. `text` is what
+ * the site sent (empty unless it answered 200).
+ * @returns {Promise<{ robots: ReturnType<typeof parseRobots>, text: string, unavailable: boolean, note?: string }>}
+ */
+export async function readRobots(getFollowing, root) {
+  let text = ''
+  let unavailable = false
+  let note
+  try {
+    const r = await getFollowing(new URL('/robots.txt', root).toString(), { maxBytes: 512 * 1024 })
+    if (r.status === 200) text = r.body.toString('utf8')
+    if (r.status >= 500) {
+      unavailable = true
+      note = `robots.txt answered ${r.status}, so nothing was read. Try again when the site answers normally.`
+    }
+  } catch (e) {
+    if (e.code === 'EPRIVATE') throw e
+  }
+  return { robots: parseRobots(unavailable ? 'User-agent: *\nDisallow: /\n' : text), text, unavailable, note }
+}
+
+/**
+ * Reads the sitemaps: robots.txt's Sitemap lines, then the usual names, and the indexes they
+ * lead to. Only sitemaps on the same site are read, each file once and at most MAX_SITEMAPS,
+ * and each parsed document is let go before the next one is read. `onUrls` gets each sitemap's
+ * page addresses and how many image entries it lists. Returns how many sitemaps were read.
+ * @param {{ onUrls: (locs: string[], images: number, from: string) => void, stop?: () => boolean }} opts
+ */
+export async function readSitemaps(getFollowing, root, robots, { onUrls, stop = () => false }) {
+  const seen = new Set()
+  let count = 0
+  async function read(url) {
+    let u
+    try { u = new URL(url) } catch { return }
+    if (!sameSite(u.hostname, root.hostname)) return
+    if (seen.has(url) || seen.size >= MAX_SITEMAPS || stop()) return
+    seen.add(url)
+    let r
+    try { r = await getFollowing(url, { maxBytes: 10 * 1024 * 1024 }) } catch { return }
+    if (r.status !== 200) return
+    let subs
+    let locs
+    let images
+    try {
+      const $ = load(r.body.toString('utf8'), { xml: true })
+      subs = $('sitemap > loc').toArray().map((e) => $(e).text().trim())
+      locs = $('url > loc').toArray().map((e) => $(e).text().trim())
+      images = $('image\\:loc').length
+    } catch { return }
+    count++
+    onUrls(locs, images, url)
+    for (const s of subs) await read(s)
+  }
+  for (const s of [...robots.sitemaps, ...SITEMAP_PATHS.map((p) => new URL(p, root).toString())]) await read(s)
+  return count
+}
+
+/**
  * @param {string} start
  * @param {{ out: string, maxPages?: number, budgetMs?: number, concurrency?: number, delayMs?: number, allowPrivate?: boolean, get?: typeof defaultGet, log?: (s: string) => void }} opts
  */
@@ -59,36 +139,10 @@ export async function crawl(start, opts) {
   const rawDir = path.join(out, 'raw')
   fs.mkdirSync(rawDir, { recursive: true })
 
-  // robots.txt and sitemaps often redirect (http→https, apex→www): follow up to 3 hops on the same site.
-  async function getFollowing(url, extra) {
-    let current = url
-    for (let hop = 0; hop <= 3; hop++) {
-      const r = await get(current, { allowPrivate, ...extra })
-      if (r.status < 300 || r.status >= 400 || !r.headers.location) return r
-      let next
-      try { next = new URL(r.headers.location, current) } catch { return r }
-      if (!sameSite(next.hostname, root.hostname)) return r
-      current = next.toString()
-    }
-    return { status: 0, headers: {}, body: Buffer.alloc(0), truncated: false }
-  }
-
-  // robots.txt decides what we may read. A refused (private) host stops everything here. A
-  // missing one (4xx) allows everything; a server error (5xx) allows nothing.
-  let robotsText = ''
-  let unavailable = false
-  try {
-    const r = await getFollowing(new URL('/robots.txt', root).toString(), { maxBytes: 512 * 1024 })
-    if (r.status === 200) robotsText = r.body.toString('utf8')
-    if (r.status >= 500) {
-      unavailable = true
-      robotsText = 'User-agent: *\nDisallow: /\n'
-      notes.push(`robots.txt answered ${r.status}, so nothing was read. Try again when the site answers normally.`)
-    }
-  } catch (e) {
-    if (e.code === 'EPRIVATE') throw e
-  }
-  const robots = parseRobots(robotsText)
+  // robots.txt decides what we may read; a refused (private) host stops everything here.
+  const getFollowing = followingGet(get, root, allowPrivate)
+  const { robots, unavailable, note: robotsNote } = await readRobots(getFollowing, root)
+  if (robotsNote) notes.push(robotsNote)
 
   const pages = []
   const queue = []
@@ -127,30 +181,9 @@ export async function crawl(start, opts) {
     queue.push(n)
   }
 
-  // Sitemaps first: robots.txt's Sitemap lines, then the usual names. Only sitemaps on the same
-  // site are read, each file once, and its parsed document is let go before the next one is read.
-  const sitemapSeen = new Set()
-  async function readSitemap(url) {
-    let u
-    try { u = new URL(url) } catch { return }
-    if (!sameSite(u.hostname, root.hostname)) return
-    if (sitemapSeen.has(url) || sitemapSeen.size >= MAX_SITEMAPS || overBudget()) return
-    sitemapSeen.add(url)
-    let r
-    try { r = await getFollowing(url, { maxBytes: 10 * 1024 * 1024 }) } catch { return }
-    if (r.status !== 200) return
-    let subs
-    let locs
-    try {
-      const $ = load(r.body.toString('utf8'), { xml: true })
-      subs = $('sitemap > loc').toArray().map((e) => $(e).text().trim())
-      locs = $('url > loc').toArray().map((e) => $(e).text().trim())
-    } catch { return }
-    for (const l of locs) enqueue(l, url)
-    for (const s of subs) await readSitemap(s)
-  }
+  // Sitemaps first (see readSitemaps), then links.
   enqueue(root.toString(), root.toString())
-  if (!unavailable) for (const s of [...robots.sitemaps, ...['/sitemap.xml', '/sitemap_index.xml', '/sitemap-index.xml'].map((p) => new URL(p, root).toString())]) await readSitemap(s)
+  if (!unavailable) await readSitemaps(getFollowing, root, robots, { stop: overBudget, onUrls: (locs, _images, from) => { for (const l of locs) enqueue(l, from) } })
 
   // A slot is reserved before the request, so two workers can never pass the cap together.
   let reserved = 0

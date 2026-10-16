@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 
 import theme from '../../site/theme.json'
-import { checkTheme, contrastRatio, themeToCss, validateTheme } from '../../src/lib/theme'
+import { checkTheme, contrastRatio, siteIcon, themeToCss, validateTheme } from '../../src/lib/theme'
 
 test('contrastRatio matches the WCAG formula', () => {
   assert.equal(Math.round(contrastRatio('#000000', '#ffffff') * 10) / 10, 21)
@@ -42,4 +43,16 @@ test('checkTheme checks every pair the components use (form errors, skip link, d
     const problems = checkTheme({ ...t, colors: { ...t.colors, [key]: value } })
     assert.ok(problems.some((p) => p.startsWith(pair)), `${pair}: ${problems.join('; ')}`)
   }
+})
+
+// The site's icon (favicon) comes from the old site and lives in public/brand/; without one the
+// kit's own /favicon.ico is used.
+test('theme.json may name an icon in /brand/, and the site uses it', () => {
+  const base = JSON.parse(readFileSync('site/theme.json', 'utf8'))
+  for (const src of ['/brand/icon.png', '/brand/icon.svg', '/brand/favicon.ico', '/brand/icon.webp']) assert.equal(siteIcon(validateTheme({ ...base, icon: { src } })), src)
+  for (const src of ['/icon.png', 'https://x.no/icon.png', '/brand/../x.png', '/brand/icon.gif'])
+    assert.throws(() => validateTheme({ ...base, icon: { src } }), /icon\.src/, src)
+  assert.equal(siteIcon(validateTheme(base)), '/favicon.ico')
+  const layout = readFileSync('src/app/(frontend)/[site]/[locale]/layout.tsx', 'utf8')
+  assert.match(layout, /icons: \{ icon: siteIcon\(THEME\) \}/)
 })

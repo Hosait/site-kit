@@ -10,7 +10,7 @@ import { planReset, seedDbDecision } from '@/lib/seed-guard'
 import { reindexAll } from '@/lib/search/indexer'
 import { loadSeedPlan, runPlanSeed, seedSource, type PlanSeedProgress } from '@/lib/site-plan/seed-plan'
 import { planOutcome, seedAnswer, settlesWithin, WAIT_MS } from '@/lib/site-plan/seed-response'
-import { SITE_KEYS } from '@/lib/sites'
+import { isProduction, SITE_KEYS } from '@/lib/sites'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 900
@@ -32,7 +32,7 @@ export const maxDuration = 900
  *          seed/site-plan.json wins when present: it is imported in the background (see status).
  * - media: henter originalbildene/-dokumentene fra kildene i seed/sources.json
  *          og laster dem opp via Payload, som lager størrelser og lagrer i S3. Går i bakgrunnen.
- * Sperret i produksjon (SITE_ORIGINS=production).
+ * Sperret i produksjon (isProduction i src/lib/sites.ts).
  */
 const SEED_DIR = path.join(process.cwd(), 'seed')
 
@@ -184,7 +184,7 @@ async function waitForPlan(progress: PlanSeedProgress, run: Promise<void>) {
 
 async function handle(req: Request, step: string) {
   if (!(await authorized(req))) return new Response('Forbidden', { status: 403 })
-  if (process.env.SITE_ORIGINS === 'production') {
+  if (isProduction()) {
     return seedAnswer(409, { ok: false, error: 'Seed er sperret i produksjon' })
   }
   if (step === 'status') {
@@ -216,7 +216,7 @@ async function handle(req: Request, step: string) {
         users,
         submissions: (await payload.count({ collection: 'form-submissions' })).totalDocs,
         replace,
-        production: process.env.SITE_ORIGINS === 'production',
+        production: isProduction(),
       })
       if (decision === 'refuse_existing') {
         release()
