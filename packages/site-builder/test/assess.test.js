@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
+import zlib from 'node:zlib'
 
 import { LIMITS, assess, classify, md, spread } from '../src/assess.js'
 import { get as netGet } from '../src/net.js'
@@ -285,4 +286,18 @@ test('spread picks deterministically across path groups and positions, never mor
 test('assess.md escapes Markdown in text taken from the site', () => {
   assert.equal(md('[a](http://x) *b* <img src=x> `c`'), '\\[a\\]\\(http://x\\) \\*b\\* \\<img src=x\\> \\`c\\`')
   assert.equal(md('a\nb\u202Ec'), 'a b c')
+})
+
+test('a gzipped sitemap is read', async () => {
+  const s = await serve({
+    '/robots.txt': (req) => ({ headers: { 'content-type': 'text/plain' }, body: `Sitemap: http://${req.headers.host}/sitemap.xml.gz\n` }),
+    '/sitemap.xml.gz': (req) => ({ headers: { 'content-type': 'application/gzip' }, body: zlib.gzipSync(urlset(req.headers.host, ['/', '/om-oss', '/kontakt'])) }),
+    '/': page('Hjem', `${NAV}<main><p>Hei</p></main>`),
+    '/om-oss': page('Om oss', `${NAV}<main><p>x</p></main>`),
+    '/kontakt': page('Kontakt', `${NAV}<main><p>x</p></main>`),
+  })
+  try {
+    const r = await run(s)
+    assert.equal(r.counts.sitemapPages, 3)
+  } finally { await s.close() }
 })
