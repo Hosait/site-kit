@@ -389,3 +389,15 @@ test('dated news and posts with article markup are articles, not pages', async (
     } finally { await s.close() }
   }
 })
+
+test('a check that could not read enough is run again, never accepted: the reason and assess.md say so', async () => {
+  const v = verdict({ enough: false, enoughWhy: 'the time budget ran out' })
+  assert.match(v.reasons[0].text, /again/)
+  const s = await serve({ '/': page('App', '<div id="root"></div>') })
+  try {
+    const r = await run(s)
+    const text = markdown(r)
+    assert.match(text, /Not decided yet/)
+    assert.doesNotMatch(text, /accept/i)
+  } finally { await s.close() }
+})
