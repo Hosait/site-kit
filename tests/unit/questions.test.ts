@@ -36,6 +36,15 @@ test('the editors question offers no sign-in the kit does not have', () => {
   assert.doesNotMatch(q.text, /microsoft|entra|azure|google sign-in|sso/i)
 })
 
+// Bjørn's review of #14: asking about a CRM or a job feed invites integrations a move declines.
+test('the integrations question asks only for simple embeds, and says connections to other systems are not part of a move', () => {
+  const q = shipped().questions.find((x: { id: string }) => x.id === 'integrations')
+  assert.ok(q)
+  assert.doesNotMatch(q.text, /crm|job feed|newsletter|connect/i)
+  for (const thing of [/map/, /video/, /form/]) assert.match(q.text, thing)
+  assert.match(q.help ?? '', /not part of a move/)
+})
+
 test('* in a path matches any key, and report./cms. paths are always allowed', () => {
   const q = { version: 1, questions: [{ id: 'domain', text: 'x', type: 'text', sets: ['sites.*.origin', 'report.goLive', 'cms.privacyPage'] }] }
   assert.deepEqual(checkQuestions(q, cfg), [])
