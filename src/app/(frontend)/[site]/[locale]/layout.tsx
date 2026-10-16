@@ -5,7 +5,7 @@ import { ConsentBanner } from '@/components/analytics/ConsentBanner'
 import { Tracker } from '@/components/analytics/Tracker'
 import { analyticsSettings } from '@/lib/analytics/ingest'
 import { t } from '@/lib/i18n'
-import { DEFAULT_LOCALE, DEFAULT_SITE, FEATURES, HREFLANG, isLocale, isSiteKey, LOCALE_CONFIG, localePath, LOCALES, SITE_KEYS, siteHref, siteOrigin, SITES } from '@/lib/sites'
+import { DEFAULT_LOCALE, DEFAULT_SITE, FEATURES, HREFLANG, isLocale, isProduction, isSiteKey, LOCALE_CONFIG, localePath, LOCALES, SITE_KEYS, siteHref, siteOrigin, SITES } from '@/lib/sites'
 
 import configPromise from '@payload-config'
 import themeJson from '@site/theme.json'
@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     title: { default: SITES[key].name, template: `%s | ${SITES[key].name}` },
     icons: { icon: '/favicon.ico' },
     // Staging skal aldri indekseres; bare produksjonsdomenene.
-    robots: process.env.SITE_ORIGINS === 'production' ? undefined : { index: false, follow: false },
+    robots: isProduction() ? undefined : { index: false, follow: false },
   }
 }
 

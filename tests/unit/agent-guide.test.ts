@@ -41,7 +41,8 @@ test('step 7 points only where the user can look, protects the admin, and walks 
   assert.match(step7, /right after the first deploy/i)
   assert.match(step7, /Settings → Domains/)
   assert.match(step7, /Serve the site here/)
-  assert.match(step7, /Variables/)
+  assert.match(step7, /Nothing to set/)
+  assert.doesNotMatch(step7, /sets the variable `SITE_ORIGINS`/)
   assert.match(step7, /commit and push/i)
 })
 

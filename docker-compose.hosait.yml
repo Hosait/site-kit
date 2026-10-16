@@ -26,8 +26,9 @@ services:
       PREVIEW_SECRET: ${PREVIEW_SECRET}
       CRON_SECRET: ${CRON_SECRET}
       NEXT_PUBLIC_SERVER_URL: ${PUBLIC_URL}
-      # «production» når nettstedets eget domene peker hit; ellers staging (noindex).
-      SITE_ORIGINS: ${SITE_ORIGINS:-staging}
+      # Tom: produksjon når HOSAIT_URL (det verifiserte egne domenet, satt av Hosait) er en av
+      # vertene i site/config.ts; ellers staging (noindex). «staging»/«production» overstyrer.
+      SITE_ORIGINS: ${SITE_ORIGINS:-}
       STAGING_HOST: ${STAGING_HOST:-}
       # Hosait setter commit for hver deploy; vises i /api/health.
       HOSAIT_COMMIT_SHORT: ${HOSAIT_COMMIT_SHORT:-}
