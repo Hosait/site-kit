@@ -50,7 +50,10 @@ the first deploy). If you change sites, locales, document types or article kinds
 ## 4. Theme
 
 Copy `theme` from `theme.draft.json` into `site/theme.json`, put the logo in `public/brand/`, set
-the fonts in `site/fonts.ts`, and run `pnpm kit:theme-check` (every pair needs 4.5:1).
+the fonts in `site/fonts.ts`, and run `pnpm kit:theme-check` (every pair needs 4.5:1). Download the
+old site's icon (`icon.src` in the draft) into `public/brand/` too, and set `icon.src` in
+`site/theme.json` to its `/brand/…` path (`.svg`, `.png`, `.webp` or `.ico`). If it cannot be
+downloaded, leave `icon` out: the kit's own icon is used.
 
 ## 5. Write the site plan
 
