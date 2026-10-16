@@ -44,13 +44,16 @@ let homeCache: { at: number; map: Partial<Record<SiteKey, Locale[]>> } | null = 
 /** Språkene der nettstedet har en publisert forside. Ved feil: alle språk, som før. */
 async function loadHomeLocales(site: SiteKey): Promise<readonly Locale[]> {
   if (!homeCache || Date.now() - homeCache.at >= REDIRECT_TTL_MS) {
+    let map = homeCache?.map ?? {}
     try {
       const port = process.env.PORT || '3000'
       const res = await fetch(`http://127.0.0.1:${port}/next/home-locales`, { cache: 'no-store' })
-      if (res.ok) homeCache = { at: Date.now(), map: (await res.json()) as Partial<Record<SiteKey, Locale[]>> }
+      if (res.ok) map = (await res.json()) as Partial<Record<SiteKey, Locale[]>>
     } catch {
       // Forrige svar brukes.
     }
+    // Også et mislykket oppslag huskes i REDIRECT_TTL_MS, så det ikke gjøres på nytt ved hvert besøk.
+    homeCache = { at: Date.now(), map }
   }
   return homeCache?.map[site] ?? LOCALES
 }
