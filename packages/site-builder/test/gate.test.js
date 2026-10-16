@@ -8,7 +8,7 @@ import { crawlGate } from '../src/gate.js'
 
 test('crawlGate lets crawl start only after a finished check of the same site that is not red', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gate-'))
-  const write = (o) => fs.writeFileSync(path.join(dir, 'assess.json'), JSON.stringify({ source: 'https://www.acme.no/', reasons: [], ...o }))
+  const write = (o) => fs.writeFileSync(path.join(dir, 'assess.json'), JSON.stringify({ source: 'https://www.acme.no/', reasons: [], assessedAt: new Date().toISOString(), ...o }))
   assert.match(String(crawlGate(dir, 'https://www.acme.no/', false)), /site-builder assess/)
   write({ class: 'red', reasons: [{ class: 'red', code: 'shop', text: 'A shop', evidence: [] }] })
   assert.match(String(crawlGate(dir, 'https://www.acme.no/', true)), /red \(shop\)/)
@@ -22,4 +22,16 @@ test('crawlGate lets crawl start only after a finished check of the same site th
   assert.match(String(crawlGate(dir, 'https://www.acme.no/', true)), /again/, 'an unfinished check is not accepted, it runs again')
   fs.writeFileSync(path.join(dir, 'assess.json'), '{ not json')
   assert.match(String(crawlGate(dir, 'https://www.acme.no/', true)), /site-builder assess/)
+})
+
+test('a fit check older than seven days, or without a date, runs again before crawl', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gate-'))
+  const write = (o) => fs.writeFileSync(path.join(dir, 'assess.json'), JSON.stringify({ source: 'https://www.acme.no/', reasons: [], class: 'green', ...o }))
+  const day = 24 * 60 * 60 * 1000
+  write({ assessedAt: new Date(Date.now() - 6 * day).toISOString() })
+  assert.equal(crawlGate(dir, 'https://www.acme.no/', false), null)
+  write({ assessedAt: new Date(Date.now() - 8 * day).toISOString() })
+  assert.match(String(crawlGate(dir, 'https://www.acme.no/', false)), /more than 7 days old.*site-builder assess/)
+  write({})
+  assert.match(String(crawlGate(dir, 'https://www.acme.no/', false)), /no date.*site-builder assess/)
 })

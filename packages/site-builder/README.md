@@ -21,13 +21,13 @@ In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-buil
   - **red**, decline: a web shop (priced Product/Offer markup, cart, checkout or add-to-cart
     links and forms, robots.txt rules for cart actions, a shop system), a payment service, a
     product catalogue (Product markup on many pages, or product addresses in the sitemap), a
-    login or member area (password fields, login forms and links), or more than 500 pages in the
-    largest language. A link to the old CMS's own admin login (WordPress, Joomla, Drupal,
-    Umbraco, Ghost) and a WordPress password-protected post are notes, not a member area.
+    login or member area (password fields, login forms and links), more than 500 pages in the
+    largest language, more than 1500 pages in all languages together, or more than 500 articles.
+    A link to the old CMS's own admin login (WordPress, Joomla, Drupal, Umbraco, Ghost) and a
+    WordPress password-protected post are notes, not a member area.
   - **yellow**, possible with the customer's OK on scope and storage: more than 200 pages in
-    the largest language, more than 1000 articles, more than 100 documents, more than 2 GB of
-    documents and images, or built-in services (booking, feeds, embedded apps, forms sent
-    elsewhere).
+    the largest language, more than 100 documents, more than 2 GB of documents and images, or
+    built-in services (booking, feeds, embedded apps, forms sent elsewhere).
   - **yellow, not decided yet** (`not-enough-read`): too little could be read (the time budget,
     robots.txt, a home page that leads to another site, or a site that needs JavaScript). It is
     not accepted: the check runs again.
@@ -35,7 +35,8 @@ In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-buil
 
   Pages are counted per language (a first path segment such as `/en/` or `/se/` is a language
   when the pages say so), and articles apart from pages: dated or news-section addresses, and
-  pages with article markup.
+  pages whose JSON-LD is an Article, NewsArticle or BlogPosting (not `og:type`, which SEO plugins
+  put on ordinary pages). A one-page site with text and only `#` links is enough to decide.
 
   The thresholds are `LIMITS` in `src/assess.js`. Exit code: 0 for green and yellow, 3 for red,
   2 for a usage error, 1 for other errors. A page that cannot be read is recorded and the others

@@ -129,8 +129,10 @@ test('JSON-LD and microdata: only the item a page is about counts, not one named
 })
 
 test('a page says its language, its alternates, and whether it is an article', () => {
-  const s = pageSignals(html('<p>x</p>', '<link rel="alternate" hreflang="sv" href="/se/"><meta property="og:type" content="article">'), 'https://www.acme.no/x', 'www.acme.no')
+  const s = pageSignals(html('<p>x</p>', '<link rel="alternate" hreflang="sv" href="/se/">' + ld({ '@type': 'NewsArticle', headline: 'X' })), 'https://www.acme.no/x', 'www.acme.no')
   assert.deepEqual([s.lang, s.alternates, s.article], ['nb', [{ lang: 'sv', href: 'https://www.acme.no/se/' }], true])
+  // Yoast and similar put og:type=article on ordinary pages: only JSON-LD article types count.
+  assert.equal(pageSignals(html('<p>x</p>', '<meta property="og:type" content="article">'), 'https://www.acme.no/x', 'www.acme.no').article, false)
   assert.equal(pageSignals(html(ld({ '@type': 'BlogPosting', headline: 'X' })), 'https://www.acme.no/x', 'www.acme.no').article, true)
   assert.equal(pageSignals(html(ld({ '@type': 'Organization', subjectOf: { '@type': 'Article' } })), 'https://www.acme.no/x', 'www.acme.no').article, false)
   assert.equal(pageSignals(html('<p>x</p>', '<meta property="og:type" content="website">'), 'https://www.acme.no/x', 'www.acme.no').article, false)

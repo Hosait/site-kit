@@ -332,6 +332,15 @@ test('a home page that leads to another site, by redirect, meta refresh or frame
   }
 })
 
+test('a one-page site with text and only #anchor links is enough to decide, and green', async () => {
+  const text = '<p>' + 'Vi er et lite firma som lager gode ting. '.repeat(20) + '</p>'
+  const s = await serve({ '/': page('Én side', `<nav><a href="#om">Om</a> <a href="#kontakt">Kontakt</a></nav><main><h1>Hei</h1>${text}<h2 id="om">Om</h2>${text}<h2 id="kontakt">Kontakt</h2><p>Ring oss.</p></main>`) })
+  try {
+    const r = await run(s)
+    assert.deepEqual([r.class, codes(r)], ['green', []])
+  } finally { await s.close() }
+})
+
 test('no sitemap and a home page that links to nothing is not enough to decide', async () => {
   const s = await serve({ '/': page('App', '<div id="root"></div><script src="/app.js"></script>') })
   try {
@@ -351,10 +360,28 @@ function siteOf(routes) {
   })
 }
 
-test('classify: more than scopeArticles articles is yellow', () => {
-  assert.equal(LIMITS.scopeArticles, 1000)
-  assert.equal(verdict({ articles: LIMITS.scopeArticles }).class, 'green')
-  assert.deepEqual(verdict({ articles: LIMITS.scopeArticles + 1 }).reasons.map((r) => r.code), ['articles'])
+test('classify: more than declineArticles articles is red', () => {
+  assert.equal(LIMITS.declineArticles, 500)
+  assert.equal(verdict({ articles: LIMITS.declineArticles }).class, 'green')
+  assert.deepEqual([verdict({ articles: LIMITS.declineArticles + 1 }).class, verdict({ articles: LIMITS.declineArticles + 1 }).reasons.map((r) => r.code)], ['red', ['articles']])
+})
+
+test('classify: more than declineTotalPages pages in all languages together is red', () => {
+  assert.equal(LIMITS.declineTotalPages, 1500)
+  assert.equal(verdict({ htmlPages: 450, totalPages: LIMITS.declineTotalPages }).class, 'yellow', 'three languages of 500: yellow by language only')
+  assert.deepEqual(verdict({ htmlPages: 450, totalPages: LIMITS.declineTotalPages + 1 }).reasons.map((r) => [r.class, r.code]), [['red', 'total-pages'], ['yellow', 'pages']])
+})
+
+test('a site whose ordinary pages carry og:type=article (Yoast) counts them as pages', async () => {
+  const routes = { '/': doc('nb', 'Hjem', `${NAV}<p>Hei</p>`) }
+  for (let i = 0; i < 900; i++) routes[`/tjeneste-${i}`] = doc('nb', `T ${i}`, '<p>x</p>', '<meta property="og:type" content="article">')
+  const s = await siteOf(routes)
+  try {
+    const r = await run(s)
+    assert.equal(r.estimates.articles, 0)
+    assert.equal(r.class, 'red')
+    assert.ok(codes(r).includes('pages'), JSON.stringify(r.reasons))
+  } finally { await s.close() }
 })
 
 test('pages are counted per language: two languages of 150 pages each is green', async () => {
@@ -387,13 +414,13 @@ test('country codes named by hreflang (/se/, /dk/) are language prefixes', async
 
 test('dated news and posts with article markup are articles, not pages', async () => {
   const news = { '/': doc('nb', 'Hjem', `${NAV}<p>Hei</p>`) }
-  for (let i = 0; i < 900; i++) news[`/nyheter/2024-05-${i}-tittel`] = doc('nb', `N ${i}`, '<p>x</p>')
+  for (let i = 0; i < 300; i++) news[`/nyheter/2024-05-${i}-tittel`] = doc('nb', `N ${i}`, '<p>x</p>')
   for (let i = 0; i < 30; i++) news[`/side-${i}`] = doc('nb', `S ${i}`, '<p>x</p>')
-  const post = '<meta property="og:type" content="article"><script type="application/ld+json">{"@type":"BlogPosting","headline":"X"}</script>'
+  const post = '<script type="application/ld+json">{"@type":"BlogPosting","headline":"X"}</script>'
   const blog = { '/': doc('nb', 'Hjem', `${NAV}<p>Hei</p>`) }
-  for (let i = 0; i < 600; i++) blog[`/innlegg-nummer-${i}`] = doc('nb', `P ${i}`, '<p>x</p>', post)
+  for (let i = 0; i < 400; i++) blog[`/innlegg-nummer-${i}`] = doc('nb', `P ${i}`, '<p>x</p>', post)
   for (let i = 0; i < 40; i++) blog[`/side-${i}`] = doc('nb', `S ${i}`, '<p>x</p>')
-  for (const [what, routes, check] of [['news', news, (r) => assert.equal(r.estimates.articles, 900)], ['blog', blog, (r) => assert.ok(r.estimates.articles >= 500, String(r.estimates.articles))]]) {
+  for (const [what, routes, check] of [['news', news, (r) => assert.equal(r.estimates.articles, 300)], ['blog', blog, (r) => assert.ok(r.estimates.articles >= 360 && r.estimates.articles <= 440, String(r.estimates.articles))]]) {
     const s = await siteOf(routes)
     try {
       const r = await run(s)

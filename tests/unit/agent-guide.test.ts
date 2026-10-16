@@ -48,9 +48,12 @@ test('step 7 points only where the user can look, protects the admin, and walks 
   const step7 = guide.slice(guide.indexOf('## 7.')).replace(/\s+/g, ' ')
   assert.doesNotMatch(step7, /\/next\/seed\/status/)
   assert.match(step7, /right after the first deploy/i)
+  assert.match(step7, /\/next\/admin-claim\?code=/)
+  assert.doesNotMatch(step7, /lets anyone create one/)
   assert.match(step7, /Settings → Domains/)
   assert.match(step7, /Serve the site here/)
-  assert.match(step7, /Variables/)
+  assert.match(step7, /Nothing to set/)
+  assert.doesNotMatch(step7, /sets the variable `SITE_ORIGINS`/)
   assert.match(step7, /commit and push/i)
 })
 
