@@ -45,7 +45,7 @@ jobs:
       # Every rebuild sets its own brand, so no brand value may end up as a database default.
       - name: A brand change in site/config.ts needs no migration
         run: |
-          perl -pi -e "s/legalName: '[^']*'/legalName: 'Drift Check AS'/; s/country: '[^']*'/country: 'SE'/" site/config.ts
+          perl -0777 -pi -e "s/(brand:\s*\{[^}]*?)legalName: '[^']*'/\${1}legalName: 'Drift Check AS'/; s/(brand:\s*\{[^}]*?)country: '[^']*'/\${1}country: 'SE'/" site/config.ts
           if git diff --quiet site/config.ts; then
             echo "::error::Could not change brand.legalName and brand.country in site/config.ts"
             exit 1
