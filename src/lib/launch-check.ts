@@ -17,11 +17,29 @@ const NOT_PAGES = /^\/(?:admin|api|next|_next)(?:\/|$)/
 const MAX_BODY = 5 * 1024 * 1024
 const CONCURRENCY = 4
 
-/** What one page shows: errors, warnings, and the site's own links it has (absolute, no fragment). */
-export function pageFindings(html: string, pageUrl: string, base: string): { errors: string[]; warnings: string[]; links: string[] } {
+const NOINDEX = 'search engines are told not to index the page (noindex)'
+
+/**
+ * What one page shows: errors, warnings, and the site's own links it has (absolute, no fragment).
+ * With `ownHosts` (the page is on the site's own domain), a noindex and a canonical address on
+ * another host are errors too.
+ */
+export function pageFindings(html: string, pageUrl: string, base: string, ownHosts?: string[]): { errors: string[]; warnings: string[]; links: string[] } {
   const { document } = new JSDOM(html, { url: pageUrl }).window
   const errors: string[] = []
   const warnings: string[] = []
+  if (ownHosts) {
+    const robots = [...document.querySelectorAll('meta[name]')].filter((m) => m.getAttribute('name')?.toLowerCase() === 'robots')
+    if (robots.some((m) => /noindex/i.test(m.getAttribute('content') ?? ''))) errors.push(NOINDEX)
+    const canonical = document.querySelector('link[rel="canonical"]')?.getAttribute('href')
+    let host: string | null = null
+    try {
+      host = canonical ? new URL(canonical, pageUrl).hostname : null
+    } catch {
+      // Not an address: left to the search engine.
+    }
+    if (host && !ownHosts.includes(host)) errors.push(`the canonical address is on ${host}, not on the site's own domain`)
+  }
   // Next puts the page's data in inline scripts; that, styles and templates are not what a visitor reads.
   for (const el of document.querySelectorAll('body script, body style, body template')) el.remove()
   const text = document.body?.textContent ?? ''
@@ -135,12 +153,41 @@ async function inParallel<T>(items: T[], work: (item: T, i: number) => Promise<v
   }))
 }
 
-export async function launchCheck(base: string, opts: { fetch?: Fetch; maxPages?: number; maxLinks?: number } = {}): Promise<LaunchResult> {
+/** Whether robots.txt shuts every search engine out: `Disallow: /` in the group for `*`. */
+export function robotsBlocksAll(text: string): boolean {
+  let agents: string[] = []
+  let inRules = false
+  for (const raw of text.split('\n')) {
+    const line = raw.replace(/#.*/, '').trim()
+    const m = /^([A-Za-z-]+)[ \t]*:[ \t]*(.*)$/.exec(line)
+    if (!m) continue
+    const [key, value] = [m[1].toLowerCase(), m[2].trim()]
+    if (key === 'user-agent') {
+      if (inRules) agents = []
+      inRules = false
+      agents.push(value)
+    } else if (key === 'disallow' || key === 'allow') {
+      inRules = true
+      if (key === 'disallow' && value === '/' && agents.includes('*')) return true
+    }
+  }
+  return false
+}
+
+/**
+ * `ownHosts` are the site's own domains (site/config.ts). On one of them, the site must be open to
+ * search engines: robots.txt, noindex and canonical addresses are checked. On a preview they are not.
+ */
+export async function launchCheck(base: string, opts: { fetch?: Fetch; maxPages?: number; maxLinks?: number; ownHosts?: string[] } = {}): Promise<LaunchResult> {
   const fetchImpl: Fetch = opts.fetch ?? ((u, init) => fetch(u, init))
   const maxPages = opts.maxPages ?? 500
   const maxLinks = opts.maxLinks ?? 2000
   const root = base.replace(/\/+$/, '')
   const result: LaunchResult = { errors: [], warnings: [], notes: [], pages: 0, linksChecked: 0 }
+  const own = opts.ownHosts?.includes(new URL(root).hostname) ? opts.ownHosts : undefined
+  if (opts.ownHosts && !own) {
+    result.notes.push('Search engine access (robots.txt, noindex, canonical addresses) is not checked on a preview address, where it is blocked on purpose. Run the check on the own domain after the move.')
+  }
 
   const map = await fetchImpl(`${root}/sitemap.xml`, { signal: AbortSignal.timeout(20_000) })
   if (map.status !== 200) {
@@ -150,6 +197,12 @@ export async function launchCheck(base: string, opts: { fetch?: Fetch; maxPages?
   const all = sitemapPaths(await body(map))
   const paths = all.slice(0, maxPages)
   if (all.length > paths.length) result.notes.push(`Checked the first ${paths.length} of ${all.length} pages in the sitemap.`)
+  if (own) {
+    const robots = await fetchImpl(`${root}/robots.txt`, { signal: AbortSignal.timeout(20_000) })
+    if (robots.status === 200 && robotsBlocksAll(await body(robots))) {
+      result.errors.push({ page: `${root}/robots.txt`, text: 'robots.txt blocks search engines on the site\'s own domain' })
+    }
+  }
 
   const perPage: { errors: Finding[]; warnings: Finding[]; links: string[] }[] = []
   const answered = new Set<string>()
@@ -164,7 +217,8 @@ export async function launchCheck(base: string, opts: { fetch?: Fetch; maxPages?
         return
       }
       answered.add(page)
-      const f = pageFindings(await body(res), page, root)
+      const f = pageFindings(await body(res), page, root, own)
+      if (own && /noindex/i.test(res.headers.get('x-robots-tag') ?? '') && !f.errors.includes(NOINDEX)) f.errors.unshift(NOINDEX)
       out.errors.push(...f.errors.map((text) => ({ page, text })))
       out.warnings.push(...f.warnings.map((text) => ({ page, text })))
       out.links = f.links

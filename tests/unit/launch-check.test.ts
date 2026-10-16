@@ -37,13 +37,13 @@ test('the sitemap gives the paths of the pages, whatever host it names', () => {
   assert.deepEqual(sitemapPaths(xml), ['/no', '/no/om-oss', '/en/about'])
 })
 
-type Route = { status?: number; body?: string; location?: string }
+type Route = { status?: number; body?: string; location?: string; headers?: Record<string, string> }
 function fakeFetch(routes: Record<string, Route>) {
   const seen: string[] = []
   const fetchImpl = async (url: string) => {
     seen.push(url)
     const r = routes[url] ?? { status: 404, body: 'not found' }
-    return new Response(r.body ?? '', { status: r.status ?? 200, headers: r.location ? { location: r.location } : {} })
+    return new Response(r.body ?? '', { status: r.status ?? 200, headers: { ...r.headers, ...(r.location ? { location: r.location } : {}) } })
   }
   return { fetchImpl, seen }
 }
@@ -88,6 +88,61 @@ test('a site without a sitemap fails at once, and the page and link caps are kep
   assert.equal(r.linksChecked, 3)
   assert.ok(seen.length <= 1 + 5 + 3, `fetched ${seen.length}`)
   assert.ok(r.notes.some((n) => /first 5 of 30 pages/.test(n)))
+})
+
+// The M8 eval: after the move, the site must be open to search engines on its own domain. A site
+// still in staging there blocks them; on a preview address, blocking them is right.
+const OWN = 'https://www.fjordlys.no'
+const OWN_HOSTS = ['www.fjordlys.no', 'fjordlys.no']
+const live = (head: string) =>
+  `<!doctype html><html><head><title>Om oss | Fjordlys</title><meta name="description" content="Hvem vi er."><meta property="og:image" content="${OWN}/media/a.webp">${head}</head><body><main><p>Hei.</p></main></body></html>`
+const ownSitemap = `<urlset><url><loc>${OWN}/no</loc></url><url><loc>${OWN}/no/om-oss</loc></url></urlset>`
+
+test('on the own domain, a site that still blocks search engines fails: robots.txt, noindex and a canonical elsewhere', async () => {
+  const { fetchImpl } = fakeFetch({
+    [`${OWN}/sitemap.xml`]: { body: ownSitemap },
+    [`${OWN}/robots.txt`]: { body: 'User-agent: *\nDisallow: /\n' },
+    [`${OWN}/no`]: { body: live('<meta name="robots" content="noindex, nofollow"><link rel="canonical" href="https://fjordlys.hosait.com/no">') },
+    [`${OWN}/no/om-oss`]: { body: live(`<link rel="canonical" href="${OWN}/no/om-oss">`), headers: { 'x-robots-tag': 'noindex' } },
+  })
+  const r = await launchCheck(OWN, { fetch: fetchImpl, ownHosts: OWN_HOSTS })
+  assert.deepEqual(r.errors.map((e) => [e.page.slice(OWN.length), e.text]), [
+    ['/robots.txt', 'robots.txt blocks search engines on the site\'s own domain'],
+    ['/no', 'search engines are told not to index the page (noindex)'],
+    ['/no', 'the canonical address is on fjordlys.hosait.com, not on the site\'s own domain'],
+    ['/no/om-oss', 'search engines are told not to index the page (noindex)'],
+  ])
+})
+
+test('on the own domain, a site open to search engines passes, the bare domain counting as its own', async () => {
+  const { fetchImpl } = fakeFetch({
+    [`${OWN}/sitemap.xml`]: { body: ownSitemap },
+    [`${OWN}/robots.txt`]: { body: `User-agent: *\nDisallow: /admin\nDisallow: /api\n\nUser-agent: BadBot\nDisallow: /\n\nSitemap: ${OWN}/sitemap.xml\n` },
+    [`${OWN}/no`]: { body: live('<link rel="canonical" href="https://fjordlys.no/no">') },
+    [`${OWN}/no/om-oss`]: { body: live(`<meta name="robots" content="index, follow"><link rel="canonical" href="${OWN}/no/om-oss">`) },
+  })
+  const r = await launchCheck(OWN, { fetch: fetchImpl, ownHosts: OWN_HOSTS })
+  assert.deepEqual(r.errors, [])
+})
+
+test('on a preview address, blocking search engines is right: not checked, with a note to check the domain after the move', async () => {
+  const { fetchImpl, seen } = fakeFetch({
+    [`${BASE}/sitemap.xml`]: { body: sitemap(['/no']) },
+    [`${BASE}/robots.txt`]: { body: 'User-agent: *\nDisallow: /\n' },
+    [`${BASE}/no`]: { body: doc('<p>Hei.</p>', '<title>Fjordlys</title><meta name="robots" content="noindex"><link rel="canonical" href="https://fjordlys.hosait.com/no">') },
+  })
+  const r = await launchCheck(BASE, { fetch: fetchImpl, ownHosts: OWN_HOSTS })
+  assert.deepEqual(r.errors, [])
+  assert.ok(!seen.includes(`${BASE}/robots.txt`))
+  assert.ok(r.notes.some((n) => /not checked on a preview address/.test(n) && /after the move/.test(n)), JSON.stringify(r.notes))
+})
+
+test('qa:launch knows the site\'s own domains from site/config.ts, not localhost', () => {
+  const script = readFileSync('scripts/qa/launch-check.ts', 'utf8')
+  assert.match(script, /ownHosts/)
+  assert.match(script, /SITES/)
+  assert.match(script, /localhost/)
+  assert.match(readFileSync('AGENTS.md', 'utf8'), /pnpm qa:launch https:\/\/<domain>/)
 })
 
 test('the kit has a qa:launch command, and AGENTS.md runs it before the move to the own domain', () => {
