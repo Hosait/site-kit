@@ -301,3 +301,27 @@ test('a gzipped sitemap is read', async () => {
     assert.equal(r.counts.sitemapPages, 3)
   } finally { await s.close() }
 })
+
+test('a home page that leads to another site, by redirect, meta refresh or frameset, is not enough to decide, and the note names it', async () => {
+  for (const [what, home] of [
+    ['redirect', { status: 301, headers: { location: 'https://www.acme-ny.example/' } }],
+    ['meta refresh', page('Acme', '<p>Vent</p>', '<meta http-equiv="refresh" content="0; url=https://www.acme-ny.example/">')],
+    ['frameset', { body: '<html><head><title>Acme</title></head><frameset><frame src="https://www.acme-ny.example/"></frameset></html>' }],
+  ]) {
+    const s = await serve({ '/': home })
+    try {
+      const r = await run(s)
+      assert.deepEqual([r.class, codes(r)], ['yellow', ['not-enough-read']], what)
+      assert.ok(r.notes.some((n) => /www\.acme-ny\.example/.test(n)), `${what}: ${JSON.stringify(r.notes)}`)
+      assert.ok(!s.requests.some((u) => /acme/.test(u)))
+    } finally { await s.close() }
+  }
+})
+
+test('no sitemap and a home page that links to nothing is not enough to decide', async () => {
+  const s = await serve({ '/': page('App', '<div id="root"></div><script src="/app.js"></script>') })
+  try {
+    const r = await run(s)
+    assert.deepEqual([r.class, codes(r)], ['yellow', ['not-enough-read']])
+  } finally { await s.close() }
+})

@@ -126,7 +126,7 @@ export function robotsCartRules(text) {
  */
 export function pageSignals(html, url, host) {
   const $ = load(html)
-  const s = { product: false, priced: false, shop: [], payment: [], login: [], integrations: [], documents: new Set(), images: new Set(), links: new Set(), languages: new Set() }
+  const s = { product: false, priced: false, shop: [], payment: [], login: [], integrations: [], documents: new Set(), images: new Set(), links: new Set(), languages: new Set(), forward: null }
   const add = (list, item) => { if (list.length < MAX_MATCHES && !list.includes(item)) list.push(item) }
   const named = new Set()
   const integration = (kind, name) => { if (s.integrations.length < MAX_INTEGRATIONS && !named.has(name)) { named.add(name); s.integrations.push({ kind, name }) } }
@@ -199,5 +199,9 @@ export function pageSignals(html, url, host) {
     const n = normalize(String($(el).attr('src') || $(el).attr('data-src') || ''), url)
     if (n) s.images.add(n)
   }
+  // A page can forward without HTTP: a meta refresh, or a frameset around another address.
+  const refresh = /url[ \t]*=[ \t]*['"]?([^'"]+)/i.exec(String($('meta[http-equiv="refresh" i]').first().attr('content') ?? '').slice(0, 2048))
+  const target = refresh ? refresh[1].trim() : $('frameset frame[src]').first().attr('src')
+  if (target) s.forward = normalize(String(target).slice(0, 2048), url)
   return s
 }
