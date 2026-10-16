@@ -29,10 +29,12 @@ test('brand comes from a --primary custom property; ink and background from body
   assert.equal(r.theme.radius.button, '4px')
 })
 
-// Every Site Kit site showed the same /favicon.ico; the old site's own icon is kept instead.
-test('the old site\'s icon: SVG first, then the largest size (an apple-touch-icon counts as 180), else /favicon.ico', () => {
+// Every Site Kit site showed the same /favicon.ico; the old site's own icon is kept instead. A
+// raster icon comes first: Safari shows no SVG favicon, and an SVG can carry script.
+test('the old site\'s icon: the largest raster icon (an apple-touch-icon counts as 180), an SVG only without one, else /favicon.ico', () => {
   const icon = (links) => themeFromCss('', `<html><head>${links}</head><body></body></html>`, 'https://acme.no/om')
-  assert.deepEqual(icon('<link rel="icon" href="/f-32.png" sizes="32x32"><link rel="icon" href="/f.svg" type="image/svg+xml">').theme.icon, { src: 'https://acme.no/f.svg' })
+  assert.deepEqual(icon('<link rel="icon" href="/f-32.png" sizes="32x32"><link rel="icon" href="/f.svg" type="image/svg+xml">').theme.icon, { src: 'https://acme.no/f-32.png' })
+  assert.deepEqual(icon('<link rel="icon" href="/f.svg" type="image/svg+xml">').theme.icon, { src: 'https://acme.no/f.svg' })
   assert.deepEqual(icon('<link rel="icon" href="/f-32.png" sizes="32x32"><link rel="icon" href="/f-192.png" sizes="192x192">').theme.icon, { src: 'https://acme.no/f-192.png' })
   assert.deepEqual(icon('<link rel="shortcut icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple.png">').theme.icon, { src: 'https://acme.no/apple.png' })
   const none = icon('')
