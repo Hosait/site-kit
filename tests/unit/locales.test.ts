@@ -17,6 +17,13 @@ test('negotiateLocale: own code, aliases, English for the rest, default when emp
   assert.equal(negotiateLocale(null), 'no')
 })
 
+test('negotiateLocale gives the default locale when the wanted one has no home page', () => {
+  assert.equal(negotiateLocale('en-US,en', ['no']), 'no')
+  assert.equal(negotiateLocale('de-DE', ['no']), 'no')
+  assert.equal(negotiateLocale('nb-NO', ['no']), 'no')
+  assert.equal(negotiateLocale('en-US,en', ['no', 'en']), 'en')
+})
+
 test('searchRewrite matches each locale only with its own segment', () => {
   assert.deepEqual(searchRewrite('/no/sok'), { locale: 'no' })
   assert.deepEqual(searchRewrite('/en/search/'), { locale: 'en' })

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
-import { DEFAULT_SITE, FEATURES, isLocale, isSiteKey, SITE_CONFIG, siteFromHost, type SiteKey } from '@/lib/sites'
+import { DEFAULT_SITE, FEATURES, isLocale, isSiteKey, type Locale, LOCALES, SITE_CONFIG, siteFromHost, type SiteKey } from '@/lib/sites'
 import { negotiateLocale, searchRewrite } from '@/lib/locales'
 import { claimNeededPage, firstUserAllowed } from '@/lib/admin-claim'
 
@@ -37,6 +37,22 @@ async function loadRedirects(): Promise<Redirect[]> {
     // Ved feil brukes forrige liste; siden har også egen reserve-oppslag.
   }
   return redirectCache?.list ?? []
+}
+
+let homeCache: { at: number; map: Partial<Record<SiteKey, Locale[]>> } | null = null
+
+/** Språkene der nettstedet har en publisert forside. Ved feil: alle språk, som før. */
+async function loadHomeLocales(site: SiteKey): Promise<readonly Locale[]> {
+  if (!homeCache || Date.now() - homeCache.at >= REDIRECT_TTL_MS) {
+    try {
+      const port = process.env.PORT || '3000'
+      const res = await fetch(`http://127.0.0.1:${port}/next/home-locales`, { cache: 'no-store' })
+      if (res.ok) homeCache = { at: Date.now(), map: (await res.json()) as Partial<Record<SiteKey, Locale[]>> }
+    } catch {
+      // Forrige svar brukes.
+    }
+  }
+  return homeCache?.map[site] ?? LOCALES
 }
 
 /** Første verdi i en header som kan inneholde en kommaliste (flere proxyer). */
@@ -92,7 +108,8 @@ export async function proxy(req: NextRequest) {
   }
 
   if (pathname === '/') {
-    const locale = negotiateLocale(req.headers.get('accept-language'))
+    // Språk uten publisert forside gir standardspråket (ellers 404 på f.eks. /en).
+    const locale = negotiateLocale(req.headers.get('accept-language'), await loadHomeLocales(site))
     return withCookie(NextResponse.redirect(publicUrl(req, `/${locale}${req.nextUrl.search}`), 302))
   }
 
