@@ -25,6 +25,17 @@ test('the checker catches duplicate ids, unknown types, choices without options 
   assert.match(problems, /wrong: features\.nope is not in site\/config\.ts/)
 })
 
+test('a question that sets the locales offers only locales the kit has strings for', () => {
+  const q = { version: 1, questions: [{ id: 'languages', text: 'x', type: 'multi', options: [{ value: 'no', label: 'Norwegian' }, { value: 'sv', label: 'Swedish' }], sets: ['locales', 'defaultLocale'] }] }
+  assert.deepEqual(checkQuestions(q, cfg), ['languages: sv is not a locale the kit supports (no, en)'])
+})
+
+test('the editors question offers no sign-in the kit does not have', () => {
+  const q = shipped().questions.find((x: { id: string }) => x.id === 'editors')
+  assert.ok(q)
+  assert.doesNotMatch(q.text, /microsoft|entra|azure|google sign-in|sso/i)
+})
+
 test('* in a path matches any key, and report./cms. paths are always allowed', () => {
   const q = { version: 1, questions: [{ id: 'domain', text: 'x', type: 'text', sets: ['sites.*.origin', 'report.goLive', 'cms.privacyPage'] }] }
   assert.deepEqual(checkQuestions(q, cfg), [])

@@ -2,6 +2,8 @@
  * site/questions.json: the intake questions both Hosait Sites paths ask (the Hosait wizard,
  * and the hosait-sites skill in the user's own Claude), and what each answer sets.
  */
+import { STRING_LOCALES } from './string-locales'
+
 export type Question = {
   id: string
   text: string
@@ -43,6 +45,10 @@ export function checkQuestions(input: unknown, config: Record<string, unknown>):
       if (/^(report|cms)\.[a-zA-Z0-9]+$/.test(p)) continue
       if (!hasPath(config, p.split('.'))) problems.push(`${id}: ${p} is not in site/config.ts`)
     }
+    if (q.sets?.includes('locales'))
+      for (const o of q.options ?? [])
+        if (!(STRING_LOCALES as readonly string[]).includes(o.value))
+          problems.push(`${id}: ${o.value} is not a locale the kit supports (${STRING_LOCALES.join(', ')})`)
   }
   return problems
 }
