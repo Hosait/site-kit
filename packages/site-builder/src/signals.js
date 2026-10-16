@@ -135,7 +135,7 @@ export function robotsCartRules(text) {
  */
 export function pageSignals(html, url, host) {
   const $ = load(html)
-  const s = { product: false, priced: false, article: false, shop: [], payment: [], login: [], integrations: [], documents: new Set(), images: new Set(), links: new Set(), languages: new Set(), lang: language($('html').attr('lang')), alternates: [], forward: null }
+  const s = { product: false, priced: false, article: false, shop: [], payment: [], login: [], integrations: [], documents: new Set(), images: new Set(), links: new Set(), languages: new Set(), lang: language($('html').attr('lang')), alternates: [], forward: null, textLength: 0 }
   const add = (list, item) => { if (list.length < MAX_MATCHES && !list.includes(item)) list.push(item) }
   const named = new Set()
   const integration = (kind, name) => { if (s.integrations.length < MAX_INTEGRATIONS && !named.has(name)) { named.add(name); s.integrations.push({ kind, name }) } }
@@ -146,7 +146,7 @@ export function pageSignals(html, url, host) {
     s.priced ||= f.priced
     s.article ||= f.article
   }
-  if (String($('meta[property="og:type" i]').attr('content') ?? '').trim().toLowerCase() === 'article') s.article = true
+  // og:type=article is not used: Yoast and similar put it on ordinary pages.
   // Microdata: only top-level items (not a property of another item) or the page's mainEntity.
   for (const el of $('[itemtype]').toArray()) {
     const prop = $(el).attr('itemprop')
@@ -219,5 +219,9 @@ export function pageSignals(html, url, host) {
   const refresh = /url[ \t]*=[ \t]*['"]?([^'"]+)/i.exec(String($('meta[http-equiv="refresh" i]').first().attr('content') ?? '').slice(0, 2048))
   const target = refresh ? refresh[1].trim() : $('frameset frame[src]').first().attr('src')
   if (target) s.forward = normalize(String(target).slice(0, 2048), url)
+  // How much a visitor can read without JavaScript (scripts and styles left out).
+  const body = $('body').clone()
+  body.find('script, style, noscript, template').remove()
+  s.textLength = body.text().replace(/\s+/g, ' ').trim().length
   return s
 }

@@ -1,10 +1,13 @@
-// The gate before crawl: the site is rebuilt only after a fit check (assess) of the same site
-// that is not red. After yellow the customer has accepted the scope (--accepted-scope); a check
+// The gate before crawl: the site is rebuilt only after a recent fit check (assess) of the same
+// site that is not red. After yellow the customer has accepted the scope (--accepted-scope); a check
 // that could not read enough is never accepted, it runs again.
 import fs from 'node:fs'
 import path from 'node:path'
 
 import { normalize, sameSite } from './crawl.js'
+
+/** How old a fit check may be before crawl asks for a new one. */
+export const MAX_AGE_DAYS = 7
 
 /**
  * Why crawl must not start in `out` for `target`, or null when it may.
@@ -22,6 +25,10 @@ export function crawlGate(out, target, acceptedScope) {
   let checked = ''
   try { checked = new URL(String(a.source)).hostname } catch { /* not a site */ }
   if (!checked || !sameSite(checked, host)) return `The fit check in ${file} is for ${checked || 'another site'}, not ${host}. ${again}`
+  // A site changes: a check older than this is run again.
+  const at = Date.parse(String(a.assessedAt ?? ''))
+  if (Number.isNaN(at)) return `The fit check in ${file} has no date. ${again}`
+  if (Date.now() - at > MAX_AGE_DAYS * 24 * 60 * 60 * 1000) return `The fit check in ${file} is more than ${MAX_AGE_DAYS} days old (${new Date(at).toISOString().slice(0, 10)}). ${again}`
   const reasons = Array.isArray(a.reasons) ? a.reasons : []
   const codes = (cls) => reasons.filter((r) => r?.class === cls).map((r) => String(r.code)).join(', ')
   if (a.class === 'red') return `The fit check is red (${codes('red')}): Hosait Sites does not move this kind of site, so nothing is crawled.`
