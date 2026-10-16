@@ -4,6 +4,25 @@ For an AI agent (or a person) rebuilding an existing website on this template an
 on Hosait. You fill in content, theme and configuration; you do not write front-end code. Where
 no block fits a part of the old site, list it as a gap in the plan.
 
+## 0. Check that the site fits
+
+Hosait Sites moves simple content websites: about, services, news, people and contact, up to
+about 200 pages. Check the site before anything else:
+
+    pnpm site-builder:install
+    pnpm site-builder assess https://www.example.com
+
+In a few minutes it reads a sample of the site and writes `assess.md` (for the user) and
+`assess.json` (class, reasons and evidence) in `.site-builder/<host>/`.
+
+- **red** (the command exits 3): stop here. Tell the user plainly why, from `assess.md`: Hosait
+  does not move web shops, product catalogues, sites with a login or member area, or sites of
+  more than 500 pages. Do not offer to move part of the site, and do not go on to step 1.
+- **yellow**: show the user `assess.md` and ask them to accept the scope and the storage it lists
+  (more pages or documents than a standard move, a lot of media, built-in services, or a site
+  that could not be read well enough). Go on only when they say yes.
+- **green**: go on to step 1.
+
 ## 1. Set up
 
     pnpm install

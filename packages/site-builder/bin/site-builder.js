@@ -2,6 +2,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
+import { assess } from '../src/assess.js'
 import { compare } from '../src/compare.js'
 import { crawl } from '../src/crawl.js'
 import { extract } from '../src/extract.js'
@@ -10,16 +11,21 @@ import { theme } from '../src/theme.js'
 
 const HELP = `site-builder <command> [options]
 
+  assess <url>  Check first whether the site fits a Site Kit rebuild: green, yellow or red
+                (writes assess.json and assess.md; exits 3 when the site is red, so do not build it)
   crawl <url>   Read the site politely and cache its pages (robots.txt, same site, max 500 pages)
   extract       Pull pages, navigation, footer, images and templates out of the cached pages
   theme         Draft site/theme.json colours, fonts and logo from the site's CSS
   report        Write report.md: technology, tracking, templates, quick checks, enhancements
   compare       Check every old URL and document on the new site and take old/new screenshots side by side
 
+Exit codes: 0 done (assess: green or yellow), 3 assess found the site red, 2 usage error, 1 other error.
+
 Options:
-  --out <dir>        Working folder (default .site-builder/<host> for crawl, required otherwise)
+  --out <dir>        Working folder (default .site-builder/<host> for assess and crawl, required otherwise)
   --max <n>          Page cap for crawl (default 500)
-  --budget <min>     Time budget for crawl in minutes (default 15); then it writes what it has
+  --max-pages <n>    Page cap for assess (default 40)
+  --budget <min>     Time budget in minutes (crawl 15, assess 3 by default); then it writes what it has
   --new <url>        The new site's address, for compare
   --allow-private    Allow private and local addresses (for testing and intranet sites)
 `
@@ -38,7 +44,16 @@ const positive = (name, fallback, whole = false) => {
 const isHttp = (s) => { try { return /^https?:$/.test(new URL(s).protocol) } catch { return false } }
 
 try {
-  if (cmd === 'crawl') {
+  if (cmd === 'assess') {
+    if (!target || target.startsWith('--')) usage('assess needs a URL')
+    const out = flag('--out') ?? path.join('.site-builder', new URL(target).hostname)
+    const r = await assess(target, { out, maxPages: positive('--max-pages', 40, true), budgetMs: positive('--budget', 3) * 60_000, allowPrivate: has('--allow-private'), log: (s) => console.log(s) })
+    console.log(`
+${r.class.toUpperCase()}: ${r.counts.pagesRead} pages read → ${path.join(out, 'assess.md')}`)
+    for (const reason of r.reasons) console.log(`- ${reason.class}: ${reason.text}`)
+    for (const n of r.notes) console.log('note: ' + n)
+    if (r.class === 'red') process.exitCode = 3
+  } else if (cmd === 'crawl') {
     if (!target || target.startsWith('--')) usage('crawl needs a URL')
     const out = flag('--out') ?? path.join('.site-builder', new URL(target).hostname)
     const inv = await crawl(target, { out, maxPages: positive('--max', 500, true), budgetMs: positive('--budget', 15) * 60_000, allowPrivate: has('--allow-private'), log: (s) => console.log(s) })

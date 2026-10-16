@@ -1,7 +1,7 @@
 {
   "name": "@hosait/site-builder",
   "version": "0.1.0",
-  "description": "Reads an existing website (crawl, extract, theme, report) so it can be rebuilt on Hosait Site Kit.",
+  "description": "Checks and reads an existing website (assess, crawl, extract, theme, report) so it can be rebuilt on Hosait Site Kit.",
   "private": true,
   "license": "MIT",
   "type": "module",

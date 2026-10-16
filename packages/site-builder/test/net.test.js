@@ -108,3 +108,15 @@ test('isPublicAddress refuses SIIT, Teredo, local-use NAT64 and documentation IP
   for (const ip of ['2001:4860:4860::8888', '2001:200::1', '2a00:1450:4001::200e', '64:ff9b::808:808'])
     assert.equal(isPublicAddress(ip), true, ip)
 })
+
+test('a HEAD request sends HEAD and returns the headers without a body', async () => {
+  const methods = []
+  const site = await serve({ '/doc.pdf': (req) => { methods.push(req.method); return { headers: { 'content-type': 'application/pdf', 'content-encoding': 'gzip', 'content-length': '1234' }, body: req.method === 'HEAD' ? '' : 'x' } } })
+  try {
+    const r = await get(site.url + '/doc.pdf', { allowPrivate: true, method: 'HEAD' })
+    assert.deepEqual(methods, ['HEAD'])
+    assert.equal(r.status, 200)
+    assert.equal(r.headers['content-length'], '1234')
+    assert.equal(r.body.length, 0)
+  } finally { await site.close() }
+})
