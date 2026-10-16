@@ -6,7 +6,7 @@ import { buildMetadata } from '../../src/lib/seo'
 
 // A moved site has many pages without an SEO description or share image (the launch check warned
 // on 18 of the demo's 24 pages). The page's own first text and first image are used instead.
-const media = (url: string) => ({ id: 1, url, sizes: { og: { url: `${url}?og` } }, updatedAt: '', createdAt: '' }) as unknown as Media
+const media = (url: string) => ({ id: 1, url, mimeType: 'image/webp', sizes: { og: { url: `${url}?og` } }, updatedAt: '', createdAt: '' }) as unknown as Media
 const rich = (...paragraphs: string[]) => ({
   root: { type: 'root', direction: null, format: '', indent: 0, version: 1, children: paragraphs.map((t) => ({ type: 'paragraph', version: 1, children: [{ type: 'text', version: 1, text: t }] })) },
 })
@@ -28,6 +28,21 @@ test('without a hero, the first text block gives the description, cut at a word 
   assert.ok(long.startsWith(d.slice(0, -1)), d)
   assert.doesNotMatch(d, / …$/)
   assert.match(og(m) ?? '', /\/media\/full\.webp\?og$/)
+})
+
+// Bjørn's review: a hero's media can be a video, and a text-only hero keeps its old image in the data.
+test('only images become the share image: not a hero video, not a hidden image in a text-only hero', () => {
+  const video = { ...media('/media/film.mp4'), mimeType: 'video/mp4', sizes: {} } as unknown as Media
+  const m = meta(page([{ blockType: 'hero', text: 'Film', media: video }, { blockType: 'fullImage', image: { ...media('/media/full.webp'), mimeType: 'image/webp' } }]))
+  assert.match(og(m) ?? '', /\/media\/full\.webp\?og$/)
+  const hidden = meta(page([{ blockType: 'hero', variant: 'text', text: 'Bare tekst', media: { ...media('/media/old.webp'), mimeType: 'image/webp' } }]))
+  assert.equal(og(hidden), undefined)
+})
+
+test('a text with no space in its first 155 characters is cut at 155, not after one letter', () => {
+  const long = 'https://www.fjordlys.no/' + 'a'.repeat(300)
+  const m = meta(page([{ blockType: 'hero', text: long }]))
+  assert.equal(m.description, long.slice(0, 155) + '…')
 })
 
 test('the SEO fields always win, and a page with neither text nor image gets none', () => {

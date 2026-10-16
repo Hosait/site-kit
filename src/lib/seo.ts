@@ -12,6 +12,8 @@ type Doc = Page | Article
 const imageUrl = (m: unknown, origin: string): string | undefined => {
   if (!m || typeof m !== 'object') return undefined
   const media = m as Media
+  // Bare bilder kan deles: et toppfelt kan ha en video.
+  if (!media.mimeType?.startsWith('image/')) return undefined
   const url = media.sizes?.og?.url || media.url
   if (!url) return undefined
   return url.startsWith('http') ? url : origin + url
@@ -46,10 +48,11 @@ function clip(text: string, max = 155): string | undefined {
   if (!t) return undefined
   if (t.length <= max) return t
   const cut = t.slice(0, max)
-  return `${cut.slice(0, Math.max(cut.lastIndexOf(' '), 1)).replace(/[\s,.;:–-]+$/, '')}…`
+  const space = cut.lastIndexOf(' ')
+  return `${(space > 0 ? cut.slice(0, space) : cut).replace(/[\s,.;:–-]+$/, '')}…`
 }
 
-type Block = { blockType?: string; text?: string | null; richText?: unknown; media?: unknown; image?: unknown }
+type Block = { blockType?: string; variant?: string | null; text?: string | null; richText?: unknown; media?: unknown; image?: unknown }
 
 /** Det første en besøkende leser på en side: heltens tekst, ellers den første tekstblokken. */
 function pageLead(layout: Block[]): string | undefined {
@@ -62,19 +65,20 @@ function pageLead(layout: Block[]): string | undefined {
 /** Det første bildet en besøkende ser: heltens, ellers den første bildeblokken. */
 function pageImage(layout: Block[], origin: string): string | undefined {
   for (const b of layout) {
-    const m = b.blockType === 'hero' ? b.media : b.blockType === 'fullImage' || b.blockType === 'textImage' ? b.image : undefined
+    // Et toppfelt med bare tekst beholder et gammelt bilde i dataene; det vises ikke.
+    const m = b.blockType === 'hero' ? (b.variant === 'text' ? undefined : b.media) : b.blockType === 'fullImage' || b.blockType === 'textImage' ? b.image : undefined
     const url = imageUrl(m, origin)
     if (url) return url
   }
   return undefined
 }
 
+const LOGO_SRC = validateTheme(themeJson).logo.src
+
 /**
  * Tittel, beskrivelse, canonical, hreflang og Open Graph for en side eller artikkel. En side uten
  * egen SEO-beskrivelse eller delingsbilde får sin første tekst og sitt første bilde.
  */
-const LOGO_SRC = validateTheme(themeJson).logo.src
-
 export function buildMetadata({
   site,
   locale,
