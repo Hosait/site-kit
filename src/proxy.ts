@@ -55,6 +55,17 @@ async function loadHomeLocales(site: SiteKey): Promise<readonly Locale[]> {
   return homeCache?.map[site] ?? LOCALES
 }
 
+/** Om Payload alt har en bruker (GET /api/users/init). Ved feil: nei, og siden forklarer lenken som før. */
+async function usersExist(): Promise<boolean> {
+  try {
+    const port = process.env.PORT || '3000'
+    const res = await fetch(`http://127.0.0.1:${port}/api/users/init`, { cache: 'no-store' })
+    return res.ok && ((await res.json()) as { initialized?: unknown }).initialized === true
+  } catch {
+    return false
+  }
+}
+
 /** Første verdi i en header som kan inneholde en kommaliste (flere proxyer). */
 const firstHeader = (req: NextRequest, name: string) => req.headers.get(name)?.split(',')[0]?.trim() || null
 
@@ -77,6 +88,8 @@ export async function proxy(req: NextRequest) {
     if (firstUserAllowed({ secret: process.env.ADMIN_CLAIM_SECRET, cookieHeader: req.headers.get('cookie'), nowMs: Date.now() })) {
       return NextResponse.next()
     }
+    // Finnes det alt en bruker, er det innloggingen de trenger.
+    if (await usersExist()) return NextResponse.redirect(publicUrl(req, '/admin'), 303)
     return new NextResponse(claimNeededPage(SITE_CONFIG.admin.language), {
       status: 403,
       headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
