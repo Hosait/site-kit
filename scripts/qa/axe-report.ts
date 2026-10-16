@@ -6,7 +6,7 @@
 import AxeBuilder from '@axe-core/playwright'
 import { chromium } from '@playwright/test'
 
-import { axePages, sitemapPaths, type Finding } from '../../src/lib/launch-check'
+import { axePages, readBody, sitemapPaths, type Finding } from '../../src/lib/launch-check'
 
 const MAX_PAGES = 50
 const base = (process.argv[2] || 'http://localhost:3100').replace(/\/$/, '')
@@ -17,7 +17,7 @@ if (!paths.length) {
     console.error(`${base}/sitemap.xml answers ${res.status}: give the pages to check as paths after the address.`)
     process.exit(1)
   }
-  paths = sitemapPaths(await res.text()).slice(0, MAX_PAGES)
+  paths = sitemapPaths(await readBody(res)).slice(0, MAX_PAGES)
 }
 
 const browser = await chromium.launch()
