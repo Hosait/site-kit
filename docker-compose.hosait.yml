@@ -25,6 +25,8 @@ services:
       PAYLOAD_SECRET: ${PAYLOAD_SECRET}
       PREVIEW_SECRET: ${PREVIEW_SECRET}
       CRON_SECRET: ${CRON_SECRET}
+      # Bare lenken /next/admin-claim?code=<denne> kan opprette den første administratoren.
+      ADMIN_CLAIM_SECRET: ${ADMIN_CLAIM_SECRET}
       NEXT_PUBLIC_SERVER_URL: ${PUBLIC_URL}
       # Tom: produksjon når HOSAIT_URL (det verifiserte egne domenet, satt av Hosait) er en av
       # vertene i site/config.ts; ellers staging (noindex). «staging»/«production» overstyrer.

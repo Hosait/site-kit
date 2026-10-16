@@ -89,8 +89,12 @@ on the project page; lines starting with `[seed]`). Fix the plan and push; then 
 "Run seed again" on the project page. A push alone does not run the seed again.
 Never commit `.env` or any secret.
 
-Right after the first deploy, the user creates the first admin user at `/admin` on the
-hosait.com address: until someone has, that page lets anyone create one. Once a user exists, an
+Right after the first deploy, the user creates the first admin user. Only the claim link can:
+"Create your admin user" under Next steps on the project page in Hosait opens
+`/next/admin-claim?code=…` (the code is the variable `ADMIN_CLAIM_SECRET`, which Hosait
+generates), and that opens `/admin` for an hour. Without it `/admin` refuses the first user. If
+the step opens plain `/admin`, the user copies `ADMIN_CLAIM_SECRET` from the project's Variables
+and opens `<address>/next/admin-claim?code=<value>`. Never ask for the value. Once a user exists, an
 import cut off part-way (the web service restarted during it) leaves pages that make "Run seed
 again" refuse; the admin then replaces the content with "Legg inn innhold" in the Testinnhold
 panel on the admin dashboard.
