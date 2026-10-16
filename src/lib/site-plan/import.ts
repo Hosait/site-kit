@@ -7,12 +7,14 @@ import path from 'node:path'
 import type { Payload } from 'payload'
 
 import { DEFAULT_LOCALE, DEFAULT_SITE, isSiteKey, LOCALES } from '../sites'
+import { retentionFromPlan } from '../forms/retention'
 import { fetchMedia as defaultFetchMedia } from './fetch-media'
+import { formData, hasLocale, type FormRow } from './forms'
 import { localFileProblem, resolveLocalFile } from './local-file'
 import { findMissingRefs, localeData, orderPages, resolveValue } from './refs'
 import type { SitePlan } from './types'
 
-export const CONTENT_COLLECTIONS = ['redirects', 'articles', 'pages', 'people', 'documents', 'media', 'site-settings'] as const
+export const CONTENT_COLLECTIONS = ['redirects', 'articles', 'pages', 'form-submissions', 'forms', 'people', 'documents', 'media', 'site-settings'] as const
 
 export type ImportOptions = {
   /** Folder that relative media and document paths are resolved against. */
@@ -76,10 +78,10 @@ export async function importPlan(payload: Payload, plan: SitePlan, opts: ImportO
       return toLexical(h)
     }
     const total =
-      plan.media.length + (plan.people?.length ?? 0) + (plan.documents?.length ?? 0) + plan.pages.length * 2 + (plan.articles?.length ?? 0) + (plan.redirects?.length ?? 0) + 1
+      plan.media.length + (plan.people?.length ?? 0) + (plan.documents?.length ?? 0) + (plan.forms?.length ?? 0) + plan.pages.length * 2 + (plan.articles?.length ?? 0) + (plan.redirects?.length ?? 0) + 1
     let done = 0
     const tick = () => opts.onProgress?.(++done, total)
-    const ids = { media: new Map<string, number>(), pages: new Map<string, number>(), people: new Map<string, number>(), documents: new Map<string, number>() }
+    const ids = { media: new Map<string, number>(), pages: new Map<string, number>(), people: new Map<string, number>(), documents: new Map<string, number>(), forms: new Map<string, number>() }
 
     async function upload(collection: 'media' | 'documents', source: string, data: Record<string, unknown>) {
       // Anything that looks like a URL goes through fetchMedia, which refuses all but public https.
@@ -123,6 +125,28 @@ export async function importPlan(payload: Payload, plan: SitePlan, opts: ImportO
       const doc = await upload('documents', d.source, { ...localeData(d, DEFAULT_LOCALE, ['title', 'description']), docType: d.docType, language: d.language, sites: [site] })
       ids.documents.set(d.ref, doc.id as number)
       await localized('documents', doc.id as number, d, ['title', 'description'])
+      tick()
+    }
+    for (const f of plan.forms ?? []) {
+      // The plugin does not localize the title: the default language's, else the first given.
+      const title = f.title[DEFAULT_LOCALE] ?? Object.values(f.title)[0]
+      const data = { title, ...(await formData(f, DEFAULT_LOCALE, html)), ...retentionFromPlan(f.retention), emails: [] }
+      let doc: { id: number; fields?: FormRow[] }
+      try {
+        doc = wrote('forms', (await payload.create({ collection: 'forms', data: data as never, locale: DEFAULT_LOCALE, context: ctx })) as typeof doc)
+      } catch (e) {
+        // Name the form: the plan's author must be able to find it.
+        throw new Error(`form "${f.ref}": ${e instanceof Error ? e.message : String(e)}`)
+      }
+      ids.forms.set(f.ref, doc.id)
+      for (const l of others) {
+        if (!hasLocale(f, l)) continue
+        try {
+          await payload.update({ collection: 'forms', id: doc.id, locale: l, data: (await formData(f, l, html, doc.fields)) as never, context: ctx })
+        } catch (e) {
+          throw new Error(`form "${f.ref}" (${l}): ${e instanceof Error ? e.message : String(e)}`)
+        }
+      }
       tick()
     }
     // Pages link to each other (and may link both ways), so create them all first, then fill in layouts.

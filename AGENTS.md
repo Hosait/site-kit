@@ -65,9 +65,14 @@ images and PDFs in `seed/media/` (or use public https URLs). Office files (Word,
 PowerPoint), zip and DWG cannot be imported from a URL: download them into `seed/media/` and list
 them under `documents`. SVG is not imported: the logo goes in `public/brand/` (step 4), and other
 SVG graphics are a gap. Every file is checked by its first bytes, not its name. Link with
-`$media`, `$page`, `$pageLink`, `$person`, `$document`; rich text is `$html`. Add `redirects` for
-every old URL that moves, and `gaps` for anything no block matches. Check it until it passes,
-then try it locally:
+`$media`, `$page`, `$pageLink`, `$person`, `$document`, `$form`; rich text is `$html`. Forms go in
+`forms`: their fields, the button text, the message shown after sending, and `retention` (days,
+or `"keep"`) from the intake answer; left out, the site default in `site/config.ts` applies. A
+`formBlock` points at one with `{ "$form": "<ref>" }`. Submissions are read in the admin and
+deleted each night once older than the period; the privacy page says how long each form's
+submissions are kept, with the same periods. Add `redirects` for every old URL that moves, and
+`gaps` for anything no block matches (a form that must send e-mail or take payment is still a
+gap). Check it until it passes, then try it locally:
 
     pnpm kit:check-plan seed/site-plan.json
     pnpm kit:import seed/site-plan.json --reset

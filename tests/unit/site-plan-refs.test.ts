@@ -53,3 +53,12 @@ test('people and documents blocks point at records with $person and $document', 
   const ids = { media: new Map(), pages: new Map(), people: new Map([['kari', 4]]), documents: new Map([['guide', 9]]) }
   assert.deepEqual(await resolveValue([{ $person: 'kari' }, { $document: 'guide' }], ids, async () => null), [4, 9])
 })
+
+test('a form block points at a form with $form, checked and resolved like the other refs', async () => {
+  const p = plan()
+  p.forms = [{ ref: 'contact', title: { no: 'Kontakt' }, fields: [{ type: 'email', name: 'epost', label: { no: 'E-post' } }], confirmation: { no: 'Takk!' } }]
+  p.pages[0].layout.no.push({ blockType: 'formBlock', form: { $form: 'contact' } }, { blockType: 'formBlock', form: { $form: 'ghost' } })
+  assert.deepEqual(findMissingRefs(p), ['form "ghost"'])
+  const ids = { media: new Map(), pages: new Map(), forms: new Map([['contact', 12]]) }
+  assert.deepEqual(await resolveValue({ blockType: 'formBlock', form: { $form: 'contact' } }, ids, async () => null), { blockType: 'formBlock', form: 12 })
+})

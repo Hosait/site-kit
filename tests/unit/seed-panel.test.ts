@@ -27,3 +27,13 @@ test('the panel uses these helpers and only offers step 2 when the SQL seed has 
   const route = readFileSync('src/app/(frontend)/next/seed/[step]/route.ts', 'utf8')
   assert.match(route, /sources: fs\.existsSync\(path\.join\(SEED_DIR, 'sources\.json'\)\)/)
 })
+
+// Replacing the content deletes every content collection, form submissions included: the
+// admin must be told before they confirm, since submissions are personal data and cannot be restored.
+test('the seed panel says that replacing deletes forms and their submissions', () => {
+  const panel = readFileSync('src/components/admin/SeedPanelClient.tsx', 'utf8')
+  const confirm = panel.match(/window\.confirm\('([^']+)'\)/)?.[1] ?? ''
+  assert.match(confirm, /skjemaer/)
+  assert.match(confirm, /innsendinger/)
+  assert.match(panel, /erstatter alt innhold, også skjemaer og innsendinger/)
+})

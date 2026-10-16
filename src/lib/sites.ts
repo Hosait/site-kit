@@ -13,6 +13,8 @@ if (problems.length) throw new Error(`site/config.ts: ${problems.join('; ')}`)
 export const SITE_CONFIG = siteConfig
 /** Feature switches, widened so code can compare them whatever site/config.ts sets. */
 export const FEATURES: SiteConfigInput['features'] = siteConfig.features
+/** Form defaults, widened so code can compare whatever site/config.ts sets. */
+export const FORMS: SiteConfigInput['forms'] = siteConfig.forms
 export type SiteKey = keyof typeof siteConfig.sites & string
 export type Locale = keyof typeof siteConfig.locales & string
 
