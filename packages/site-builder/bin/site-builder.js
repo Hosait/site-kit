@@ -25,9 +25,9 @@ Options:
   --out <dir>        Working folder (default .site-builder/<host> for assess and crawl, required otherwise)
   --max <n>          Page cap for crawl (default 500)
   --max-pages <n>    Page cap for assess (default 40)
-  --budget <min>     Time budget in minutes (crawl 15, assess 3 by default); then it writes what it has
+  --budget <min>     Time budget in minutes (crawl 15, assess 3, compare 10 by default); then it writes what it has
   --new <url>        The new site's address, for compare
-  --allow-private    Allow private and local addresses (for testing and intranet sites)
+  --allow-private    Allow private and local addresses (for testing and intranet sites; compare: the new site only)
 `
 
 const args = process.argv.slice(2)
@@ -70,7 +70,7 @@ ${r.class.toUpperCase()}: ${r.counts.pagesRead} pages read → ${path.join(out, 
     const newBase = flag('--new')
     if (!out || !fs.existsSync(path.join(out, 'urls.json'))) usage('compare needs --out <dir> pointing at a crawl folder')
     if (!isHttp(newBase)) usage('compare needs --new <http(s) address of the new site>')
-    const r = await compare(out, { newBase, allowPrivate: has('--allow-private'), log: (s) => console.log(s) })
+    const r = await compare(out, { newBase, allowPrivate: has('--allow-private'), budgetMs: positive('--budget', 10) * 60_000, log: (s) => console.log(s) })
     const fail = r.results.filter((x) => !x.ok).length
     const docFail = r.documents.filter((x) => !x.ok).length
     console.log(`\n${r.results.length} old addresses checked: ${r.results.length - fail} OK, ${fail} fail.`)

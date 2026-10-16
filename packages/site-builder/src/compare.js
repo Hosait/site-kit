@@ -5,7 +5,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import { get, publicOnlyLookup } from './net.js'
+import { get as netGet, publicOnlyLookup } from './net.js'
 
 const MOVED = [301, 308]
 const TEMPORARY = [302, 303, 307]
@@ -15,12 +15,39 @@ const MAX_PAGES = 12
 const MAX_HEIGHT = 4000
 const VIEWPORTS = [['desktop', { width: 1280, height: 800 }], ['mobile', { width: 390, height: 844 }]]
 const NO_PLAYWRIGHT = 'Screenshots skipped: Playwright is not available (pnpm exec playwright install chromium).'
+const PAGE_TIMEOUT_MS = 30_000
+/** The browser always runs with its sandbox; if it cannot start with it, there are no screenshots. */
+export const LAUNCH = Object.freeze({ chromiumSandbox: true })
 const reason = (e) => (e.code === 'EPRIVATE' ? `${e.message}. Use --allow-private only for your own local or intranet sites.` : e.message)
 const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'))
 const pathOf = (url) => { const u = new URL(url); return u.pathname + u.search }
 const resolve = (location, base) => { try { return location ? new URL(location, base) : null } catch { return null } }
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
-const defaultLaunch = async () => (await import('@playwright/test')).chromium.launch()
+async function defaultLaunch(options) {
+  let playwright
+  try { playwright = await import('@playwright/test') } catch (e) { throw Object.assign(e, { code: 'NO_PLAYWRIGHT' }) }
+  return playwright.chromium.launch(options)
+}
+
+/**
+ * Whether the browser may make a request: http(s) to a public address, or the page's own data:
+ * and blob: content. A private address only for the new site's own origin, and only with
+ * --allow-private; never for the old site or anything else (metadata services, the intranet).
+ * The browser resolves names itself after this check, so it narrows, not seals, what it reaches.
+ * @param {string} url @param {{ newOrigin: string, allowPrivate: boolean, lookup?: typeof publicOnlyLookup, cache?: Map<string, Promise<boolean>> }} opts
+ */
+export async function allowRequest(url, { newOrigin, allowPrivate, lookup = publicOnlyLookup, cache }) {
+  let u
+  try { u = new URL(url) } catch { return false }
+  if (u.protocol === 'data:' || u.protocol === 'blob:') return true
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') return false
+  if (allowPrivate && u.origin === newOrigin) return true
+  const host = u.hostname.replace(/^\[|\]$/g, '')
+  const ask = () => new Promise((ok) => lookup(host, {}, (e) => ok(!e)))
+  if (!cache) return ask()
+  if (!cache.has(host)) cache.set(host, ask())
+  return cache.get(host)
+}
 
 /** Every old address that answered 200, in all languages, once per path and query. */
 function oldAddresses(out) {
@@ -55,7 +82,7 @@ async function pool(items, fn) {
 }
 
 /** Requests the old address on the new site and follows at most 3 permanent redirects there. */
-async function check(old, origin, allowPrivate) {
+async function check(old, origin, allowPrivate, get) {
   const target = origin + pathOf(old)
   const row = (status, final, note) => ({ old, target, status, final, ok: status === 200, note })
   let url = target
@@ -99,12 +126,21 @@ function shotPages(out, origin, notes) {
     .map((u) => ({ page: pathOf(u), slug: slug(new URL(u).pathname, used), old: u, new: origin + pathOf(u) }))
 }
 
-async function snap(browser, url, viewport, file) {
-  const page = await browser.newPage({ viewport })
+async function snap(browser, url, viewport, file, { guard, timeoutMs }) {
+  // Every request the page makes goes through the address check; no service workers, downloads
+  // or WebSockets.
+  const context = await browser.newContext({ viewport, serviceWorkers: 'block', acceptDownloads: false })
   try {
-    await page.goto(url)
-    await page.screenshot({ path: file, fullPage: true, clip: { x: 0, y: 0, width: viewport.width, height: MAX_HEIGHT } })
-  } finally { await page.close() }
+    await context.route('**/*', async (route) => ((await guard(route.request().url())) ? route.continue() : route.abort('blockedbyclient')))
+    if (context.routeWebSocket) await context.routeWebSocket(/.*/, (ws) => ws.close())
+    const page = await context.newPage()
+    page.setDefaultTimeout(timeoutMs)
+    page.setDefaultNavigationTimeout(timeoutMs)
+    try {
+      await page.goto(url)
+      await page.screenshot({ path: file, fullPage: true, clip: { x: 0, y: 0, width: viewport.width, height: MAX_HEIGHT } })
+    } finally { await page.close() }
+  } finally { await context.close() }
 }
 
 /** Rejects (EPRIVATE) when the host is or resolves to a private address, as the fetcher would. */
@@ -114,24 +150,35 @@ function publicHost(origin) {
 }
 
 /** @returns {Promise<{ shots: object[], pairs?: object[], skipped?: string }>} */
-async function screenshots(out, { origin, allowPrivate, launchBrowser, log, notes }) {
+async function screenshots(out, { origin, allowPrivate, launchBrowser, log, notes, deadline, lookup }) {
   // The browser resolves the new site's name itself: it may not reach what the fetcher refuses.
   if (!allowPrivate) {
     try { await publicHost(origin) } catch (e) { return { shots: [], skipped: `Screenshots skipped: ${reason(e)}` } }
   }
   let browser
-  try { browser = await launchBrowser() } catch { return { shots: [], skipped: NO_PLAYWRIGHT } }
+  try { browser = await launchBrowser(LAUNCH) } catch (e) {
+    if (e.code === 'NO_PLAYWRIGHT') return { shots: [], skipped: NO_PLAYWRIGHT }
+    return { shots: [], skipped: `Screenshots skipped: the browser could not start with its sandbox (${String(e.message).split('\n')[0]}). It is never run without one.` }
+  }
+  const cache = new Map()
+  const guard = (url) => allowRequest(url, { newOrigin: origin, allowPrivate, lookup, cache })
   const pairs = []
   try {
     const pages = shotPages(out, origin, notes)
     fs.mkdirSync(path.join(out, 'shots'), { recursive: true })
-    for (const p of pages) {
+    shots: for (const p of pages) {
       log(`screenshots ${p.page}`)
       for (const [name, viewport] of VIEWPORTS) {
         const pair = { page: p.page, viewport: name, old: null, new: null, oldUrl: p.old, newUrl: p.new }
         for (const side of ['old', 'new']) {
+          const left = deadline - Date.now()
+          if (left <= 0) {
+            notes.push(`Screenshots stopped at the time budget; ${pairs.length} pairs were taken.`)
+            if (pair.old || pair.new) pairs.push(pair)
+            break shots
+          }
           const file = `shots/${p.slug}-${name}-${side}.png`
-          try { await snap(browser, p[side], viewport, path.join(out, file)); pair[side] = file } catch (e) { notes.push(`Screenshot of ${p[side]} (${name}) failed: ${e.message.split('\n')[0]}`) }
+          try { await snap(browser, p[side], viewport, path.join(out, file), { guard, timeoutMs: Math.min(PAGE_TIMEOUT_MS, left) }); pair[side] = file } catch (e) { notes.push(`Screenshot of ${p[side]} (${name}) failed: ${e.message.split('\n')[0]}`) }
         }
         pairs.push(pair)
       }
@@ -179,12 +226,15 @@ function markdown(newBase, results, documents, skipped, notes) {
 
 /**
  * @param {string} out a crawl folder (urls.json, inventory.json, optionally extract.json)
- * @param {{ newBase: string, allowPrivate?: boolean, log?: (s: string) => void, launchBrowser?: () => Promise<any> }} opts
+ * --allow-private applies to the new site only: the old site's addresses and documents are always
+ * fetched as public. budgetMs bounds the screenshots (each page also times out at 30 s).
+ * @param {{ newBase: string, allowPrivate?: boolean, log?: (s: string) => void, launchBrowser?: (options: object) => Promise<any>, get?: typeof netGet, budgetMs?: number, lookup?: typeof publicOnlyLookup }} opts
  */
-export async function compare(out, { newBase, allowPrivate = false, log = () => {}, launchBrowser = defaultLaunch }) {
+export async function compare(out, { newBase, allowPrivate = false, log = () => {}, launchBrowser = defaultLaunch, get = netGet, budgetMs = 10 * 60_000, lookup }) {
+  const deadline = Date.now() + budgetMs
   const origin = new URL(newBase).origin
   const checked = async (old) => {
-    const r = await check(old, origin, allowPrivate)
+    const r = await check(old, origin, allowPrivate, get)
     log(`${r.status} ${r.target}${r.final ? ` → ${r.final}` : ''}${r.note ? ` (${r.note})` : ''}`)
     return r
   }
@@ -192,7 +242,7 @@ export async function compare(out, { newBase, allowPrivate = false, log = () => 
   // The crawl does not fetch documents, so each is first asked for on the old site (16 KB at most);
   // only one that answers 200 there is judged on the new site.
   const docs = oldDocuments(out)
-  const before = await pool(docs, (d) => get(d, { allowPrivate, maxBytes: 16 * 1024 }).then((r) => r.status, reason))
+  const before = await pool(docs, (d) => get(d, { allowPrivate: false, maxBytes: 16 * 1024 }).then((r) => r.status, reason))
   const documents = await pool(docs.filter((_, i) => before[i] === 200), checked)
   const broken = docs.flatMap((d, i) => (before[i] === 200 ? [] : [`${pathOf(d)} (${before[i]})`]))
 
@@ -200,7 +250,7 @@ export async function compare(out, { newBase, allowPrivate = false, log = () => 
   if (broken.length) notes.push(`${broken.length} documents did not work on the old site either and were not checked: ${broken.slice(0, 10).join(', ')}${broken.length > 10 ? ', …' : ''}`)
   let shot
   // Screenshots never fail the command.
-  try { shot = await screenshots(out, { origin, allowPrivate, launchBrowser, log, notes }) } catch (e) { shot = { shots: [], skipped: `Screenshots skipped: ${e.message}` } }
+  try { shot = await screenshots(out, { origin, allowPrivate, launchBrowser, log, notes, deadline, lookup }) } catch (e) { shot = { shots: [], skipped: `Screenshots skipped: ${e.message}` } }
   if (shot.skipped) notes.push(shot.skipped)
   if (shot.pairs) fs.writeFileSync(path.join(out, 'compare.html'), html(newBase, shot.pairs))
 

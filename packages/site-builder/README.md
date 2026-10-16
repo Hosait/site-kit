@@ -51,7 +51,12 @@ In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-buil
   The old site's documents (PDFs and the like) are checked the same way if they still work there.
   It writes `compare.md` and `compare.json`, and exits 1 when an address fails. With Playwright
   installed it also takes old and new screenshots (the home page and the first page of each
-  template, desktop and mobile) into `shots/`, side by side in `compare.html`.
+  template, desktop and mobile) into `shots/`, side by side in `compare.html`. The browser runs
+  only with its sandbox (without one there are no screenshots), every request it makes must go to
+  a public address, service workers, downloads and WebSockets are blocked, and `--budget`
+  (10 minutes by default) bounds the screenshots; each page times out after 30 seconds. With
+  `--allow-private` only the new site may be a private address: the old site and its documents
+  are always fetched as public.
 
 Private, loopback and link-local addresses are refused, and this is checked when connecting.
 `--allow-private` is for your own local or intranet sites.
