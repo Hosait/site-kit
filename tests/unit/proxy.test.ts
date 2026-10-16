@@ -18,3 +18,25 @@ test('/ sends a browser to the default locale when its own locale has no home pa
     globalThis.fetch = realFetch
   }
 })
+
+// Keep this test last: it moves the clock an hour ahead, past the answer the test above cached.
+test('a failed home-page lookup is remembered, so / does not ask again on every visit', async (t) => {
+  const realFetch = globalThis.fetch
+  let calls = 0
+  globalThis.fetch = (async () => {
+    calls++
+    throw new Error('connection refused')
+  }) as typeof fetch
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() + 3_600_000 })
+  const visit = () => proxy(new NextRequest('http://localhost:3100/', { headers: { 'accept-language': 'en-US,en' } }))
+  try {
+    await visit()
+    await visit()
+    assert.equal(calls, 1)
+    t.mock.timers.tick(30_000)
+    await visit()
+    assert.equal(calls, 2)
+  } finally {
+    globalThis.fetch = realFetch
+  }
+})

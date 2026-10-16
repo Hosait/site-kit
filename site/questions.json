@@ -15,6 +15,6 @@
     { "id": "editors", "text": "Who will edit the site? Names, e-mail addresses and roles.", "type": "people", "sets": ["cms.editors"] },
     { "id": "domain", "text": "Which domain will the site use, who controls its DNS, and when should it go live?", "type": "text", "required": true, "sets": ["sites.*.origin", "sites.*.hosts", "report.goLive"] },
     { "id": "terms", "text": "Do you accept the data processing agreement and hosting in the EU/EEA?", "type": "boolean", "required": true, "sets": ["report.terms"] },
-    { "id": "integrations", "text": "Should the site connect to anything else, such as a newsletter, a CRM or a job feed?", "type": "text", "sets": ["report.integrations"] }
+    { "id": "integrations", "text": "Should the new site embed anything simple the old one does not have, such as a map, a video or a form?", "help": "Only simple embeds. Connections to other systems (a CRM, a shop, a member area, a job feed) are not part of a move; they are custom work.", "type": "text", "sets": ["report.integrations"] }
   ]
 }

@@ -140,8 +140,9 @@ export function themeFromCss(css, html, baseUrl) {
     else notes.push('logo skipped: its src is not a web address (for example an inline data: image); add public/brand/logo.svg by hand')
   } else notes.push('no logo found: add public/brand/logo.svg by hand')
 
-  // The site's icon: an SVG first, then the largest size (an apple-touch-icon is 180 px), else
-  // the /favicon.ico every browser asks for.
+  // The site's icon: the largest raster icon (an apple-touch-icon is 180 px), an SVG only when
+  // there is none (Safari shows no SVG favicon, and an SVG can carry script), else the
+  // /favicon.ico every browser asks for.
   let icon = null
   let best = -1
   for (const el of $('link[rel][href]').toArray()) {
@@ -151,7 +152,7 @@ export function themeFromCss(css, html, baseUrl) {
     try { src = new URL(String($(el).attr('href')), baseUrl) } catch { continue }
     if (src.protocol !== 'http:' && src.protocol !== 'https:') continue
     const sizes = String($(el).attr('sizes') ?? '').match(/\d+/g)?.map(Number) ?? []
-    const score = /\.svg$/i.test(src.pathname) || String($(el).attr('type') ?? '').includes('svg') ? Infinity
+    const score = /\.svg$/i.test(src.pathname) || String($(el).attr('type') ?? '').includes('svg') ? 0
       : sizes.length ? Math.max(...sizes) : rel.includes('apple-touch-icon') ? 180 : 16
     if (score > best) { best = score; icon = { src: src.toString() } }
   }

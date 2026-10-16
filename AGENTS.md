@@ -51,9 +51,11 @@ the first deploy). If you change sites, locales, document types or article kinds
 
 Copy `theme` from `theme.draft.json` into `site/theme.json`, put the logo in `public/brand/`, set
 the fonts in `site/fonts.ts`, and run `pnpm kit:theme-check` (every pair needs 4.5:1). Download the
-old site's icon (`icon.src` in the draft) into `public/brand/` too, and set `icon.src` in
-`site/theme.json` to its `/brand/…` path (`.svg`, `.png`, `.webp` or `.ico`). If it cannot be
-downloaded, leave `icon` out: the kit's own icon is used.
+old site's icon (`icon.src` in the draft, a PNG or ICO when the old site has one) into
+`public/brand/` too, and set `icon.src` in `site/theme.json` to its `/brand/…` path (`.png`,
+`.ico`, `.webp` or `.svg`). `kit:theme-check` refuses an icon over 100 KB, one whose content does
+not match its extension, and an SVG with script, event handlers or outside links. If it cannot be
+downloaded or does not pass, leave `icon` out: the kit's own icon is used.
 
 ## 5. Write the site plan
 
@@ -128,6 +130,10 @@ preview):
    route locked. If the domain was verified after the last deploy, the user redeploys in Hosait.
    Until then every page is `noindex` and `robots.txt` blocks search engines. The variable
    `SITE_ORIGINS` (`staging` or `production`) overrides this; leave it unset.
+4. Once the domain answers, run `pnpm qa:launch https://<domain>`. On one of the site's own
+   `hosts` it also fails while search engines are shut out: `robots.txt` blocks them, a page is
+   `noindex`, or a canonical address is on another host. Then the site is still in staging: the
+   user redeploys in Hosait, and you run the check again.
 ---
 
 <!-- BEGIN:nextjs-agent-rules -->
