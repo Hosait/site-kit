@@ -169,6 +169,8 @@ export async function assess(start, opts) {
   const read = []
   const tried = new Set()
   let reserved = 0
+  // Where the home page leads when that is another site (a redirect, a meta refresh or a frameset).
+  let elsewhere = null
 
   // A slot is reserved before each request (redirects included), so the cap holds with two workers.
   async function fetchHtml(url, role) {
@@ -189,6 +191,7 @@ export async function assess(start, opts) {
       log(`${r.status} ${current}`)
       if (r.status >= 300 && r.status < 400 && r.headers.location) {
         const next = normalize(String(r.headers.location), current)
+        if (next && role === 'home' && !sameSite(new URL(next).hostname, host)) elsewhere = next
         if (!next || !sameSite(new URL(next).hostname, host) || tried.has(next)) return null
         record.location = next
         current = next
@@ -230,6 +233,7 @@ export async function assess(start, opts) {
   if (!unavailable) {
     await visit(root.toString(), 'home')
     const home = read.find((p) => p.role === 'home')
+    if (home?.sig.forward && !sameSite(new URL(home.sig.forward).hostname, host)) elsewhere = home.sig.forward
     const nav = home ? [...new Set(home.nav.map((l) => normalize(l.href, home.url)).filter((n) => n && pageLink(n) && !tried.has(n)))].slice(0, Math.min(MAX_NAV, Math.floor(maxPages / 4))) : []
     await run(nav.map((url) => ({ url, role: 'nav' })))
     await run(spread([...sitemap.pages].filter((u) => !tried.has(u)), maxPages - reserved).map((url) => ({ url, role: 'sample' })))
@@ -333,8 +337,11 @@ export async function assess(start, opts) {
   if (failed.length) notes.push(`${failed.length} of the pages tried could not be read; they are listed under pages.`)
   if (budgetReached) notes.push(`Stopped at the ${Math.round(budgetMs / 6000) / 10}-minute time budget; the answer is based on the ${read.length} pages read.`)
   const homeAllowed = robots.allowed(root.pathname + root.search)
-  const enough = read.length >= Math.min(LIMITS.minPagesRead, Math.max(1, htmlPages))
-  const enoughWhy = unavailable ? 'robots.txt did not answer' : !homeAllowed ? 'robots.txt does not allow reading the home page' : budgetReached ? 'the time budget ran out' : `${read.length} pages could be read`
+  if (elsewhere) notes.push(`The home page leads to ${new URL(elsewhere).origin}/, another site. Check that address instead.`)
+  // No sitemap and nothing linked from the pages read: the site may need JavaScript to show its pages.
+  const noLinks = !sitemapPages && read.length > 0 && !read.some((p) => [...p.sig.links].some((l) => l !== p.url && l !== root.toString()))
+  const enough = !elsewhere && !noLinks && read.length >= Math.min(LIMITS.minPagesRead, Math.max(1, htmlPages))
+  const enoughWhy = unavailable ? 'robots.txt did not answer' : !homeAllowed ? 'robots.txt does not allow reading the home page' : elsewhere ? 'the home page leads to another site' : noLinks ? 'there is no sitemap and the home page links to no other page; it may need JavaScript' : budgetReached ? 'the time budget ran out' : `${read.length} pages could be read`
 
   const verdict = classify({ shop, payment, catalogue, login, integrations: [...integrations.values()], htmlPages, documents: documents.count, mediaBytes, enough, enoughWhy })
   const result = {

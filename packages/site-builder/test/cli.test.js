@@ -35,7 +35,7 @@ test('a --max that is not a positive whole number is a usage error', async () =>
 })
 
 test('assess writes assess.json and assess.md, exits 0 for a green site and 3 for a red one', async () => {
-  const green = await serve({ '/': { body: '<html lang="en"><head><title>Home</title></head><body><main><p>Hello</p></main></body></html>' } })
+  const green = await serve({ '/': { body: '<html lang="en"><head><title>Home</title></head><body><main><p>Hello</p><a href="/about">About</a></main></body></html>' }, '/about': { body: '<html lang="en"><head><title>About</title></head><body><main><p>Us</p></main></body></html>' } })
   const red = await serve({ '/': { body: '<html><body><form action="/login"><input type="password"></form></body></html>' } })
   const out = fs.mkdtempSync(path.join(os.tmpdir(), 'cli-'))
   try {
