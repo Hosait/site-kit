@@ -55,8 +55,11 @@ const MAGIC: Record<string, (b: Buffer) => boolean> = {
 // What an icon SVG must not hold: script, embedded HTML, event handlers, script or outside links,
 // or a DTD (entities).
 const SVG_UNSAFE: [RegExp, string][] = [
-  [/<script/i, 'a <script>'],
-  [/<foreignObject/i, 'a <foreignObject>'],
+  // Also in another namespace: <h:script xmlns:h="http://www.w3.org/1999/xhtml">.
+  [/<(?:[\w.-]+:)?script/i, 'a <script>'],
+  [/<(?:[\w.-]+:)?foreignObject/i, 'a <foreignObject>'],
+  // A character reference can hide javascript: (&#106;avascript:); an icon needs none.
+  [/&#/, 'a character reference (&#…;)'],
   [/\son[a-z]+\s*=/i, 'an on…= event handler'],
   [/javascript:/i, 'a javascript: link'],
   [/href\s*=\s*["']\s*(?:[a-z][a-z0-9+.-]*:)?\/\//i, 'a link to another site'],

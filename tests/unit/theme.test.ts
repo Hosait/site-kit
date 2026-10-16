@@ -83,6 +83,19 @@ test('checkIconFile: too large, the wrong type, or an SVG with script or outside
   ]) assert.ok(checkIconFile(Buffer.from(bad), 'svg').length > 0, bad)
 })
 
+// Bjørn's review of #21: a script in another namespace, and an encoded javascript:, got through.
+// The CSP on /brand/ (#22) stops both; this refuses them before they are copied there.
+test('checkIconFile: a namespaced script or foreignObject, and character references, are refused', () => {
+  for (const bad of [
+    '<svg xmlns="http://www.w3.org/2000/svg"><h:script xmlns:h="http://www.w3.org/1999/xhtml">alert(1)</h:script></svg>',
+    '<svg:svg xmlns:svg="http://www.w3.org/2000/svg"><svg:script>alert(1)</svg:script></svg:svg>',
+    '<svg xmlns="http://www.w3.org/2000/svg"><x:foreignObject xmlns:x="http://www.w3.org/2000/svg"/></svg>',
+    '<svg xmlns="http://www.w3.org/2000/svg"><a href="&#106;avascript:alert(1)"><circle r="4"/></a></svg>',
+    '<svg xmlns="http://www.w3.org/2000/svg"><a href="&#x6a;avascript:alert(1)"><circle r="4"/></a></svg>',
+  ]) assert.ok(checkIconFile(Buffer.from(bad), 'svg').length > 0, bad)
+  assert.deepEqual(checkIconFile(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8"><title>Fjordlys &amp; co</title><circle r="4"/></svg>'), 'svg'), [])
+})
+
 test('kit:theme-check checks the icon file that theme.json names', () => {
   const script = readFileSync('scripts/kit/theme-check.ts', 'utf8')
   assert.match(script, /checkIconFile/)
