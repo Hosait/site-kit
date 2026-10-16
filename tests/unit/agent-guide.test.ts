@@ -12,9 +12,21 @@ test('every pnpm command in the builder\'s guide is a real script', () => {
 })
 
 test('the guide uses only real site-builder commands and points at the shipped files', () => {
-  for (const m of guide.matchAll(/site-builder (\w+)/g)) if (m[1] !== 'install') assert.ok(['crawl', 'extract', 'theme', 'report'].includes(m[1]), m[1])
+  for (const m of guide.matchAll(/site-builder (\w+)/g)) if (m[1] !== 'install') assert.ok(['assess', 'crawl', 'extract', 'theme', 'report'].includes(m[1]), m[1])
   for (const f of ['seed/site-plan.json', 'schema/site-plan.schema.json', 'schema/blocks.schema.json', 'site/questions.json', 'site/config.ts', 'site/theme.json'])
     assert.ok(guide.includes(f), f)
+})
+
+test('step 0 checks that the site fits before anything is set up or read: red stops, yellow asks', () => {
+  const at = guide.indexOf('## 0.')
+  assert.ok(at !== -1 && at < guide.indexOf('## 1.') && at < guide.indexOf('site-builder crawl'))
+  const step0 = guide.slice(at, guide.indexOf('## 1.')).replace(/\s+/g, ' ')
+  assert.match(step0, /pnpm site-builder assess /)
+  assert.match(step0, /assess\.md/)
+  assert.match(step0, /\*\*red\*\*.*exits 3.*stop/)
+  assert.match(step0, /Do not offer to move part of the site/)
+  assert.match(step0, /\*\*yellow\*\*.*ask them to accept the scope and the storage/)
+  assert.match(step0, /\*\*green\*\*: go on to step 1/)
 })
 
 test('CLAUDE.md scopes the staff-only rules to the Hosait/site-kit repository itself', () => {
