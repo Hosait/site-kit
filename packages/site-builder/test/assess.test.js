@@ -5,7 +5,7 @@ import path from 'node:path'
 import { test } from 'node:test'
 import zlib from 'node:zlib'
 
-import { LIMITS, assess, classify, md, spread } from '../src/assess.js'
+import { LIMITS, assess, classify, markdown, md, spread } from '../src/assess.js'
 import { get as netGet } from '../src/net.js'
 import { serve } from './server.js'
 
@@ -324,4 +324,68 @@ test('no sitemap and a home page that links to nothing is not enough to decide',
     const r = await run(s)
     assert.deepEqual([r.class, codes(r)], ['yellow', ['not-enough-read']])
   } finally { await s.close() }
+})
+
+// --- Pages per language, with articles apart ------------------------------------------------
+const doc = (lang, title, body, head = '') => ({ body: `<!doctype html><html lang="${lang}"><head><title>${title}</title>${head}</head><body>${body}</body></html>` })
+/** A site from a map of path → route; the sitemap lists every path. */
+function siteOf(routes) {
+  return serve({
+    '/robots.txt': (req) => ({ headers: { 'content-type': 'text/plain' }, body: `User-agent: *\nDisallow:\nSitemap: http://${req.headers.host}/sitemap.xml\n` }),
+    '/sitemap.xml': (req) => xml(urlset(req.headers.host, Object.keys(routes))),
+    ...routes,
+  })
+}
+
+test('classify: more than scopeArticles articles is yellow', () => {
+  assert.equal(LIMITS.scopeArticles, 1000)
+  assert.equal(verdict({ articles: LIMITS.scopeArticles }).class, 'green')
+  assert.deepEqual(verdict({ articles: LIMITS.scopeArticles + 1 }).reasons.map((r) => r.code), ['articles'])
+})
+
+test('pages are counted per language: two languages of 150 pages each is green', async () => {
+  const alt = '<link rel="alternate" hreflang="nb" href="/"><link rel="alternate" hreflang="en" href="/en/">'
+  const routes = { '/': doc('nb', 'Hjem', `${NAV}<p>Hei</p>`, alt), '/en/': doc('en', 'Home', '<p>Hi</p>', alt) }
+  for (let i = 0; i < 150; i++) { routes[`/side-${i}`] = doc('nb', `Side ${i}`, '<p>x</p>'); routes[`/en/page-${i}`] = doc('en', `Page ${i}`, '<p>x</p>') }
+  const s = await siteOf(routes)
+  try {
+    const r = await run(s)
+    assert.deepEqual(r.estimates.pagesPerLanguage, { nb: 151, en: 151 })
+    assert.equal(r.class, 'green', JSON.stringify(r.reasons))
+    assert.match(markdown(r), /Pages: about 151 in the largest language \(nb 151, en 151\), and 0 articles/)
+  } finally { await s.close() }
+})
+
+test('country codes named by hreflang (/se/, /dk/) are language prefixes', async () => {
+  const alt = '<link rel="alternate" hreflang="nb" href="/no/"><link rel="alternate" hreflang="sv" href="/se/"><link rel="alternate" hreflang="da" href="/dk/">'
+  const routes = { '/': doc('nb', 'Hjem', `${NAV}<p>Hei</p>`, alt) }
+  for (const [p, lang] of [['no', 'nb'], ['se', 'sv'], ['dk', 'da']]) {
+    routes[`/${p}/`] = doc(lang, p, '<p>x</p>', alt)
+    for (let i = 0; i < 180; i++) routes[`/${p}/side-${i}`] = doc(lang, `${p} ${i}`, '<p>x</p>')
+  }
+  const s = await siteOf(routes)
+  try {
+    const r = await run(s)
+    assert.deepEqual(r.estimates.pagesPerLanguage, { nb: 182, sv: 181, da: 181 })
+    assert.equal(r.class, 'green', JSON.stringify(r.reasons))
+  } finally { await s.close() }
+})
+
+test('dated news and posts with article markup are articles, not pages', async () => {
+  const news = { '/': doc('nb', 'Hjem', `${NAV}<p>Hei</p>`) }
+  for (let i = 0; i < 900; i++) news[`/nyheter/2024-05-${i}-tittel`] = doc('nb', `N ${i}`, '<p>x</p>')
+  for (let i = 0; i < 30; i++) news[`/side-${i}`] = doc('nb', `S ${i}`, '<p>x</p>')
+  const post = '<meta property="og:type" content="article"><script type="application/ld+json">{"@type":"BlogPosting","headline":"X"}</script>'
+  const blog = { '/': doc('nb', 'Hjem', `${NAV}<p>Hei</p>`) }
+  for (let i = 0; i < 600; i++) blog[`/innlegg-nummer-${i}`] = doc('nb', `P ${i}`, '<p>x</p>', post)
+  for (let i = 0; i < 40; i++) blog[`/side-${i}`] = doc('nb', `S ${i}`, '<p>x</p>')
+  for (const [what, routes, check] of [['news', news, (r) => assert.equal(r.estimates.articles, 900)], ['blog', blog, (r) => assert.ok(r.estimates.articles >= 500, String(r.estimates.articles))]]) {
+    const s = await siteOf(routes)
+    try {
+      const r = await run(s)
+      check(r)
+      assert.ok(r.estimates.pagesPerLanguage.nb <= 200, `${what}: ${JSON.stringify(r.estimates.pagesPerLanguage)}`)
+      assert.equal(r.class, 'green', `${what}: ${JSON.stringify(r.reasons)}`)
+    } finally { await s.close() }
+  }
 })
