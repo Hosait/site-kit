@@ -52,11 +52,14 @@ In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-buil
   It writes `compare.md` and `compare.json`, and exits 1 when an address fails. With Playwright
   installed it also takes old and new screenshots (the home page and the first page of each
   template, desktop and mobile) into `shots/`, side by side in `compare.html`. The browser runs
-  only with its sandbox (without one there are no screenshots), every request it makes must go to
-  a public address, service workers, downloads and WebSockets are blocked, and `--budget`
-  (10 minutes by default) bounds the screenshots; each page times out after 30 seconds. With
-  `--allow-private` only the new site may be a private address: the old site and its documents
-  are always fetched as public.
+  only with its sandbox (without one there are no screenshots). It reaches the network only
+  through a local filtering proxy (`src/filter-proxy.js`, loopback included), which resolves each
+  name when it connects and refuses private addresses and ports other than 80 and 443, so
+  redirects, frames, fetch and names that turn private (DNS rebinding) are caught too. Service
+  workers, downloads and WebSockets are blocked. `--budget` (10 minutes by default) bounds the
+  whole run: the address and document checks, then the screenshots; each page times out after
+  30 seconds. With `--allow-private` only the new site's own host and port may be a private
+  address: the old site and its documents are always fetched as public.
 
 Private, loopback and link-local addresses are refused, and this is checked when connecting.
 `--allow-private` is for your own local or intranet sites.

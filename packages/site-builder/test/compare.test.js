@@ -436,3 +436,28 @@ test('screenshots stop at the time budget with a note, and each page gets a time
     assert.ok(fake.calls.timeouts.length > 0 && fake.calls.timeouts.every((ms) => ms > 0 && ms <= 30_000), String(fake.calls.timeouts))
   } finally { await s.close() }
 })
+
+// Bjørn's review of #8, round 2: the route check sees only the first address of a redirect, and the
+// browser resolves names itself (DNS rebinding). Its only way out is the filtering proxy.
+test('the browser is started with the filtering proxy for every request, loopback included, and the proxy is closed after', async () => {
+  const s = await serve({ '/': { body: 'ok' } })
+  try {
+    const fake = fakeBrowser()
+    await compare(folder([['/', 200]]), { newBase: s.url, allowPrivate: true, launchBrowser: fake.launchBrowser, get: localOld })
+    const { proxy, chromiumSandbox } = fake.calls.launchOptions
+    assert.equal(chromiumSandbox, true)
+    assert.match(proxy.server, /^http:\/\/127\.0\.0\.1:\d+$/)
+    assert.equal(proxy.bypass, '<-loopback>')
+    await assert.rejects(fetch(proxy.server), 'the proxy is closed once the screenshots are done')
+  } finally { await s.close() }
+})
+
+test('the address and document checks stop at the time budget too, with a note', async () => {
+  const slow = (u, o) => new Promise((r) => setTimeout(r, 40)).then(() => localOld(u, o))
+  const s = await serve(Object.fromEntries(Array.from({ length: 40 }, (_, i) => [`/p${i}`, { body: 'ok' }])))
+  try {
+    const { results, notes } = await compare(folder(Array.from({ length: 40 }, (_, i) => [`/p${i}`, 200])), { newBase: s.url, allowPrivate: true, launchBrowser: noBrowser, get: slow, budgetMs: 100 })
+    assert.ok(results.length > 0 && results.length < 40, `checked ${results.length}`)
+    assert.ok(notes.some((n) => /time budget/.test(n) && /of 40 old addresses/.test(n)), notes.join('\n'))
+  } finally { await s.close() }
+})

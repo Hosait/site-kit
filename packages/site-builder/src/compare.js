@@ -5,6 +5,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
+import { startFilterProxy } from './filter-proxy.js'
 import { get as netGet, publicOnlyLookup } from './net.js'
 
 const MOVED = [301, 308]
@@ -33,7 +34,8 @@ async function defaultLaunch(options) {
  * Whether the browser may make a request: http(s) to a public address, or the page's own data:
  * and blob: content. A private address only for the new site's own origin, and only with
  * --allow-private; never for the old site or anything else (metadata services, the intranet).
- * The browser resolves names itself after this check, so it narrows, not seals, what it reaches.
+ * It sees only the first address of a redirect; the filtering proxy (src/filter-proxy.js) checks
+ * every connection the browser makes.
  * @param {string} url @param {{ newOrigin: string, allowPrivate: boolean, lookup?: typeof publicOnlyLookup, cache?: Map<string, Promise<boolean>> }} opts
  */
 export async function allowRequest(url, { newOrigin, allowPrivate, lookup = publicOnlyLookup, cache }) {
@@ -127,8 +129,8 @@ function shotPages(out, origin, notes) {
 }
 
 async function snap(browser, url, viewport, file, { guard, timeoutMs }) {
-  // Every request the page makes goes through the address check; no service workers, downloads
-  // or WebSockets.
+  // Every request the page makes goes through the address check, and every connection through the
+  // filtering proxy the browser was started with; no service workers, downloads or WebSockets.
   const context = await browser.newContext({ viewport, serviceWorkers: 'block', acceptDownloads: false })
   try {
     await context.route('**/*', async (route) => ((await guard(route.request().url())) ? route.continue() : route.abort('blockedbyclient')))
@@ -155,8 +157,13 @@ async function screenshots(out, { origin, allowPrivate, launchBrowser, log, note
   if (!allowPrivate) {
     try { await publicHost(origin) } catch (e) { return { shots: [], skipped: `Screenshots skipped: ${reason(e)}` } }
   }
+  // The browser's only way out: every request, loopback included, goes through the filtering
+  // proxy, which allows a private address only for the new site's own host and port.
+  const site = new URL(origin)
+  const proxy = await startFilterProxy({ allow: allowPrivate ? { host: site.hostname, port: site.port || (site.protocol === 'https:' ? '443' : '80') } : null })
   let browser
-  try { browser = await launchBrowser(LAUNCH) } catch (e) {
+  try { browser = await launchBrowser({ ...LAUNCH, proxy: { server: proxy.url, bypass: '<-loopback>' } }) } catch (e) {
+    await proxy.close()
     if (e.code === 'NO_PLAYWRIGHT') return { shots: [], skipped: NO_PLAYWRIGHT }
     return { shots: [], skipped: `Screenshots skipped: the browser could not start with its sandbox (${String(e.message).split('\n')[0]}). It is never run without one.` }
   }
@@ -183,7 +190,10 @@ async function screenshots(out, { origin, allowPrivate, launchBrowser, log, note
         pairs.push(pair)
       }
     }
-  } finally { await browser.close().catch(() => {}) }
+  } finally {
+    await browser.close().catch(() => {})
+    await proxy.close()
+  }
   return { shots: pairs.map(({ page, viewport, old, new: n }) => ({ page, viewport, old, new: n })), pairs }
 }
 
@@ -227,26 +237,34 @@ function markdown(newBase, results, documents, skipped, notes) {
 /**
  * @param {string} out a crawl folder (urls.json, inventory.json, optionally extract.json)
  * --allow-private applies to the new site only: the old site's addresses and documents are always
- * fetched as public. budgetMs bounds the screenshots (each page also times out at 30 s).
+ * fetched as public. budgetMs bounds the whole run: the address and document checks, then the
+ * screenshots (each page also times out at 30 s).
  * @param {{ newBase: string, allowPrivate?: boolean, log?: (s: string) => void, launchBrowser?: (options: object) => Promise<any>, get?: typeof netGet, budgetMs?: number, lookup?: typeof publicOnlyLookup }} opts
  */
 export async function compare(out, { newBase, allowPrivate = false, log = () => {}, launchBrowser = defaultLaunch, get = netGet, budgetMs = 10 * 60_000, lookup }) {
   const deadline = Date.now() + budgetMs
+  const over = () => Date.now() >= deadline
   const origin = new URL(newBase).origin
+  const notes = []
+  // After the budget no new check starts; the ones running finish.
   const checked = async (old) => {
+    if (over()) return null
     const r = await check(old, origin, allowPrivate, get)
     log(`${r.status} ${r.target}${r.final ? ` → ${r.final}` : ''}${r.note ? ` (${r.note})` : ''}`)
     return r
   }
-  const results = await pool(oldAddresses(out), checked)
+  const addresses = oldAddresses(out)
+  const results = (await pool(addresses, checked)).filter(Boolean)
+  if (results.length < addresses.length) notes.push(`Stopped at the time budget: ${results.length} of ${addresses.length} old addresses were checked. Run compare again with a larger --budget.`)
   // The crawl does not fetch documents, so each is first asked for on the old site (16 KB at most);
   // only one that answers 200 there is judged on the new site.
   const docs = oldDocuments(out)
-  const before = await pool(docs, (d) => get(d, { allowPrivate: false, maxBytes: 16 * 1024 }).then((r) => r.status, reason))
-  const documents = await pool(docs.filter((_, i) => before[i] === 200), checked)
-  const broken = docs.flatMap((d, i) => (before[i] === 200 ? [] : [`${pathOf(d)} (${before[i]})`]))
+  const before = await pool(docs, (d) => (over() ? null : get(d, { allowPrivate: false, maxBytes: 16 * 1024 }).then((r) => r.status, reason)))
+  const documents = (await pool(docs.filter((_, i) => before[i] === 200), checked)).filter(Boolean)
+  const asked = before.filter((b) => b !== null).length
+  if (asked < docs.length || documents.length < before.filter((b) => b === 200).length) notes.push(`Stopped at the time budget: ${documents.length} of ${docs.length} old documents were checked.`)
+  const broken = docs.flatMap((d, i) => (before[i] === 200 || before[i] === null ? [] : [`${pathOf(d)} (${before[i]})`]))
 
-  const notes = []
   if (broken.length) notes.push(`${broken.length} documents did not work on the old site either and were not checked: ${broken.slice(0, 10).join(', ')}${broken.length > 10 ? ', …' : ''}`)
   let shot
   // Screenshots never fail the command.
