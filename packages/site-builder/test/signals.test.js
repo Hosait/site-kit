@@ -79,6 +79,54 @@ test('a login form on the site is still a login area, also when it posts to wp-l
   assert.deepEqual(s.cmsLogin, [])
 })
 
+// Bjørn's review of #17: the CMS exception must not let real member areas through.
+test('member wording, registration, a redirect outside wp-admin or a member folder stay a login area', () => {
+  const login = (a) => pageSignals(html(a), 'https://x.no/', 'x.no')
+  for (const a of [
+    '<a href="/wp-login.php?redirect_to=%2Fmin-side%2F">Min side</a>',
+    '<a href="/wp-login.php?action=register">Registrer deg</a>',
+    '<a href="/wp-login.php?action=lostpassword">Glemt passord</a>',
+    '<a href="/user/login">Logg inn for medlemmer</a>',
+    '<a href="/admin">Mine sider</a>',
+    '<a href="/min-side/wp-login.php">Logg inn</a>',
+    '<a href="/wp-login.php?redirect_to=https%3A%2F%2Fx.no%2Fkurs%2F">Logg inn</a>',
+    '<a href="/wp-login.php">Min side</a>',
+    '<a href="/medlem/wp-admin/">Logg inn</a>',
+  ]) {
+    const s = login(a)
+    assert.equal(s.login.length, 1, a)
+    assert.deepEqual(s.cmsLogin, [], a)
+  }
+})
+
+test('the CMS\'s own login with plain admin wording, or none, stays a note', () => {
+  for (const a of [
+    '<a href="/wp-login.php">Logg inn</a>',
+    '<a href="/wp-login.php?redirect_to=https%3A%2F%2Fx.no%2Fwp-admin%2F">Log in</a>',
+    '<a href="/wp-admin/">Admin</a>',
+    '<a href="/blogg/wp-admin/">Meta</a>',
+    '<a href="/administrator"><img src="/lock.svg" alt=""></a>',
+    '<a href="/user/login">Login</a>',
+  ]) {
+    const s = pageSignals(html(a), 'https://x.no/', 'x.no')
+    assert.deepEqual(s.login, [], a)
+    assert.equal(s.cmsLogin.length, 1, a)
+  }
+})
+
+test('only WordPress\'s own password form for a protected post is noted; one that also asks for a name is a login', () => {
+  const page = (f) => pageSignals(html(f), 'https://x.no/', 'x.no')
+  const real = page('<form action="https://x.no/wp-login.php?action=postpass" class="post-password-form" method="post"><input name="post_password" type="password"><input type="submit"></form>')
+  assert.deepEqual([real.login, real.passwordPosts], [[], ['password-protected post']])
+  const withName = page('<form action="https://x.no/wp-login.php?action=postpass" class="post-password-form" method="post"><input name="log"><input name="post_password" type="password"></form>')
+  assert.ok(withName.login.length >= 1, JSON.stringify(withName.login))
+  assert.deepEqual(withName.passwordPosts, [])
+  const notWordPress = page('<form action="https://x.no/login?action=postpass" class="post-password-form" method="post"><input name="post_password" type="password"></form>')
+  assert.ok(notWordPress.login.length >= 1, JSON.stringify(notWordPress.login))
+  const noMarks = page('<form action="https://x.no/wp-login.php?action=postpass" method="post"><input name="pw" type="password"></form>')
+  assert.ok(noMarks.login.length >= 1, JSON.stringify(noMarks.login))
+})
+
 test('a page shows a login area by a password field, a login form or a login link on the same site', () => {
   const s = pageSignals(html('<form action="/kunde"><input type="Password" name="pw"></form><a href="/min-side">Min side</a><a href="/portal">Logg inn</a><a href="https://app.other.no/login">Logg inn</a>'), 'https://x.no/', 'x.no')
   assert.deepEqual(s.login, ['password field', 'link to /min-side', 'link to /portal'])

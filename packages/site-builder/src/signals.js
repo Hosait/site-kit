@@ -22,6 +22,11 @@ const CART_KEYS = new Set(['add-to-cart', 'add_to_cart', 'addtocart'])
 const CART_ACTIONS = new Set(['add', 'addtocart', 'add-to-cart', 'add_to_cart', 'cart_add', 'addtobasket'])
 const LOGIN_SEGMENTS = new Set(['login', 'log-in', 'logg-inn', 'logginn', 'signin', 'sign-in', 'min-side', 'minside', 'mine-sider', 'my-account', 'myaccount', 'account', 'konto', 'min-konto', 'wp-login'])
 const LOGIN_TEXTS = new Set(['logg inn', 'logg på', 'log in', 'login', 'sign in', 'min side', 'mine sider', 'my account', 'min konto', 'my page', 'logga in', 'log ind'])
+// A link to the CMS's own login is a note only with plain admin wording (or none, an icon).
+const ADMIN_TEXTS = new Set(['', 'logg inn', 'log in', 'login', 'admin', 'meta'])
+// Member wording is a login area wherever the link goes.
+const MEMBER_TEXT = /(^|[\s(])(min side|mine sider|my account|min konto|my page|medlem|member)/
+const MEMBER_SEGMENT = /^(min-?side|mine-sider|my-?account|account|konto|min-konto|profil|profile|medlem|member)/
 // Path segments of product pages in common shop systems (WooCommerce, Shopify, Norwegian shops).
 const PRODUCT_SEGMENTS = new Set(['product', 'products', 'produkt', 'produkter', 'produkte', 'vare', 'varer', 'shop', 'butikk', 'nettbutikk', 'item', 'items', 'catalog', 'catalogue', 'katalog', 'sku'])
 // Shop systems, by what they put in every page.
@@ -69,11 +74,36 @@ export const isLoginUrl = (u) => segments(u.pathname).some((s) => LOGIN_SEGMENTS
  */
 export function isCmsAdminUrl(u) {
   const s = segments(u.pathname)
-  return s.includes('wp-login') || s.includes('wp-admin') || ['admin', 'administrator', 'umbraco', 'ghost'].includes(s[0]) || (s[0] === 'user' && s[1] === 'login')
+  // Not under a member folder, not open registration or password reset, and a WordPress
+  // redirect only into wp-admin.
+  if (!s.length || s.some((x) => MEMBER_SEGMENT.test(x))) return false
+  const action = (u.searchParams.get('action') ?? '').toLowerCase()
+  if (action && action !== 'login') return false
+  const redirect = u.searchParams.get('redirect_to')
+  if (redirect !== null) {
+    let to = ''
+    try { to = new URL(redirect, u).pathname } catch { return false }
+    if (!/\/wp-admin(\/|$)/.test(to)) return false
+  }
+  const last = s[s.length - 1]
+  if (last === 'wp-login' || last === 'wp-admin' || s.indexOf('wp-admin') === 0 || s.indexOf('wp-admin') === 1) return true
+  return (['admin', 'administrator', 'umbraco', 'ghost'].includes(s[0]) && s.length <= 2) || (s[0] === 'user' && s[1] === 'login' && s.length === 2)
 }
 
-/** WordPress's form for a password-protected post. @param {URL} u */
-const isPostPassword = (u) => segments(u.pathname).includes('wp-login') && u.searchParams.get('action') === 'postpass'
+/**
+ * WordPress's own form for a password-protected post: it posts to wp-login.php?action=postpass,
+ * is marked as that form, and asks for nothing but the password. Anything else is a login.
+ */
+function isPostPasswordForm($, form, pageUrl) {
+  const n = normalize(String($(form).attr('action') ?? ''), pageUrl)
+  if (!n) return false
+  const u = new URL(n)
+  const s = segments(u.pathname)
+  if (s[s.length - 1] !== 'wp-login' || u.searchParams.get('action') !== 'postpass') return false
+  if (!$(form).hasClass('post-password-form') && !$(form).find('[name="post_password"]').length) return false
+  const other = $(form).find('input').toArray().some((i) => ['', 'text', 'email', 'tel'].includes(String($(i).attr('type') ?? '').trim().toLowerCase()))
+  return !other
+}
 
 /** True when a path has a segment that shop systems use for product pages. @param {string} pathname */
 export const isProductPath = (pathname) => segments(pathname).some((s) => PRODUCT_SEGMENTS.has(s))
@@ -174,8 +204,8 @@ export function pageSignals(html, url, host) {
 
   for (const el of $('input').toArray()) {
     if (String($(el).attr('type') ?? '').trim().toLowerCase() !== 'password') continue
-    const action = normalize(String($(el).closest('form').attr('action') ?? ''), url)
-    if (action && isPostPassword(new URL(action))) add(s.passwordPosts, 'password-protected post')
+    const form = $(el).closest('form')
+    if (form.length && isPostPasswordForm($, form[0], url)) add(s.passwordPosts, 'password-protected post')
     else { add(s.login, 'password field'); break }
   }
   for (const el of $('form').toArray()) {
@@ -184,7 +214,7 @@ export function pageSignals(html, url, host) {
     const u = new URL(n)
     if (sameSite(u.hostname, host)) {
       if (isCartUrl(u)) add(s.shop, `form to ${shortPath(u)}`)
-      else if (isLoginUrl(u) && !isPostPassword(u)) add(s.login, `form to ${shortPath(u)}`)
+      else if (isLoginUrl(u) && !isPostPasswordForm($, el, url)) add(s.login, `form to ${shortPath(u)}`)
     } else if (hostIn(u.hostname, PAYMENT)) add(s.payment, `form to ${u.hostname}`)
     else integration(hostIn(u.hostname, BOOKING) ? 'booking' : 'form', `form sent to ${u.hostname}`)
   }
@@ -214,9 +244,9 @@ export function pageSignals(html, url, host) {
     if (!sameSite(u.hostname, host)) continue
     if (IMAGE.test(u.pathname)) { s.images.add(n); continue }
     if (isCartUrl(u)) { add(s.shop, `link to ${shortPath(u)}`); continue }
-    if (isCmsAdminUrl(u)) { add(s.cmsLogin, `link to ${shortPath(u)}`); continue }
     const label = $(el).text().replace(/\s+/g, ' ').trim().toLowerCase()
-    if (isLoginUrl(u) || LOGIN_TEXTS.has(label)) { add(s.login, `link to ${shortPath(u)}`); continue }
+    if (!MEMBER_TEXT.test(label) && ADMIN_TEXTS.has(label) && isCmsAdminUrl(u)) { add(s.cmsLogin, `link to ${shortPath(u)}`); continue }
+    if (MEMBER_TEXT.test(label) || isLoginUrl(u) || LOGIN_TEXTS.has(label)) { add(s.login, `link to ${shortPath(u)}`); continue }
     if (!SKIP.test(u.pathname)) s.links.add(n)
   }
   for (const v of [$('html').attr('lang'), ...$('link[rel="alternate"][hreflang]').toArray().map((e) => $(e).attr('hreflang'))]) {

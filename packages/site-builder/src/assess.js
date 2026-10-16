@@ -41,6 +41,8 @@ export const LIMITS = Object.freeze({
   productPathShare: 0.3,
   /** Fewer pages read than this (or than the site has, if fewer): yellow, too little to decide. */
   minPagesRead: 3,
+  /** More password-protected pages than this among those read: yellow (their content cannot be read). */
+  scopePasswordPosts: 3,
   /** A home page with less visible text than this and no links may need JavaScript to show anything. */
   minHomeText: 200,
 })
@@ -101,7 +103,7 @@ export function spread(urls, n) {
  * The answer from what was found. Any red reason makes the site red; otherwise any yellow
  * reason makes it yellow; otherwise green. There is no "unknown": too little read is yellow.
  * `htmlPages` is the pages of the largest language, articles not counted.
- * @param {{ shop: {url: string, match: string}[], payment: {url: string, match: string}[], catalogue: {url: string, match: string}[], login: {url: string, match: string}[], integrations: {url: string, match: string}[], htmlPages: number, totalPages?: number, articles?: number, documents: number, mediaBytes: number | null, enough: boolean, enoughWhy?: string }} f
+ * @param {{ shop: {url: string, match: string}[], payment: {url: string, match: string}[], catalogue: {url: string, match: string}[], login: {url: string, match: string}[], integrations: {url: string, match: string}[], htmlPages: number, totalPages?: number, articles?: number, passwordPosts?: number, documents: number, mediaBytes: number | null, enough: boolean, enoughWhy?: string }} f
  */
 export function classify(f) {
   const reasons = []
@@ -117,6 +119,7 @@ export function classify(f) {
   if ((f.articles ?? 0) > LIMITS.declineArticles) reason('red', 'articles', `It has about ${f.articles} articles (news and posts), more than the ${LIMITS.declineArticles} Hosait Sites moves.`)
   if (f.documents > LIMITS.scopeDocuments) reason('yellow', 'documents', `It has about ${f.documents} documents (PDF and Office files), more than the ${LIMITS.scopeDocuments} a standard move covers.`)
   if (f.mediaBytes !== null && f.mediaBytes > LIMITS.scopeMediaBytes) reason('yellow', 'storage', `Its documents and images take about ${gigabytes(f.mediaBytes)}, more than the ${gigabytes(LIMITS.scopeMediaBytes)} of storage a standard move covers.`)
+  if ((f.passwordPosts ?? 0) > LIMITS.scopePasswordPosts) reason('yellow', 'protected-posts', `${f.passwordPosts} of the pages read are password-protected: their content cannot be read, so the customer has to give it, or they are left out.`)
   if (f.integrations.length) reason('yellow', 'integrations', 'It has built-in services the new site cannot run itself; they become links or embeds, or are left out.', f.integrations)
   if (!f.enough) reason('yellow', 'not-enough-read', `Too little of the site could be read to decide${f.enoughWhy ? ` (${f.enoughWhy})` : ''}. The check has to run again (with a longer time budget, or at the address a note names) before anything is built.`)
   const cls = reasons.some((r) => r.class === 'red') ? 'red' : reasons.length ? 'yellow' : 'green'
@@ -275,7 +278,7 @@ export async function assess(start, opts) {
   const cmsLogin = read.find((p) => p.sig.cmsLogin.length)
   if (cmsLogin) notes.push(`It links to its own admin login (${cmsLogin.sig.cmsLogin[0]} on ${cmsLogin.url}). That is how the old site's editors get in, not a member area.`)
   const passwordPosts = read.filter((p) => p.sig.passwordPosts.length)
-  if (passwordPosts.length) notes.push(`${passwordPosts.length} of the pages read are password-protected posts (${passwordPosts[0].url}). Their text cannot be read: the customer gives it, or they are left out.`)
+  if (passwordPosts.length && passwordPosts.length <= LIMITS.scopePasswordPosts) notes.push(`${passwordPosts.length} of the pages read are password-protected posts (${passwordPosts[0].url}). Their text cannot be read: the customer gives it, or they are left out.`)
 
   // A catalogue: product markup on pages read, extrapolated per sitemap group, or product paths.
   const products = read.filter((p) => p.sig.product)
@@ -362,7 +365,7 @@ export async function assess(start, opts) {
 
   const { pagesPerLanguage, largestLanguagePages, articles } = countPages({ read, pool: sitemap.pages.size ? sitemap.pages : siteLinks, host, uncapped: sitemap.uncapped })
 
-  const verdict = classify({ shop, payment, catalogue, login, integrations: [...integrations.values()], htmlPages: largestLanguagePages, totalPages: Object.values(pagesPerLanguage).reduce((a, b) => a + b, 0), articles, documents: documents.count, mediaBytes, enough, enoughWhy })
+  const verdict = classify({ shop, payment, catalogue, login, integrations: [...integrations.values()], htmlPages: largestLanguagePages, totalPages: Object.values(pagesPerLanguage).reduce((a, b) => a + b, 0), articles, passwordPosts: passwordPosts.length, documents: documents.count, mediaBytes, enough, enoughWhy })
   const result = {
     version: VERSION,
     source: root.toString(),

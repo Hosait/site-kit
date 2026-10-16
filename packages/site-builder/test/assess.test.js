@@ -255,6 +255,10 @@ test('classify: an estimated media size over scopeMediaBytes is yellow', () => {
   assert.equal(verdict({ mediaBytes: LIMITS.scopeMediaBytes }).class, 'green')
   assert.equal(verdict({ mediaBytes: LIMITS.scopeMediaBytes + 1 }).class, 'yellow')
 })
+test('classify: more than scopePasswordPosts password-protected pages read is yellow', () => {
+  assert.equal(verdict({ passwordPosts: LIMITS.scopePasswordPosts }).class, 'green')
+  assert.deepEqual(verdict({ passwordPosts: LIMITS.scopePasswordPosts + 1 }).reasons.map((r) => [r.class, r.code]), [['yellow', 'protected-posts']])
+})
 test('classify: integrations are yellow, not red', () => assert.equal(verdict({ integrations: ev }).class, 'yellow'))
 test('classify: too little read is yellow with its reason', () => {
   const v = verdict({ enough: false, enoughWhy: 'the time budget ran out' })
