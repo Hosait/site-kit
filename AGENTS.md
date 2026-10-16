@@ -67,7 +67,8 @@ SVG graphics are a gap. Every file is checked by its first bytes, not its name. 
 `forms`: their fields, the button text, the message shown after sending, and `retention` (days,
 or `"keep"`) from the intake answer; left out, the site default in `site/config.ts` applies. A
 `formBlock` points at one with `{ "$form": "<ref>" }`. Submissions are read in the admin and
-deleted each night once older than the period. Add `redirects` for every old URL that moves, and
+deleted each night once older than the period; the privacy page says how long each form's
+submissions are kept, with the same periods. Add `redirects` for every old URL that moves, and
 `gaps` for anything no block matches (a form that must send e-mail or take payment is still a
 gap). Check it until it passes, then try it locally:
 

@@ -15,6 +15,9 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   ALTER TABLE "forms" ADD COLUMN "retention" "enum_forms_retention" DEFAULT 'default' NOT NULL;
   ALTER TABLE "forms" ADD COLUMN "retention_days" numeric;
   ALTER TABLE "payload_jobs" ADD COLUMN "meta" jsonb;`)
+  // Skjemaer som finnes fra før, beholder alle innsendinger til eieren endrer det (Bjørns beslutning);
+  // nye skjemaer får nettstedets standard fra kolonnens default.
+  await db.execute(sql`UPDATE "forms" SET "retention" = 'keep';`)
 }
 
 export async function down({ db, payload, req }: MigrateDownArgs): Promise<void> {

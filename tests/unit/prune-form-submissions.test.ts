@@ -65,11 +65,29 @@ test('a submission exactly at the cutoff is kept (review focus 2)', async () => 
   assert.deepEqual(f.deleted, [])
 })
 
-test('at most one batch per form per run, so a backlog clears over a few nights', async () => {
+// Bjørn's review of #10: one batch per form per night never catches up with a flood of spam.
+test('a large backlog is deleted in rounds of the batch size, in one run', async () => {
   const subs = Array.from({ length: 2505 }, (_, i) => ({ id: i + 1, form: 1, createdAt: daysAgo(100) }))
   const f = fake([{ id: 1, title: 'Kontakt', retention: 'default' }], subs)
-  assert.deepEqual(await pruneFormSubmissions(f.payload, { siteDefault: 90, now: NOW, batch: 1000 }), [{ form: 1, deleted: 1000 }])
-  assert.equal(f.deleted.length, 1000)
+  assert.deepEqual(await pruneFormSubmissions(f.payload, { siteDefault: 90, now: NOW, batch: 1000 }), [{ form: 1, deleted: 2505 }])
+  assert.equal(f.deleted.length, 2505)
+})
+
+test('the rounds stop at the time budget, and the rest waits for the next night', async () => {
+  const subs = Array.from({ length: 5000 }, (_, i) => ({ id: i + 1, form: i < 4000 ? 1 : 2, createdAt: daysAgo(100) }))
+  const f = fake([{ id: 1, title: 'Kontakt', retention: 'default' }, { id: 2, title: 'Jobb', retention: 'default' }], subs)
+  let t = 0
+  const clock = () => (t += 1000) // every look at the clock is one second later
+  const r = await pruneFormSubmissions(f.payload, { siteDefault: 90, now: NOW, batch: 1000, budgetMs: 3500, clock })
+  assert.ok(f.deleted.length >= 1000 && f.deleted.length < 4000, `deleted ${f.deleted.length}`)
+  assert.deepEqual(r.map((x) => x.form), [1])
+  assert.ok(f.logs.some((l) => /time budget/.test(l) && /next night/.test(l)), JSON.stringify(f.logs))
+})
+
+test('a round that deletes nothing ends that form, so refused submissions cannot loop', async () => {
+  const subs = [{ id: 11, form: 1, createdAt: daysAgo(100) }, { id: 12, form: 1, createdAt: daysAgo(100) }]
+  const f = fake([{ id: 1, title: 'Kontakt', retention: 'default' }], subs, undefined, [11, 12])
+  assert.deepEqual(await pruneFormSubmissions(f.payload, { siteDefault: 90, now: NOW, batch: 2 }), [{ form: 1, deleted: 0 }])
 })
 
 test('one failing form is logged and the others still run', async () => {

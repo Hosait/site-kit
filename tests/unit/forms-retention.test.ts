@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readdirSync, readFileSync } from 'node:fs'
 import { test } from 'node:test'
 
 import { retentionDaysFor, retentionFromPlan } from '../../src/lib/forms/retention'
@@ -26,4 +27,19 @@ test('a number of days beyond 3650 (written outside the admin) follows the site 
   assert.equal(retentionDaysFor({ retention: 'days', retentionDays: 3651 }, 90), 90)
   assert.equal(retentionDaysFor({ retention: 'days', retentionDays: 1e9 }, 90), 90)
   assert.equal(retentionDaysFor({ retention: 'days', retentionDays: 3650 }, 90), 3650)
+})
+
+// Bjørn's decision: a site that already has forms keeps every submission until the owner changes
+// the setting, so nothing is deleted the first night after the update. New forms follow the site.
+test('the migration gives forms that already exist "keep"; the column default stays the site default', () => {
+  const file = readdirSync('src/migrations').find((f) => /_forms_retention\.ts$/.test(f))
+  assert.ok(file)
+  const src = readFileSync(`src/migrations/${file}`, 'utf8')
+  const up = src.slice(src.indexOf('export async function up'), src.indexOf('export async function down'))
+  assert.match(up, /ADD COLUMN "retention" "enum_forms_retention" DEFAULT 'default' NOT NULL;[\s\S]*UPDATE "forms" SET "retention" = 'keep'/)
+})
+
+// Bjørn's review of #10: the period was only in the intake question, not where visitors read it.
+test('AGENTS.md has the privacy page say how long each form\'s submissions are kept', () => {
+  assert.match(readFileSync('AGENTS.md', 'utf8'), /privacy page says how long each form's\s+submissions are kept/)
 })
