@@ -112,7 +112,7 @@ export function classify(f) {
   if (f.documents > LIMITS.scopeDocuments) reason('yellow', 'documents', `It has about ${f.documents} documents (PDF and Office files), more than the ${LIMITS.scopeDocuments} a standard move covers.`)
   if (f.mediaBytes !== null && f.mediaBytes > LIMITS.scopeMediaBytes) reason('yellow', 'storage', `Its documents and images take about ${gigabytes(f.mediaBytes)}, more than the ${gigabytes(LIMITS.scopeMediaBytes)} of storage a standard move covers.`)
   if (f.integrations.length) reason('yellow', 'integrations', 'It has built-in services the new site cannot run itself; they become links or embeds, or are left out.', f.integrations)
-  if (!f.enough) reason('yellow', 'not-enough-read', `Too little of the site could be read to decide${f.enoughWhy ? ` (${f.enoughWhy})` : ''}. Check the site by hand before going on.`)
+  if (!f.enough) reason('yellow', 'not-enough-read', `Too little of the site could be read to decide${f.enoughWhy ? ` (${f.enoughWhy})` : ''}. The check has to run again (with a longer time budget, or at the address a note names) before anything is built.`)
   const cls = reasons.some((r) => r.class === 'red') ? 'red' : reasons.length ? 'yellow' : 'green'
   return { class: cls, reasons }
 }
@@ -403,12 +403,18 @@ const ANSWER = {
     '',
     'This is a simple content website of a size Hosait Sites moves. The next step reads the whole site and rebuilds it.',
   ],
+  unfinished: [
+    '## Answer: Not decided yet',
+    '',
+    'Too little of the site could be read to decide, so the check has to run again before anything is built:',
+  ],
 }
 
 /** assess.md: one page for the customer, in plain language. */
 export function markdown(r) {
   const host = new URL(r.source).hostname
-  const lines = [`# Can Hosait move ${md(host)}?`, '', `Checked on ${r.assessedAt.slice(0, 10)}.`, '', NOTICE, '', ...ANSWER[r.class], '']
+  const unfinished = r.class === 'yellow' && r.reasons.some((x) => x.code === 'not-enough-read')
+  const lines = [`# Can Hosait move ${md(host)}?`, '', `Checked on ${r.assessedAt.slice(0, 10)}.`, '', NOTICE, '', ...ANSWER[unfinished ? 'unfinished' : r.class], '']
   for (const reason of r.reasons) {
     lines.push(`- ${reason.text}`)
     for (const e of reason.evidence) lines.push(`  - ${md(e.match)}: ${md(e.url)}`)

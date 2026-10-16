@@ -19,9 +19,15 @@ In a few minutes it reads a sample of the site and writes `assess.md` (for the u
   does not move web shops, product catalogues, sites with a login or member area, or sites of
   more than 500 pages. Do not offer to move part of the site, and do not go on to step 1.
 - **yellow**: show the user `assess.md` and ask them to accept the scope and the storage it lists
-  (more pages or documents than a standard move, a lot of media, built-in services, or a site
-  that could not be read well enough). Go on only when they say yes.
+  (more pages, articles or documents than a standard move, a lot of media, or built-in
+  services). Go on only when they say yes, and run `crawl` with `--accepted-scope`.
+- **Not decided yet** (yellow, `not-enough-read`): do not ask the user to accept it. Run the
+  check again, with a larger `--budget` or at the address a note names. If it still cannot read
+  the site, stop and tell the user the site could not be checked.
 - **green**: go on to step 1.
+
+`crawl` starts only after a check of the same site that is not red, never after one that could
+not read enough, and after yellow only with `--accepted-scope`.
 
 ## 1. Set up
 
@@ -32,7 +38,7 @@ In a few minutes it reads a sample of the site and writes `assess.md` (for the u
 
 ## 2. Read the old site
 
-    pnpm site-builder crawl https://www.example.com
+    pnpm site-builder crawl https://www.example.com      # with --accepted-scope after a yes to yellow
     pnpm site-builder extract --out .site-builder/www.example.com
     pnpm site-builder theme   --out .site-builder/www.example.com
     pnpm site-builder report  --out .site-builder/www.example.com
