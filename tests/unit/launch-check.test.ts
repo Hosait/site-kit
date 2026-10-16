@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 
-import { axeErrors, launchCheck, pageFindings, sitemapPaths } from '../../src/lib/launch-check'
+import { axeErrors, axePages, launchCheck, pageFindings, sitemapPaths } from '../../src/lib/launch-check'
 
 // The launch check runs against the preview before the site moves to its own domain. Errors stop
 // the move; warnings go into the hand-off.
@@ -37,13 +37,13 @@ test('the sitemap gives the paths of the pages, whatever host it names', () => {
   assert.deepEqual(sitemapPaths(xml), ['/no', '/no/om-oss', '/en/about'])
 })
 
-type Route = { status?: number; body?: string; location?: string }
+type Route = { status?: number; body?: string; location?: string; headers?: Record<string, string> }
 function fakeFetch(routes: Record<string, Route>) {
   const seen: string[] = []
   const fetchImpl = async (url: string) => {
     seen.push(url)
     const r = routes[url] ?? { status: 404, body: 'not found' }
-    return new Response(r.body ?? '', { status: r.status ?? 200, headers: r.location ? { location: r.location } : {} })
+    return new Response(r.body ?? '', { status: r.status ?? 200, headers: { ...r.headers, ...(r.location ? { location: r.location } : {}) } })
   }
   return { fetchImpl, seen }
 }
@@ -90,6 +90,61 @@ test('a site without a sitemap fails at once, and the page and link caps are kep
   assert.ok(r.notes.some((n) => /first 5 of 30 pages/.test(n)))
 })
 
+// The M8 eval: after the move, the site must be open to search engines on its own domain. A site
+// still in staging there blocks them; on a preview address, blocking them is right.
+const OWN = 'https://www.fjordlys.no'
+const OWN_HOSTS = ['www.fjordlys.no', 'fjordlys.no']
+const live = (head: string) =>
+  `<!doctype html><html><head><title>Om oss | Fjordlys</title><meta name="description" content="Hvem vi er."><meta property="og:image" content="${OWN}/media/a.webp">${head}</head><body><main><p>Hei.</p></main></body></html>`
+const ownSitemap = `<urlset><url><loc>${OWN}/no</loc></url><url><loc>${OWN}/no/om-oss</loc></url></urlset>`
+
+test('on the own domain, a site that still blocks search engines fails: robots.txt, noindex and a canonical elsewhere', async () => {
+  const { fetchImpl } = fakeFetch({
+    [`${OWN}/sitemap.xml`]: { body: ownSitemap },
+    [`${OWN}/robots.txt`]: { body: 'User-agent: *\nDisallow: /\n' },
+    [`${OWN}/no`]: { body: live('<meta name="robots" content="noindex, nofollow"><link rel="canonical" href="https://fjordlys.hosait.com/no">') },
+    [`${OWN}/no/om-oss`]: { body: live(`<link rel="canonical" href="${OWN}/no/om-oss">`), headers: { 'x-robots-tag': 'noindex' } },
+  })
+  const r = await launchCheck(OWN, { fetch: fetchImpl, ownHosts: OWN_HOSTS })
+  assert.deepEqual(r.errors.map((e) => [e.page.slice(OWN.length), e.text]), [
+    ['/robots.txt', 'robots.txt blocks search engines on the site\'s own domain'],
+    ['/no', 'search engines are told not to index the page (noindex)'],
+    ['/no', 'the canonical address is on fjordlys.hosait.com, not on the site\'s own domain'],
+    ['/no/om-oss', 'search engines are told not to index the page (noindex)'],
+  ])
+})
+
+test('on the own domain, a site open to search engines passes, the bare domain counting as its own', async () => {
+  const { fetchImpl } = fakeFetch({
+    [`${OWN}/sitemap.xml`]: { body: ownSitemap },
+    [`${OWN}/robots.txt`]: { body: `User-agent: *\nDisallow: /admin\nDisallow: /api\n\nUser-agent: BadBot\nDisallow: /\n\nSitemap: ${OWN}/sitemap.xml\n` },
+    [`${OWN}/no`]: { body: live('<link rel="canonical" href="https://fjordlys.no/no">') },
+    [`${OWN}/no/om-oss`]: { body: live(`<meta name="robots" content="index, follow"><link rel="canonical" href="${OWN}/no/om-oss">`) },
+  })
+  const r = await launchCheck(OWN, { fetch: fetchImpl, ownHosts: OWN_HOSTS })
+  assert.deepEqual(r.errors, [])
+})
+
+test('on a preview address, blocking search engines is right: not checked, with a note to check the domain after the move', async () => {
+  const { fetchImpl, seen } = fakeFetch({
+    [`${BASE}/sitemap.xml`]: { body: sitemap(['/no']) },
+    [`${BASE}/robots.txt`]: { body: 'User-agent: *\nDisallow: /\n' },
+    [`${BASE}/no`]: { body: doc('<p>Hei.</p>', '<title>Fjordlys</title><meta name="robots" content="noindex"><link rel="canonical" href="https://fjordlys.hosait.com/no">') },
+  })
+  const r = await launchCheck(BASE, { fetch: fetchImpl, ownHosts: OWN_HOSTS })
+  assert.deepEqual(r.errors, [])
+  assert.ok(!seen.includes(`${BASE}/robots.txt`))
+  assert.ok(r.notes.some((n) => /not checked on a preview address/.test(n) && /after the move/.test(n)), JSON.stringify(r.notes))
+})
+
+test('qa:launch knows the site\'s own domains from site/config.ts, not localhost', () => {
+  const script = readFileSync('scripts/qa/launch-check.ts', 'utf8')
+  assert.match(script, /ownHosts/)
+  assert.match(script, /SITES/)
+  assert.match(script, /localhost/)
+  assert.match(readFileSync('AGENTS.md', 'utf8'), /pnpm qa:launch https:\/\/<domain>/)
+})
+
 test('the kit has a qa:launch command, and AGENTS.md runs it before the move to the own domain', () => {
   const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as { scripts: Record<string, string> }
   assert.equal(pkg.scripts['qa:launch'], 'tsx scripts/qa/launch-check.ts')
@@ -104,6 +159,42 @@ test('accessibility: serious and critical axe violations are errors, the rest is
   assert.deepEqual(axeErrors(`${BASE}/no`, [v('image-alt', 'critical', 2), v('color-contrast', 'serious', 1), v('region', 'moderate', 4), v('x', 'minor', 1)]), [
     { page: `${BASE}/no`, text: 'accessibility: image-alt, image-alt help (2 elements)' },
     { page: `${BASE}/no`, text: 'accessibility: color-contrast, color-contrast help (1 element)' },
+  ])
+})
+
+// Bjørn's review of #18: Next puts the page's data in inline scripts, and styles and templates are
+// not shown, so their text is not the page's.
+test('text in a script, style or template is not page text; text a visitor sees still is', () => {
+  const hidden = '<script>self.__next_f.push([1,"Lorem ipsum"])</script><style>.x::after{content:"Example text"}</style><template><p>Eksempeltekst</p></template>'
+  assert.deepEqual(pageFindings(doc(`<p>Fjordlys AS.</p>${hidden}`), `${BASE}/no`, BASE).errors, [])
+  assert.equal(pageFindings(doc(`<p>Lorem ipsum</p>${hidden}`), `${BASE}/no`, BASE).errors.length, 1)
+})
+
+test('a huge page is read only up to the cap, not loaded whole', async () => {
+  let pulled = 0
+  const mb = new TextEncoder().encode(`<p>${'a'.repeat(1024 * 1024 - 7)}</p>`)
+  const huge = new ReadableStream<Uint8Array>({
+    start: (c) => c.enqueue(new TextEncoder().encode('<!doctype html><html><head><title>T</title></head><body>')),
+    pull: (c) => (pulled++ < 64 ? c.enqueue(mb) : c.close()),
+  })
+  const fetchImpl = async (url: string) => (url.endsWith('/sitemap.xml') ? new Response(sitemap(['/no'])) : new Response(huge))
+  const r = await launchCheck(BASE, { fetch: fetchImpl })
+  assert.ok(pulled <= 8, `read ${pulled} MB of 64`)
+  assert.equal(r.pages, 1)
+  assert.ok(!r.errors.some((e) => /could not be read/.test(e.text)), JSON.stringify(r.errors))
+})
+
+test('qa:axe: a page that cannot be opened is an error, and the other pages are still checked', async () => {
+  const checked: string[] = []
+  const errors = await axePages([`${BASE}/no`, `${BASE}/no/treg`, `${BASE}/en`], async (url) => {
+    checked.push(url)
+    if (url.endsWith('/treg')) throw new Error('page.goto: Timeout 30000ms exceeded.\nCall log: ...')
+    return url.endsWith('/en') ? [{ id: 'image-alt', impact: 'critical', help: 'Images need alt', nodes: [{}] }] : []
+  })
+  assert.deepEqual(checked, [`${BASE}/no`, `${BASE}/no/treg`, `${BASE}/en`])
+  assert.deepEqual(errors, [
+    { page: `${BASE}/no/treg`, text: 'the page could not be checked for accessibility (page.goto: Timeout 30000ms exceeded.)' },
+    { page: `${BASE}/en`, text: 'accessibility: image-alt, Images need alt (1 element)' },
   ])
 })
 

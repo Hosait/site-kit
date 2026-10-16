@@ -130,6 +130,10 @@ preview):
    route locked. If the domain was verified after the last deploy, the user redeploys in Hosait.
    Until then every page is `noindex` and `robots.txt` blocks search engines. The variable
    `SITE_ORIGINS` (`staging` or `production`) overrides this; leave it unset.
+4. Once the domain answers, run `pnpm qa:launch https://<domain>`. On one of the site's own
+   `hosts` it also fails while search engines are shut out: `robots.txt` blocks them, a page is
+   `noindex`, or a canonical address is on another host. Then the site is still in staging: the
+   user redeploys in Hosait, and you run the check again.
 ---
 
 <!-- BEGIN:nextjs-agent-rules -->
