@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 
-import { launchCheck, pageFindings, sitemapPaths } from '../../src/lib/launch-check'
+import { axeErrors, launchCheck, pageFindings, sitemapPaths } from '../../src/lib/launch-check'
 
 // The launch check runs against the preview before the site moves to its own domain. Errors stop
 // the move; warnings go into the hand-off.
@@ -95,4 +95,21 @@ test('the kit has a qa:launch command, and AGENTS.md runs it before the move to 
   assert.equal(pkg.scripts['qa:launch'], 'tsx scripts/qa/launch-check.ts')
   const guide = readFileSync('AGENTS.md', 'utf8')
   assert.match(guide, /pnpm qa:launch <preview address>/)
+  assert.match(guide, /pnpm qa:axe <preview address>/)
+})
+
+// qa:axe used to print only, and only for the demo's own pages (om-oss, about).
+test('accessibility: serious and critical axe violations are errors, the rest is not reported', () => {
+  const v = (id: string, impact: string, n: number) => ({ id, impact, help: `${id} help`, nodes: Array.from({ length: n }, () => ({ target: ['img'] })) })
+  assert.deepEqual(axeErrors(`${BASE}/no`, [v('image-alt', 'critical', 2), v('color-contrast', 'serious', 1), v('region', 'moderate', 4), v('x', 'minor', 1)]), [
+    { page: `${BASE}/no`, text: 'accessibility: image-alt, image-alt help (2 elements)' },
+    { page: `${BASE}/no`, text: 'accessibility: color-contrast, color-contrast help (1 element)' },
+  ])
+})
+
+test('qa:axe checks the site\'s own pages from its sitemap, not the demo\'s', () => {
+  const script = readFileSync('scripts/qa/axe-report.ts', 'utf8')
+  assert.doesNotMatch(script, /om-oss|about/)
+  assert.match(script, /sitemapPaths/)
+  assert.match(script, /process\.exit\(/)
 })

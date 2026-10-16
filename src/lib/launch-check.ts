@@ -51,6 +51,15 @@ export function pageFindings(html: string, pageUrl: string, base: string): { err
   return { errors, warnings, links }
 }
 
+type AxeViolation = { id: string; impact?: string | null; help?: string; nodes: unknown[] }
+
+/** qa:axe: the serious and critical violations on one page are errors; the rest is left out. */
+export function axeErrors(page: string, violations: AxeViolation[]): Finding[] {
+  return violations
+    .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+    .map((v) => ({ page, text: `accessibility: ${v.id}, ${v.help ?? ''} (${v.nodes.length} element${v.nodes.length === 1 ? '' : 's'})` }))
+}
+
 /** The paths (with any query) of the pages a sitemap lists, whatever host it names. */
 export function sitemapPaths(xml: string): string[] {
   const out: string[] = []
