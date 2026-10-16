@@ -335,6 +335,19 @@ test('no sitemap and a home page that links to nothing is not enough to decide',
   } finally { await s.close() }
 })
 
+// Bjørn's review of #13: a JavaScript app whose server HTML is only a cookie banner passed as a
+// one-page site. The text counted is the page's main content, not a cookie or consent banner.
+test('a JavaScript app with only a cookie banner in its HTML is not enough to decide', async () => {
+  const banner = '<div id="cookie-banner" class="cookie-consent"><p>' + 'Vi bruker informasjonskapsler for å gi deg en bedre opplevelse. '.repeat(6) + '</p><button>OK</button></div>'
+  for (const body of [`<div id="root"></div>${banner}<script src="/app.js"></script>`, `<main><div id="root"></div></main>${banner}`]) {
+    const s = await serve({ '/': page('App', body) })
+    try {
+      const r = await run(s)
+      assert.deepEqual([r.class, codes(r)], ['yellow', ['not-enough-read']], body.slice(0, 40))
+    } finally { await s.close() }
+  }
+})
+
 // --- Pages per language, with articles apart ------------------------------------------------
 const doc = (lang, title, body, head = '') => ({ body: `<!doctype html><html lang="${lang}"><head><title>${title}</title>${head}</head><body>${body}</body></html>` })
 /** A site from a map of path → route; the sitemap lists every path. */
@@ -346,9 +359,17 @@ function siteOf(routes) {
   })
 }
 
+// Bjørn's review of #13: 499 pages and 499 articles was green. Together they are the move's size.
+test('classify: more than scopeContent pages and articles together is yellow', () => {
+  assert.equal(LIMITS.scopeContent, 500)
+  assert.equal(verdict({ htmlPages: 150, articles: 350 }).class, 'green', '500 together is still green')
+  assert.deepEqual(verdict({ htmlPages: 199, articles: 302 }).reasons.map((r) => [r.class, r.code]), [['yellow', 'content']])
+  assert.deepEqual(verdict({ htmlPages: 499, articles: 499 }).reasons.map((r) => [r.class, r.code]), [['yellow', 'pages'], ['yellow', 'content']])
+})
+
 test('classify: more than declineArticles articles is red', () => {
   assert.equal(LIMITS.declineArticles, 500)
-  assert.equal(verdict({ articles: LIMITS.declineArticles }).class, 'green')
+  assert.equal(verdict({ htmlPages: 0, articles: LIMITS.declineArticles }).class, 'green')
   assert.deepEqual([verdict({ articles: LIMITS.declineArticles + 1 }).class, verdict({ articles: LIMITS.declineArticles + 1 }).reasons.map((r) => r.code)], ['red', ['articles']])
 })
 

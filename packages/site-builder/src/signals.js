@@ -219,9 +219,10 @@ export function pageSignals(html, url, host) {
   const refresh = /url[ \t]*=[ \t]*['"]?([^'"]+)/i.exec(String($('meta[http-equiv="refresh" i]').first().attr('content') ?? '').slice(0, 2048))
   const target = refresh ? refresh[1].trim() : $('frameset frame[src]').first().attr('src')
   if (target) s.forward = normalize(String(target).slice(0, 2048), url)
-  // How much a visitor can read without JavaScript (scripts and styles left out).
-  const body = $('body').clone()
-  body.find('script, style, noscript, template').remove()
-  s.textLength = body.text().replace(/\s+/g, ' ').trim().length
+  // How much a visitor can read without JavaScript: the main content, or the body without one,
+  // leaving out scripts, styles and cookie or consent banners.
+  const content = ($('main').length ? $('main') : $('body')).first().clone()
+  content.find('script, style, noscript, template, [id*="cookie" i], [class*="cookie" i], [id*="consent" i], [class*="consent" i]').remove()
+  s.textLength = content.text().replace(/\s+/g, ' ').trim().length
   return s
 }
