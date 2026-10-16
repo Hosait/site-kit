@@ -101,9 +101,12 @@ When the site moves to its own domain:
    and push the change.
 2. In Hosait, the user adds the domain under Settings → Domains and follows the DNS steps there.
    Each extra name (the bare domain next to `www.`, an old domain) gets "Serve the site here".
-3. The user sets the variable `SITE_ORIGINS` to `production` under the project's Variables in
-   Hosait (the plugin's sign-in cannot change variables) and redeploys. Until then every page is
-   `noindex`, `robots.txt` blocks search engines, and the sitemap uses the hosait.com address.
+3. Nothing to set. Once Hosait has verified the domain, the next deploy or restart serves it as
+   the project's address (`HOSAIT_URL`), and because it is one of the `hosts` the site switches
+   to production by itself: indexing on, canonical URLs and the sitemap on the domain, the seed
+   route locked. If the domain was verified after the last deploy, the user redeploys in Hosait.
+   Until then every page is `noindex` and `robots.txt` blocks search engines. The variable
+   `SITE_ORIGINS` (`staging` or `production`) overrides this; leave it unset.
 ---
 
 <!-- BEGIN:nextjs-agent-rules -->
