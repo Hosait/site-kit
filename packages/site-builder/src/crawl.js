@@ -87,11 +87,12 @@ export async function readRobots(getFollowing, root) {
  * Reads the sitemaps: robots.txt's Sitemap lines, then the usual names, and the indexes they
  * lead to. Only sitemaps on the same site are read, each file once and at most MAX_SITEMAPS,
  * and each parsed document is let go before the next one is read. `onUrls` gets each sitemap's
- * page addresses and how many image entries it lists. Returns how many sitemaps were tried.
+ * page addresses and how many image entries it lists. Returns how many sitemaps were read.
  * @param {{ onUrls: (locs: string[], images: number, from: string) => void, stop?: () => boolean }} opts
  */
 export async function readSitemaps(getFollowing, root, robots, { onUrls, stop = () => false }) {
   const seen = new Set()
+  let count = 0
   async function read(url) {
     let u
     try { u = new URL(url) } catch { return }
@@ -110,11 +111,12 @@ export async function readSitemaps(getFollowing, root, robots, { onUrls, stop = 
       locs = $('url > loc').toArray().map((e) => $(e).text().trim())
       images = $('image\\:loc').length
     } catch { return }
+    count++
     onUrls(locs, images, url)
     for (const s of subs) await read(s)
   }
   for (const s of [...robots.sitemaps, ...SITEMAP_PATHS.map((p) => new URL(p, root).toString())]) await read(s)
-  return seen.size
+  return count
 }
 
 /**
