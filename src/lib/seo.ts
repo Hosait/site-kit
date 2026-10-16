@@ -61,7 +61,8 @@ export function buildMetadata({
       ...('publishedAt' in doc && doc.publishedAt ? { publishedTime: doc.publishedAt } : {}),
     },
     twitter: { card: 'summary_large_image' },
-    robots: meta.noindex ? { index: false, follow: true } : undefined,
+    // Bare når siden selv er noindex: også en tom robots-nøkkel ville overstyrt layoutens noindex på staging.
+    ...(meta.noindex ? { robots: { index: false, follow: true } } : {}),
   }
 }
 
