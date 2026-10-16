@@ -17,7 +17,62 @@ const imageUrl = (m: unknown, origin: string): string | undefined => {
   return url.startsWith('http') ? url : origin + url
 }
 
-/** Tittel, beskrivelse, canonical, hreflang og Open Graph for en side eller artikkel. */
+/** Brødteksten i et Lexical-tre, gått gjennom uten rekursjon, til minst `max` tegn er samlet. */
+function lexicalText(rich: unknown, max: number): string {
+  const root = (rich as { root?: unknown } | null)?.root
+  const stack: unknown[] = root ? [root] : []
+  const parts: string[] = []
+  let length = 0
+  while (stack.length && length < max) {
+    const node = stack.pop() as { type?: unknown; text?: unknown; children?: unknown } | null
+    // Overskrifter gjentar tittelen; beskrivelsen er brødteksten.
+    if (!node || typeof node !== 'object' || node.type === 'heading') continue
+    if (typeof node.text === 'string') {
+      parts.push(node.text)
+      length += node.text.length
+    }
+    if (Array.isArray(node.children)) {
+      // A space after each block (paragraph, heading, list item), none between text runs in it.
+      stack.push({ text: ' ' })
+      for (let i = node.children.length - 1; i >= 0; i--) stack.push(node.children[i])
+    }
+  }
+  return parts.join('').replace(/\s+/g, ' ').trim()
+}
+
+/** Kort beskrivelse: hele ord, høyst rundt 155 tegn. */
+function clip(text: string, max = 155): string | undefined {
+  const t = text.trim()
+  if (!t) return undefined
+  if (t.length <= max) return t
+  const cut = t.slice(0, max)
+  return `${cut.slice(0, Math.max(cut.lastIndexOf(' '), 1)).replace(/[\s,.;:–-]+$/, '')}…`
+}
+
+type Block = { blockType?: string; text?: string | null; richText?: unknown; media?: unknown; image?: unknown }
+
+/** Det første en besøkende leser på en side: heltens tekst, ellers den første tekstblokken. */
+function pageLead(layout: Block[]): string | undefined {
+  const hero = layout.find((b) => b.blockType === 'hero' && b.text?.trim())
+  if (hero) return clip(String(hero.text))
+  const rich = layout.find((b) => (b.blockType === 'content' || b.blockType === 'textImage') && b.richText)
+  return rich ? clip(lexicalText(rich.richText, 400)) : undefined
+}
+
+/** Det første bildet en besøkende ser: heltens, ellers den første bildeblokken. */
+function pageImage(layout: Block[], origin: string): string | undefined {
+  for (const b of layout) {
+    const m = b.blockType === 'hero' ? b.media : b.blockType === 'fullImage' || b.blockType === 'textImage' ? b.image : undefined
+    const url = imageUrl(m, origin)
+    if (url) return url
+  }
+  return undefined
+}
+
+/**
+ * Tittel, beskrivelse, canonical, hreflang og Open Graph for en side eller artikkel. En side uten
+ * egen SEO-beskrivelse eller delingsbilde får sin første tekst og sitt første bilde.
+ */
 const LOGO_SRC = validateTheme(themeJson).logo.src
 
 export function buildMetadata({
@@ -39,8 +94,9 @@ export function buildMetadata({
   // SEO-pluginen legger på « | Nettsted»; layouten gjør det også, så vi bruker absolute.
   const rawTitle = meta.title || doc.title
   const title = isHome ? rawTitle : rawTitle.includes(' | ') ? rawTitle : `${rawTitle} | ${SITES[site].name}`
-  const description = meta.description || ('lead' in doc ? (doc.lead ?? undefined) : undefined)
-  const ogImage = imageUrl(meta.image, origin) || ('heroImage' in doc ? imageUrl(doc.heroImage, origin) : undefined)
+  const layout = 'layout' in doc && Array.isArray(doc.layout) ? (doc.layout as Block[]) : []
+  const description = meta.description || ('lead' in doc ? (doc.lead ?? undefined) : pageLead(layout))
+  const ogImage = imageUrl(meta.image, origin) || ('heroImage' in doc ? imageUrl(doc.heroImage, origin) : pageImage(layout, origin))
 
   const languages: Record<string, string> = {}
   for (const [l, p] of Object.entries(alternates)) languages[HREFLANG[l as Locale]] = origin + p
