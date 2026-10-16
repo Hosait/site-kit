@@ -22,6 +22,8 @@ export function pageFindings(html: string, pageUrl: string, base: string): { err
   const { document } = new JSDOM(html, { url: pageUrl }).window
   const errors: string[] = []
   const warnings: string[] = []
+  // Next puts the page's data in inline scripts; that, styles and templates are not what a visitor reads.
+  for (const el of document.querySelectorAll('body script, body style, body template')) el.remove()
   const text = document.body?.textContent ?? ''
   for (const re of PLACEHOLDERS) {
     const m = re.exec(text)
@@ -60,6 +62,20 @@ export function axeErrors(page: string, violations: AxeViolation[]): Finding[] {
     .map((v) => ({ page, text: `accessibility: ${v.id}, ${v.help ?? ''} (${v.nodes.length} element${v.nodes.length === 1 ? '' : 's'})` }))
 }
 
+/** qa:axe over the pages in turn: one that cannot be opened or checked is an error, and the rest are still checked. */
+export async function axePages(urls: string[], analyse: (url: string) => Promise<AxeViolation[]>): Promise<Finding[]> {
+  const errors: Finding[] = []
+  for (const url of urls) {
+    try {
+      errors.push(...axeErrors(url, await analyse(url)))
+    } catch (e) {
+      const why = (e instanceof Error ? e.message : String(e)).split('\n')[0]
+      errors.push({ page: url, text: `the page could not be checked for accessibility (${why})` })
+    }
+  }
+  return errors
+}
+
 /** The paths (with any query) of the pages a sitemap lists, whatever host it names. */
 export function sitemapPaths(xml: string): string[] {
   const out: string[] = []
@@ -75,9 +91,24 @@ export function sitemapPaths(xml: string): string[] {
   return out
 }
 
+/** The body as text, read only up to MAX_BODY bytes; the rest is not downloaded. */
 async function body(res: Response): Promise<string> {
-  const t = await res.text()
-  return t.length > MAX_BODY ? t.slice(0, MAX_BODY) : t
+  if (!res.body) return ''
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let text = ''
+  let bytes = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) return text + decoder.decode()
+    const room = MAX_BODY - bytes
+    if (value.byteLength >= room) {
+      await reader.cancel()
+      return text + decoder.decode(value.subarray(0, room))
+    }
+    bytes += value.byteLength
+    text += decoder.decode(value, { stream: true })
+  }
 }
 
 /** Status after following up to three redirects on the same site; another site counts as fine. */

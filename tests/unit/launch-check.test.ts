@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 
-import { axeErrors, launchCheck, pageFindings, sitemapPaths } from '../../src/lib/launch-check'
+import { axeErrors, axePages, launchCheck, pageFindings, sitemapPaths } from '../../src/lib/launch-check'
 
 // The launch check runs against the preview before the site moves to its own domain. Errors stop
 // the move; warnings go into the hand-off.
@@ -104,6 +104,42 @@ test('accessibility: serious and critical axe violations are errors, the rest is
   assert.deepEqual(axeErrors(`${BASE}/no`, [v('image-alt', 'critical', 2), v('color-contrast', 'serious', 1), v('region', 'moderate', 4), v('x', 'minor', 1)]), [
     { page: `${BASE}/no`, text: 'accessibility: image-alt, image-alt help (2 elements)' },
     { page: `${BASE}/no`, text: 'accessibility: color-contrast, color-contrast help (1 element)' },
+  ])
+})
+
+// Bjørn's review of #18: Next puts the page's data in inline scripts, and styles and templates are
+// not shown, so their text is not the page's.
+test('text in a script, style or template is not page text; text a visitor sees still is', () => {
+  const hidden = '<script>self.__next_f.push([1,"Lorem ipsum"])</script><style>.x::after{content:"Example text"}</style><template><p>Eksempeltekst</p></template>'
+  assert.deepEqual(pageFindings(doc(`<p>Fjordlys AS.</p>${hidden}`), `${BASE}/no`, BASE).errors, [])
+  assert.equal(pageFindings(doc(`<p>Lorem ipsum</p>${hidden}`), `${BASE}/no`, BASE).errors.length, 1)
+})
+
+test('a huge page is read only up to the cap, not loaded whole', async () => {
+  let pulled = 0
+  const mb = new TextEncoder().encode(`<p>${'a'.repeat(1024 * 1024 - 7)}</p>`)
+  const huge = new ReadableStream<Uint8Array>({
+    start: (c) => c.enqueue(new TextEncoder().encode('<!doctype html><html><head><title>T</title></head><body>')),
+    pull: (c) => (pulled++ < 64 ? c.enqueue(mb) : c.close()),
+  })
+  const fetchImpl = async (url: string) => (url.endsWith('/sitemap.xml') ? new Response(sitemap(['/no'])) : new Response(huge))
+  const r = await launchCheck(BASE, { fetch: fetchImpl })
+  assert.ok(pulled <= 8, `read ${pulled} MB of 64`)
+  assert.equal(r.pages, 1)
+  assert.ok(!r.errors.some((e) => /could not be read/.test(e.text)), JSON.stringify(r.errors))
+})
+
+test('qa:axe: a page that cannot be opened is an error, and the other pages are still checked', async () => {
+  const checked: string[] = []
+  const errors = await axePages([`${BASE}/no`, `${BASE}/no/treg`, `${BASE}/en`], async (url) => {
+    checked.push(url)
+    if (url.endsWith('/treg')) throw new Error('page.goto: Timeout 30000ms exceeded.\nCall log: ...')
+    return url.endsWith('/en') ? [{ id: 'image-alt', impact: 'critical', help: 'Images need alt', nodes: [{}] }] : []
+  })
+  assert.deepEqual(checked, [`${BASE}/no`, `${BASE}/no/treg`, `${BASE}/en`])
+  assert.deepEqual(errors, [
+    { page: `${BASE}/no/treg`, text: 'the page could not be checked for accessibility (page.goto: Timeout 30000ms exceeded.)' },
+    { page: `${BASE}/en`, text: 'accessibility: image-alt, Images need alt (1 element)' },
   ])
 })
 
