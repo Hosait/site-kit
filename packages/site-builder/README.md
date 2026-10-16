@@ -21,7 +21,9 @@ In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-buil
   - **red**, decline: a web shop (priced Product/Offer markup, cart, checkout or add-to-cart
     links and forms, robots.txt rules for cart actions, a shop system), a payment service, a
     product catalogue (Product markup on many pages, or product addresses in the sitemap), a
-    login or member area (password fields, login forms and links), or more than 500 pages.
+    login or member area (password fields, login forms and links), or more than 500 pages. A
+    link to the old CMS's own admin login (WordPress, Joomla, Drupal, Umbraco, Ghost) and a
+    WordPress password-protected post are notes, not a member area.
   - **yellow**, possible with the customer's OK on scope and storage: more than 200 pages, more
     than 100 documents, more than 2 GB of documents and images, built-in services (booking,
     feeds, embedded apps, forms sent elsewhere), or too little read to decide.

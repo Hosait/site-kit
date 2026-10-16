@@ -62,6 +62,19 @@ export function isCartUrl(u) {
 /** True when an address is a login, account or «min side» page. @param {URL} u */
 export const isLoginUrl = (u) => segments(u.pathname).some((s) => LOGIN_SEGMENTS.has(s))
 
+/**
+ * True when an address is the old site's own CMS admin login: WordPress (also in a subfolder),
+ * Joomla, Drupal, Umbraco, Ghost or a plain /admin. A link there is how the site's editors get
+ * in, not a member area. @param {URL} u
+ */
+export function isCmsAdminUrl(u) {
+  const s = segments(u.pathname)
+  return s.includes('wp-login') || s.includes('wp-admin') || ['admin', 'administrator', 'umbraco', 'ghost'].includes(s[0]) || (s[0] === 'user' && s[1] === 'login')
+}
+
+/** WordPress's form for a password-protected post. @param {URL} u */
+const isPostPassword = (u) => segments(u.pathname).includes('wp-login') && u.searchParams.get('action') === 'postpass'
+
 /** True when a path has a segment that shop systems use for product pages. @param {string} pathname */
 export const isProductPath = (pathname) => segments(pathname).some((s) => PRODUCT_SEGMENTS.has(s))
 
@@ -123,7 +136,7 @@ export function robotsCartRules(text) {
  */
 export function pageSignals(html, url, host) {
   const $ = load(html)
-  const s = { product: false, priced: false, shop: [], payment: [], login: [], integrations: [], documents: new Set(), images: new Set(), links: new Set(), languages: new Set() }
+  const s = { product: false, priced: false, shop: [], payment: [], login: [], cmsLogin: [], passwordPosts: [], integrations: [], documents: new Set(), images: new Set(), links: new Set(), languages: new Set() }
   const add = (list, item) => { if (list.length < MAX_MATCHES && !list.includes(item)) list.push(item) }
   const named = new Set()
   const integration = (kind, name) => { if (s.integrations.length < MAX_INTEGRATIONS && !named.has(name)) { named.add(name); s.integrations.push({ kind, name }) } }
@@ -143,7 +156,10 @@ export function pageSignals(html, url, host) {
   if ($('[name="add-to-cart"], [name="add_to_cart"], .add_to_cart_button, .single_add_to_cart_button').length) add(s.shop, 'add-to-cart button')
 
   for (const el of $('input').toArray()) {
-    if (String($(el).attr('type') ?? '').trim().toLowerCase() === 'password') { add(s.login, 'password field'); break }
+    if (String($(el).attr('type') ?? '').trim().toLowerCase() !== 'password') continue
+    const action = normalize(String($(el).closest('form').attr('action') ?? ''), url)
+    if (action && isPostPassword(new URL(action))) add(s.passwordPosts, 'password-protected post')
+    else { add(s.login, 'password field'); break }
   }
   for (const el of $('form').toArray()) {
     const n = normalize(String($(el).attr('action') ?? '') || url, url)
@@ -151,7 +167,7 @@ export function pageSignals(html, url, host) {
     const u = new URL(n)
     if (sameSite(u.hostname, host)) {
       if (isCartUrl(u)) add(s.shop, `form to ${shortPath(u)}`)
-      else if (isLoginUrl(u)) add(s.login, `form to ${shortPath(u)}`)
+      else if (isLoginUrl(u) && !isPostPassword(u)) add(s.login, `form to ${shortPath(u)}`)
     } else if (hostIn(u.hostname, PAYMENT)) add(s.payment, `form to ${u.hostname}`)
     else integration(hostIn(u.hostname, BOOKING) ? 'booking' : 'form', `form sent to ${u.hostname}`)
   }
@@ -181,6 +197,7 @@ export function pageSignals(html, url, host) {
     if (!sameSite(u.hostname, host)) continue
     if (IMAGE.test(u.pathname)) { s.images.add(n); continue }
     if (isCartUrl(u)) { add(s.shop, `link to ${shortPath(u)}`); continue }
+    if (isCmsAdminUrl(u)) { add(s.cmsLogin, `link to ${shortPath(u)}`); continue }
     const label = $(el).text().replace(/\s+/g, ' ').trim().toLowerCase()
     if (isLoginUrl(u) || LOGIN_TEXTS.has(label)) { add(s.login, `link to ${shortPath(u)}`); continue }
     if (!SKIP.test(u.pathname)) s.links.add(n)

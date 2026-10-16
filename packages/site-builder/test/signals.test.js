@@ -58,6 +58,27 @@ test('a page shows a shop by priced product markup, a shop system, add-to-cart b
   for (const m of ['product markup with a price', 'WooCommerce shop system', 'add-to-cart button', 'link to /handlekurv/', 'form to /?add-to-cart=5']) assert.ok(s.shop.includes(m), m)
 })
 
+// The old site's own CMS login (WordPress's Meta widget «Logg inn» → /wp-login.php, /wp-admin,
+// Joomla's /administrator, Drupal's /user/login, Umbraco, Ghost) is how its editors get in, not a
+// member area: it is noted, not counted as a login. Most Norwegian sites are WordPress.
+test('a link to the CMS\'s own admin login is noted, not counted as a login area', () => {
+  const s = pageSignals(html('<footer><a href="/wp-login.php">Logg inn</a> <a href="/blogg/wp-admin/">Admin</a> <a href="/administrator">Log in</a> <a href="/user/login">Logg inn</a> <a href="/umbraco">Logg inn</a></footer>'), 'https://x.no/', 'x.no')
+  assert.deepEqual(s.login, [])
+  assert.deepEqual(s.cmsLogin, ['link to /wp-login.php', 'link to /blogg/wp-admin/', 'link to /administrator', 'link to /user/login', 'link to /umbraco'])
+})
+
+test('a WordPress password-protected post is noted, not counted as a login area', () => {
+  const s = pageSignals(html('<form action="https://x.no/wp-login.php?action=postpass" class="post-password-form" method="post"><input name="post_password" type="password"><input type="submit"></form>'), 'https://x.no/', 'x.no')
+  assert.deepEqual(s.login, [])
+  assert.deepEqual(s.passwordPosts, ['password-protected post'])
+})
+
+test('a login form on the site is still a login area, also when it posts to wp-login.php', () => {
+  const s = pageSignals(html('<form action="/wp-login.php" method="post"><input name="log"><input type="password" name="pwd"></form><a href="/min-side">Logg inn</a>'), 'https://x.no/', 'x.no')
+  assert.deepEqual(s.login, ['password field', 'form to /wp-login.php', 'link to /min-side'])
+  assert.deepEqual(s.cmsLogin, [])
+})
+
 test('a page shows a login area by a password field, a login form or a login link on the same site', () => {
   const s = pageSignals(html('<form action="/kunde"><input type="Password" name="pw"></form><a href="/min-side">Min side</a><a href="/portal">Logg inn</a><a href="https://app.other.no/login">Logg inn</a>'), 'https://x.no/', 'x.no')
   assert.deepEqual(s.login, ['password field', 'link to /min-side', 'link to /portal'])

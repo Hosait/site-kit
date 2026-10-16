@@ -257,6 +257,10 @@ export async function assess(start, opts) {
     for (const i of p.sig.integrations) if (!integrations.has(i.name)) integrations.set(i.name, evidence(p.url, `${i.kind}: ${i.name}`))
     for (const name of p.services) if (!integrations.has(name)) integrations.set(name, evidence(p.url, `service: ${name}`))
   }
+  const cmsLogin = read.find((p) => p.sig.cmsLogin.length)
+  if (cmsLogin) notes.push(`It links to its own admin login (${cmsLogin.sig.cmsLogin[0]} on ${cmsLogin.url}). That is how the old site's editors get in, not a member area.`)
+  const passwordPosts = read.filter((p) => p.sig.passwordPosts.length)
+  if (passwordPosts.length) notes.push(`${passwordPosts.length} of the pages read are password-protected posts (${passwordPosts[0].url}). Their text cannot be read: the customer gives it, or they are left out.`)
 
   // A catalogue: product markup on pages read, extrapolated per sitemap group, or product paths.
   const products = read.filter((p) => p.sig.product)
