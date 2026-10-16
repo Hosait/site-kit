@@ -32,3 +32,11 @@ export const useFormStrings = () => useContext(FormStringsContext)
 export function RequiredText() {
   return <span className="sr-only">{useFormStrings().required}</span>
 }
+
+/**
+ * What the form says when sending fails: the limits' own message (413 too large, 429 too many,
+ * src/lib/forms/limits.ts, already in the visitor's language), otherwise the generic text.
+ */
+export function formErrorText(error: { status?: number; message: string }, generic: string): string {
+  return (error.status === 413 || error.status === 429) && error.message ? error.message : generic
+}
