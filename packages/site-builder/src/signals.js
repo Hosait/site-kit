@@ -85,28 +85,40 @@ const OFFER_TYPES = new Set(['offer', 'aggregateoffer'])
 const hasPrice = (o) => ['price', 'lowPrice', 'highPrice', 'priceSpecification'].some((k) => o[k] !== undefined && o[k] !== null && o[k] !== '')
 
 /**
- * Whether one JSON-LD script describes a product, and one with a price. An offer counts only
- * on its own or inside a product (an event's tickets are not a shop). Never throws.
+ * Whether one JSON-LD script describes a product, and one with a price. Only the items the page
+ * is about count: the top-level items, their @graph members and their mainEntity. A product
+ * named inside another item (an organisation's offer, a review's subject) does not, and an
+ * offer counts only on its own or as a main product's offers (an event's tickets are not a
+ * shop). Never throws.
  * @param {string} text
  */
 export function jsonLd(text) {
-  const found = { product: false, priced: false }
+  const { product, priced } = readJsonLd(text)
+  return { product, priced }
+}
+
+const ARTICLE_TYPES = new Set(['article', 'blogposting', 'newsarticle'])
+
+/** jsonLd, plus whether a main item is an article. */
+function readJsonLd(text) {
+  const found = { product: false, priced: false, article: false }
   if (text.length > MAX_JSONLD_BYTES) return found
   let data
   try { data = JSON.parse(text) } catch { return found }
-  const stack = [{ v: data, depth: 0, owner: null }]
+  const stack = [{ v: data, depth: 0 }]
   let nodes = 0
   while (stack.length && nodes++ < MAX_JSONLD_NODES) {
-    const { v, depth, owner } = stack.pop()
+    const { v, depth } = stack.pop()
     if (!v || typeof v !== 'object' || depth > MAX_JSONLD_DEPTH) continue
-    if (Array.isArray(v)) { for (const x of v) stack.push({ v: x, depth: depth + 1, owner }); continue }
+    if (Array.isArray(v)) { for (const x of v) stack.push({ v: x, depth: depth + 1 }); continue }
     const types = [].concat(v['@type'] ?? []).map(typeName)
-    const product = types.some((t) => PRODUCT_TYPES.has(t))
-    const offer = types.some((t) => OFFER_TYPES.has(t))
-    if (product) found.product = true
-    if ((owner === 'product' || (offer && owner === null)) && hasPrice(v)) found.priced = true
-    const next = product ? 'product' : types.length ? 'other' : owner
-    for (const x of Object.values(v)) if (x && typeof x === 'object') stack.push({ v: x, depth: depth + 1, owner: next })
+    if (types.some((t) => PRODUCT_TYPES.has(t))) {
+      found.product = true
+      if ([].concat(v.offers ?? []).some((o) => o && typeof o === 'object' && hasPrice(o))) found.priced = true
+    }
+    if (types.some((t) => OFFER_TYPES.has(t)) && hasPrice(v)) found.priced = true
+    if (types.some((t) => ARTICLE_TYPES.has(t))) found.article = true
+    for (const k of ['@graph', 'mainEntity']) if (v[k] && typeof v[k] === 'object') stack.push({ v: v[k], depth: depth + 1 })
   }
   return found
 }
@@ -136,17 +148,22 @@ export function robotsCartRules(text) {
  */
 export function pageSignals(html, url, host) {
   const $ = load(html)
-  const s = { product: false, priced: false, shop: [], payment: [], login: [], cmsLogin: [], passwordPosts: [], integrations: [], documents: new Set(), images: new Set(), links: new Set(), languages: new Set() }
+  const s = { product: false, priced: false, article: false, shop: [], payment: [], login: [], cmsLogin: [], passwordPosts: [], integrations: [], documents: new Set(), images: new Set(), links: new Set(), languages: new Set(), lang: language($('html').attr('lang')), alternates: [], forward: null }
   const add = (list, item) => { if (list.length < MAX_MATCHES && !list.includes(item)) list.push(item) }
   const named = new Set()
   const integration = (kind, name) => { if (s.integrations.length < MAX_INTEGRATIONS && !named.has(name)) { named.add(name); s.integrations.push({ kind, name }) } }
 
   for (const el of $('script').toArray().filter((e) => String($(e).attr('type') ?? '').trim().toLowerCase() === 'application/ld+json').slice(0, MAX_JSONLD_SCRIPTS)) {
-    const f = jsonLd($(el).text())
+    const f = readJsonLd($(el).text())
     s.product ||= f.product
     s.priced ||= f.priced
+    s.article ||= f.article
   }
+  if (String($('meta[property="og:type" i]').attr('content') ?? '').trim().toLowerCase() === 'article') s.article = true
+  // Microdata: only top-level items (not a property of another item) or the page's mainEntity.
   for (const el of $('[itemtype]').toArray()) {
+    const prop = $(el).attr('itemprop')
+    if (prop !== undefined && prop !== 'mainEntity') continue
     if (!PRODUCT_TYPES.has(typeName(String($(el).attr('itemtype')).trim()))) continue
     s.product = true
     if ($(el).find('[itemprop="price"], [itemprop="lowPrice"]').length) s.priced = true
@@ -206,9 +223,18 @@ export function pageSignals(html, url, host) {
     const l = language(v)
     if (l) s.languages.add(l.split('-')[0])
   }
+  for (const el of $('link[rel="alternate"][hreflang]').toArray().slice(0, MAX_LINKS)) {
+    const l = language($(el).attr('hreflang'))
+    const href = normalize(String($(el).attr('href') ?? ''), url)
+    if (l && href) s.alternates.push({ lang: l, href })
+  }
   for (const el of $('img').toArray()) {
     const n = normalize(String($(el).attr('src') || $(el).attr('data-src') || ''), url)
     if (n) s.images.add(n)
   }
+  // A page can forward without HTTP: a meta refresh, or a frameset around another address.
+  const refresh = /url[ \t]*=[ \t]*['"]?([^'"]+)/i.exec(String($('meta[http-equiv="refresh" i]').first().attr('content') ?? '').slice(0, 2048))
+  const target = refresh ? refresh[1].trim() : $('frameset frame[src]').first().attr('src')
+  if (target) s.forward = normalize(String(target).slice(0, 2048), url)
   return s
 }
