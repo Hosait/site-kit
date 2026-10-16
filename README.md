@@ -38,14 +38,18 @@ pnpm tsx scripts/dev-admin.ts # a local admin user; password saved in .env
 A site plan (`site-plan.json`, schema in `schema/site-plan.schema.json`) describes pages as blocks,
 articles, people, documents, media, menus and redirects. `examples/demo/` is a complete example.
 
+Images and PDFs sit in a folder next to the plan, or are public https URLs. Try a plan locally:
+
 ```bash
-pnpm kit:import examples/demo/site-plan.json   # into the local database (--reset to replace)
-pnpm kit:export-seed                           # → seed/ (content SQL, media files, media sources)
+pnpm kit:import seed/site-plan.json --reset   # into the local database
 ```
 
-On Hosait, `hosait.json` copies `seed/files` into the project's storage and loads the content on
-the first publish. The admin dashboard's seed panel does the same by hand. It never replaces
-content unless asked.
+To ship it, commit it as `seed/site-plan.json` with local files under `seed/`. On Hosait the
+first publish runs `seed.run` from `hosait.json`, which imports the plan into the empty database
+in the background (`/next/seed/status` shows progress). The admin dashboard's seed panel does the
+same by hand. It never replaces content unless asked (`?replace=1`). Older sites can still ship a
+SQL dump (`pnpm kit:export-seed` → `seed/content.sql.gz` and `seed/files/`, with
+`"files": "seed/files"` added under `seed` in `hosait.json`), which is used when there is no plan.
 
 ## Checks
 
@@ -54,7 +58,8 @@ pnpm test:unit          # unit tests
 pnpm kit:theme-check    # theme.json contrast
 pnpm kit:schema         # regenerate schema/blocks.schema.json after block changes
 pnpm test:e2e           # Playwright against a running site (BASE_URL for a deployed one)
-pnpm qa:axe <url>       # accessibility report
+pnpm qa:axe <url>       # serious accessibility errors on the site's own pages (exit 1)
+pnpm qa:launch <url>    # launch check: errors stop the move to the own domain
 ```
 
 ## Spending

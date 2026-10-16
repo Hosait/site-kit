@@ -1,0 +1,1114 @@
+{
+  "version": 1,
+  "source": {
+    "url": "https://www.example.com",
+    "cms": "demo"
+  },
+  "media": [
+    {
+      "ref": "hero",
+      "source": "media/hero.jpg",
+      "alt": {
+        "no": "Abstrakt nordlys over en fjord",
+        "en": "Abstract northern lights over a fjord"
+      }
+    },
+    {
+      "ref": "office",
+      "source": "media/office.jpg",
+      "alt": {
+        "no": "Lyst kontorlandskap",
+        "en": "Bright open-plan office"
+      }
+    },
+    {
+      "ref": "workshop",
+      "source": "media/workshop.jpg",
+      "alt": {
+        "no": "Arbeidsmøte rundt et bord",
+        "en": "Working session around a table"
+      }
+    },
+    {
+      "ref": "fjord",
+      "source": "media/fjord.jpg",
+      "alt": {
+        "no": "Fjordlandskap i blått",
+        "en": "Fjord landscape in blue"
+      }
+    },
+    {
+      "ref": "coast",
+      "source": "media/coast.jpg",
+      "alt": {
+        "no": "Kystlinje i morgenlys",
+        "en": "Coastline in morning light"
+      }
+    },
+    {
+      "ref": "kari",
+      "source": "media/portrait-kari.jpg",
+      "alt": {
+        "no": "Portrett av Kari Nordmann",
+        "en": "Portrait of Kari Nordmann"
+      }
+    },
+    {
+      "ref": "ola",
+      "source": "media/portrait-ola.jpg",
+      "alt": {
+        "no": "Portrett av Ola Nordmann",
+        "en": "Portrait of Ola Nordmann"
+      }
+    },
+    {
+      "ref": "news",
+      "source": "media/news.jpg",
+      "alt": {
+        "no": "Illustrasjon til nyhet",
+        "en": "News illustration"
+      }
+    }
+  ],
+  "people": [
+    {
+      "ref": "kari",
+      "name": "Kari Nordmann",
+      "role": {
+        "no": "Daglig leder",
+        "en": "Managing director"
+      },
+      "email": "kari@example.com",
+      "phone": "+47 000 00 001",
+      "image": "kari",
+      "bio": {
+        "no": "Kari leder rådgivningen og har 15 års erfaring.",
+        "en": "Kari leads our advisory work and has 15 years of experience."
+      }
+    },
+    {
+      "ref": "ola",
+      "name": "Ola Nordmann",
+      "role": {
+        "no": "Prosjektleder",
+        "en": "Project manager"
+      },
+      "email": "ola@example.com",
+      "phone": "+47 000 00 002",
+      "image": "ola",
+      "bio": {
+        "no": "Ola styrer prosjektene fra start til slutt.",
+        "en": "Ola runs our projects from start to finish."
+      }
+    }
+  ],
+  "documents": [
+    {
+      "ref": "guide",
+      "source": "media/brukerveiledning.pdf",
+      "title": {
+        "no": "Brukerveiledning",
+        "en": "User guide"
+      },
+      "docType": "manual",
+      "language": "no",
+      "description": {
+        "no": "Eksempeldokument.",
+        "en": "Example document."
+      }
+    }
+  ],
+  "pages": [
+    {
+      "ref": "home",
+      "title": {
+        "no": "Forside",
+        "en": "Home"
+      },
+      "layout": {
+        "no": [
+          {
+            "blockType": "hero",
+            "variant": "image",
+            "media": {
+              "$media": "hero"
+            },
+            "eyebrow": "Rådgivning",
+            "heading": "Vi hjelper virksomheter å lykkes digitalt",
+            "text": "Nordlys Demo er et eksempelnettsted for Hosait Site Kit.",
+            "links": [
+              {
+                "link": {
+                  "type": "reference",
+                  "reference": {
+                    "$pageLink": "services"
+                  },
+                  "label": "Våre tjenester",
+                  "appearance": "primary"
+                }
+              },
+              {
+                "link": {
+                  "type": "reference",
+                  "reference": {
+                    "$pageLink": "contact"
+                  },
+                  "label": "Kontakt oss"
+                }
+              }
+            ]
+          },
+          {
+            "blockType": "cards",
+            "heading": "Slik kan vi hjelpe",
+            "columns": "3",
+            "align": "center",
+            "items": [
+              {
+                "title": "Rådgivning",
+                "text": "Strategi og planer som holder.",
+                "image": {
+                  "$media": "workshop"
+                },
+                "link": {
+                  "type": "reference",
+                  "reference": {
+                    "$pageLink": "advice"
+                  },
+                  "label": "Les mer"
+                }
+              },
+              {
+                "title": "Prosjekter",
+                "text": "Vi leverer fra idé til drift.",
+                "image": {
+                  "$media": "office"
+                },
+                "link": {
+                  "type": "reference",
+                  "reference": {
+                    "$pageLink": "projects"
+                  },
+                  "label": "Les mer"
+                }
+              },
+              {
+                "title": "Om oss",
+                "text": "Et lite team med lang erfaring.",
+                "image": {
+                  "$media": "fjord"
+                },
+                "link": {
+                  "type": "reference",
+                  "reference": {
+                    "$pageLink": "about"
+                  },
+                  "label": "Les mer"
+                }
+              }
+            ]
+          },
+          {
+            "blockType": "articleFeed",
+            "heading": "Siste nytt",
+            "kind": "all",
+            "limit": 3
+          },
+          {
+            "blockType": "cta",
+            "heading": "Klar for en prat?",
+            "text": "Vi svarer innen én arbeidsdag.",
+            "links": [
+              {
+                "link": {
+                  "type": "reference",
+                  "reference": {
+                    "$pageLink": "contact"
+                  },
+                  "label": "Kontakt oss",
+                  "appearance": "primary"
+                }
+              }
+            ],
+            "background": "tint"
+          }
+        ],
+        "en": [
+          {
+            "blockType": "hero",
+            "variant": "image",
+            "media": {
+              "$media": "hero"
+            },
+            "eyebrow": "Advisory",
+            "heading": "We help businesses succeed online",
+            "text": "Nordlys Demo is an example website for Hosait Site Kit.",
+            "links": [
+              {
+                "link": {
+                  "type": "reference",
+                  "reference": {
+                    "$pageLink": "services"
+                  },
+                  "label": "Our services",
+                  "appearance": "primary"
+                }
+              },
+              {
+                "link": {
+                  "type": "reference",
+                  "reference": {
+                    "$pageLink": "contact"
+                  },
+                  "label": "Contact us"
+                }
+              }
+            ]
+          },
+          {
+            "blockType": "cards",
+            "heading": "How we can help",
+            "columns": "3",
+            "align": "center",
+            "items": [
+              {
+                "title": "Advice",
+                "text": "Strategy and plans that hold up.",
+                "image": {
+                  "$media": "workshop"
+                },
+                "link": {
+                  "type": "reference",
+                  "reference": {
+                    "$pageLink": "advice"
+                  },
+                  "label": "Read more"
+                }
+              },
+              {
+                "title": "Projects",
+                "text": "We deliver from idea to operations.",
+                "image": {
+                  "$media": "office"
+                },
+                "link": {
+                  "type": "reference",
+                  "reference": {
+                    "$pageLink": "projects"
+                  },
+                  "label": "Read more"
+                }
+              },
+              {
+                "title": "About us",
+                "text": "A small team with long experience.",
+                "image": {
+                  "$media": "fjord"
+                },
+                "link": {
+                  "type": "reference",
+                  "reference": {
+                    "$pageLink": "about"
+                  },
+                  "label": "Read more"
+                }
+              }
+            ]
+          },
+          {
+            "blockType": "articleFeed",
+            "heading": "Latest news",
+            "kind": "all",
+            "limit": 3
+          },
+          {
+            "blockType": "cta",
+            "heading": "Ready to talk?",
+            "text": "We reply within one working day.",
+            "links": [
+              {
+                "link": {
+                  "type": "reference",
+                  "reference": {
+                    "$pageLink": "contact"
+                  },
+                  "label": "Contact us",
+                  "appearance": "primary"
+                }
+              }
+            ],
+            "background": "tint"
+          }
+        ]
+      },
+      "isHome": true
+    },
+    {
+      "ref": "about",
+      "title": {
+        "no": "Om oss",
+        "en": "About us"
+      },
+      "layout": {
+        "no": [
+          {
+            "blockType": "textImage",
+            "heading": "Hvem vi er",
+            "image": {
+              "$media": "office"
+            },
+            "imagePosition": "right",
+            "richText": {
+              "$html": "<p>Nordlys Demo er et fiktivt firma laget for å vise hva Site Kit kan.</p><p>Alt innhold her er eksempler.</p>"
+            }
+          },
+          {
+            "blockType": "stats",
+            "heading": "I tall",
+            "items": [
+              {
+                "value": "15",
+                "label": "år med erfaring"
+              },
+              {
+                "value": "120",
+                "label": "prosjekter"
+              },
+              {
+                "value": "2",
+                "label": "kontorer"
+              }
+            ],
+            "background": "muted"
+          },
+          {
+            "blockType": "timeline",
+            "heading": "Historien vår",
+            "items": [
+              {
+                "year": "2011",
+                "title": "Oppstart",
+                "text": "Startet i Tromsø."
+              },
+              {
+                "year": "2018",
+                "title": "Nytt kontor",
+                "text": "Åpnet kontor i Oslo."
+              },
+              {
+                "year": "2026",
+                "title": "Hosait",
+                "text": "Flyttet nettstedet til Hosait.",
+                "image": {
+                  "$media": "coast"
+                }
+              }
+            ]
+          }
+        ],
+        "en": [
+          {
+            "blockType": "textImage",
+            "heading": "Who we are",
+            "image": {
+              "$media": "office"
+            },
+            "imagePosition": "right",
+            "richText": {
+              "$html": "<p>Nordlys Demo is a fictional company made to show what Site Kit can do.</p><p>All content here is an example.</p>"
+            }
+          },
+          {
+            "blockType": "stats",
+            "heading": "In numbers",
+            "items": [
+              {
+                "value": "15",
+                "label": "years of experience"
+              },
+              {
+                "value": "120",
+                "label": "projects"
+              },
+              {
+                "value": "2",
+                "label": "offices"
+              }
+            ],
+            "background": "muted"
+          },
+          {
+            "blockType": "timeline",
+            "heading": "Our story",
+            "items": [
+              {
+                "year": "2011",
+                "title": "Founded",
+                "text": "Started in Tromsø."
+              },
+              {
+                "year": "2018",
+                "title": "New office",
+                "text": "Opened an office in Oslo."
+              },
+              {
+                "year": "2026",
+                "title": "Hosait",
+                "text": "Moved the website to Hosait.",
+                "image": {
+                  "$media": "coast"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "slug": {
+        "no": "om-oss",
+        "en": "about"
+      },
+      "order": 1,
+      "summary": {
+        "no": "Hvem vi er og hvor vi kommer fra.",
+        "en": "Who we are and where we come from."
+      },
+      "cardImage": "fjord"
+    },
+    {
+      "ref": "services",
+      "title": {
+        "no": "Tjenester",
+        "en": "Services"
+      },
+      "layout": {
+        "no": [
+          {
+            "blockType": "content",
+            "richText": {
+              "$html": "<h2>Det vi gjør</h2><p>Vi tilbyr rådgivning og prosjektgjennomføring.</p>"
+            }
+          },
+          {
+            "blockType": "childPages",
+            "heading": "Tjenestene våre",
+            "parent": {
+              "$page": "services"
+            },
+            "depth": "1",
+            "columns": "2"
+          }
+        ],
+        "en": [
+          {
+            "blockType": "content",
+            "richText": {
+              "$html": "<h2>What we do</h2><p>We offer advice and project delivery.</p>"
+            }
+          },
+          {
+            "blockType": "childPages",
+            "heading": "Our services",
+            "parent": {
+              "$page": "services"
+            },
+            "depth": "1",
+            "columns": "2"
+          }
+        ]
+      },
+      "slug": {
+        "no": "tjenester",
+        "en": "services"
+      },
+      "order": 2,
+      "summary": {
+        "no": "Rådgivning og prosjekter.",
+        "en": "Advice and projects."
+      },
+      "cardImage": "workshop"
+    },
+    {
+      "ref": "advice",
+      "title": {
+        "no": "Rådgivning",
+        "en": "Advice"
+      },
+      "layout": {
+        "no": [
+          {
+            "blockType": "content",
+            "width": "text",
+            "richText": {
+              "$html": "<p>Vi hjelper deg å velge riktig retning.</p>"
+            }
+          },
+          {
+            "blockType": "accordion",
+            "heading": "Vanlige spørsmål",
+            "items": [
+              {
+                "title": "Hva koster det?",
+                "content": {
+                  "$html": "<p>Vi gir fast pris etter en første samtale.</p>"
+                }
+              },
+              {
+                "title": "Hvor lang tid tar det?",
+                "content": {
+                  "$html": "<p>De fleste oppdrag tar 4–8 uker.</p>"
+                }
+              }
+            ]
+          },
+          {
+            "blockType": "video",
+            "heading": "Film: Big Buck Bunny (Blender Foundation, CC BY)",
+            "url": "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
+            "poster": {
+              "$media": "coast"
+            }
+          }
+        ],
+        "en": [
+          {
+            "blockType": "content",
+            "width": "text",
+            "richText": {
+              "$html": "<p>We help you choose the right direction.</p>"
+            }
+          },
+          {
+            "blockType": "accordion",
+            "heading": "Frequently asked questions",
+            "items": [
+              {
+                "title": "What does it cost?",
+                "content": {
+                  "$html": "<p>We give a fixed price after a first conversation.</p>"
+                }
+              },
+              {
+                "title": "How long does it take?",
+                "content": {
+                  "$html": "<p>Most assignments take 4–8 weeks.</p>"
+                }
+              }
+            ]
+          },
+          {
+            "blockType": "video",
+            "heading": "Film: Big Buck Bunny (Blender Foundation, CC BY)",
+            "url": "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
+            "poster": {
+              "$media": "coast"
+            }
+          }
+        ]
+      },
+      "slug": {
+        "no": "radgivning",
+        "en": "advice"
+      },
+      "parent": "services",
+      "order": 1,
+      "summary": {
+        "no": "Strategi og planer.",
+        "en": "Strategy and plans."
+      },
+      "cardImage": "workshop"
+    },
+    {
+      "ref": "projects",
+      "title": {
+        "no": "Prosjekter",
+        "en": "Projects"
+      },
+      "layout": {
+        "no": [
+          {
+            "blockType": "content",
+            "richText": {
+              "$html": "<p>Noen eksempler på hva vi har levert.</p>"
+            }
+          },
+          {
+            "blockType": "imageGrid",
+            "heading": "Utvalgte prosjekter",
+            "columns": "3",
+            "images": [
+              {
+                "image": {
+                  "$media": "fjord"
+                },
+                "caption": "Fjord"
+              },
+              {
+                "image": {
+                  "$media": "coast"
+                },
+                "caption": "Kyst"
+              },
+              {
+                "image": {
+                  "$media": "office"
+                },
+                "caption": "Kontor"
+              }
+            ]
+          },
+          {
+            "blockType": "fullImage",
+            "image": {
+              "$media": "hero"
+            },
+            "size": "wide",
+            "caption": "Eksempelbilde"
+          },
+          {
+            "blockType": "quote",
+            "quote": "De leverte til avtalt tid og pris.",
+            "author": "Eksempel Kunde AS",
+            "role": "Kunde",
+            "align": "center"
+          }
+        ],
+        "en": [
+          {
+            "blockType": "content",
+            "richText": {
+              "$html": "<p>Some examples of what we have delivered.</p>"
+            }
+          },
+          {
+            "blockType": "imageGrid",
+            "heading": "Selected projects",
+            "columns": "3",
+            "images": [
+              {
+                "image": {
+                  "$media": "fjord"
+                },
+                "caption": "Fjord"
+              },
+              {
+                "image": {
+                  "$media": "coast"
+                },
+                "caption": "Coast"
+              },
+              {
+                "image": {
+                  "$media": "office"
+                },
+                "caption": "Office"
+              }
+            ]
+          },
+          {
+            "blockType": "fullImage",
+            "image": {
+              "$media": "hero"
+            },
+            "size": "wide",
+            "caption": "Example image"
+          },
+          {
+            "blockType": "quote",
+            "quote": "They delivered on time and on budget.",
+            "author": "Eksempel Kunde AS",
+            "role": "Client",
+            "align": "center"
+          }
+        ]
+      },
+      "slug": {
+        "no": "prosjekter",
+        "en": "projects"
+      },
+      "parent": "services",
+      "order": 2,
+      "summary": {
+        "no": "Fra idé til drift.",
+        "en": "From idea to operations."
+      },
+      "cardImage": "office"
+    },
+    {
+      "ref": "team",
+      "title": {
+        "no": "Folk",
+        "en": "People"
+      },
+      "layout": {
+        "no": [
+          {
+            "blockType": "people",
+            "heading": "Menneskene bak",
+            "people": [
+              {
+                "$person": "kari"
+              },
+              {
+                "$person": "ola"
+              }
+            ],
+            "layout": "grid"
+          },
+          {
+            "blockType": "facts",
+            "heading": "Fakta",
+            "items": [
+              {
+                "label": "Ansatte",
+                "value": "2"
+              },
+              {
+                "label": "Kontorer",
+                "value": "Tromsø og Oslo"
+              }
+            ]
+          }
+        ],
+        "en": [
+          {
+            "blockType": "people",
+            "heading": "The people behind it",
+            "people": [
+              {
+                "$person": "kari"
+              },
+              {
+                "$person": "ola"
+              }
+            ],
+            "layout": "grid"
+          },
+          {
+            "blockType": "facts",
+            "heading": "Facts",
+            "items": [
+              {
+                "label": "Employees",
+                "value": "2"
+              },
+              {
+                "label": "Offices",
+                "value": "Tromsø and Oslo"
+              }
+            ]
+          }
+        ]
+      },
+      "slug": {
+        "no": "folk",
+        "en": "people"
+      },
+      "order": 3
+    },
+    {
+      "ref": "contact",
+      "title": {
+        "no": "Kontakt",
+        "en": "Contact"
+      },
+      "layout": {
+        "no": [
+          {
+            "blockType": "content",
+            "richText": {
+              "$html": "<p>Ring oss på +47 000 00 000 eller skriv til nettsted@example.com.</p>"
+            }
+          },
+          {
+            "blockType": "embed",
+            "heading": "Finn oss",
+            "provider": "google-maps",
+            "url": "https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d2000!2d18.95!3d69.65!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sno!2sno",
+            "title": "Kart over Tromsø",
+            "height": 400
+          },
+          {
+            "blockType": "documents",
+            "heading": "Dokumenter",
+            "documents": [
+              {
+                "$document": "guide"
+              }
+            ]
+          }
+        ],
+        "en": [
+          {
+            "blockType": "content",
+            "richText": {
+              "$html": "<p>Call us on +47 000 00 000 or write to nettsted@example.com.</p>"
+            }
+          },
+          {
+            "blockType": "embed",
+            "heading": "Find us",
+            "provider": "google-maps",
+            "url": "https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d2000!2d18.95!3d69.65!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sno!2sno",
+            "title": "Map of Tromsø",
+            "height": 400
+          },
+          {
+            "blockType": "documents",
+            "heading": "Documents",
+            "documents": [
+              {
+                "$document": "guide"
+              }
+            ]
+          }
+        ]
+      },
+      "slug": {
+        "no": "kontakt",
+        "en": "contact"
+      },
+      "order": 4
+    },
+    {
+      "ref": "privacy",
+      "title": {
+        "no": "Personvern",
+        "en": "Privacy"
+      },
+      "layout": {
+        "no": [
+          {
+            "blockType": "content",
+            "width": "text",
+            "richText": {
+              "$html": "<h2>Personvern</h2><p>Eksempeltekst. Erstatt med virksomhetens egen personvernerklæring.</p>"
+            }
+          }
+        ],
+        "en": [
+          {
+            "blockType": "content",
+            "width": "text",
+            "richText": {
+              "$html": "<h2>Privacy</h2><p>Example text. Replace with the organisation's own privacy notice.</p>"
+            }
+          }
+        ]
+      },
+      "slug": {
+        "no": "personvern",
+        "en": "privacy"
+      },
+      "order": 9,
+      "hideFromNav": true
+    },
+    {
+      "ref": "cookies",
+      "title": {
+        "no": "Informasjonskapsler",
+        "en": "Cookies"
+      },
+      "layout": {
+        "no": [
+          {
+            "blockType": "content",
+            "width": "text",
+            "richText": {
+              "$html": "<h2>Informasjonskapsler</h2><p>Vi bruker bare nødvendige informasjonskapsler, og statistikk når du samtykker.</p>"
+            }
+          }
+        ],
+        "en": [
+          {
+            "blockType": "content",
+            "width": "text",
+            "richText": {
+              "$html": "<h2>Cookies</h2><p>We use only necessary cookies, and statistics when you consent.</p>"
+            }
+          }
+        ]
+      },
+      "slug": {
+        "no": "informasjonskapsler",
+        "en": "cookies"
+      },
+      "order": 10,
+      "hideFromNav": true
+    }
+  ],
+  "articles": [
+    {
+      "ref": "n1",
+      "kind": "news",
+      "publishedAt": "2026-10-01T09:00:00.000Z",
+      "heroImage": "news",
+      "title": {
+        "no": "Nytt nettsted på Hosait",
+        "en": "New website on Hosait"
+      },
+      "lead": {
+        "no": "Vi har flyttet nettstedet.",
+        "en": "We have moved our website."
+      },
+      "contentHtml": {
+        "no": "<p>Nettstedet kjører nå på Hosait Site Kit.</p>",
+        "en": "<p>The website now runs on Hosait Site Kit.</p>"
+      }
+    },
+    {
+      "ref": "n2",
+      "kind": "news",
+      "publishedAt": "2026-09-15T09:00:00.000Z",
+      "heroImage": "office",
+      "title": {
+        "no": "Nytt kontor i Oslo",
+        "en": "New office in Oslo"
+      },
+      "lead": {
+        "no": "Vi har åpnet kontor i Oslo.",
+        "en": "We have opened an office in Oslo."
+      },
+      "contentHtml": {
+        "no": "<p>Velkommen innom.</p>",
+        "en": "<p>Drop by.</p>"
+      }
+    },
+    {
+      "ref": "b1",
+      "kind": "blog",
+      "publishedAt": "2026-08-20T09:00:00.000Z",
+      "heroImage": "workshop",
+      "title": {
+        "no": "Tre råd om digital strategi",
+        "en": "Three tips on digital strategy"
+      },
+      "lead": {
+        "no": "Kort fortalt.",
+        "en": "In short."
+      },
+      "contentHtml": {
+        "no": "<h2>1. Start smått</h2><p>Velg ett mål.</p><h2>2. Mål</h2><p>Følg med på tallene.</p><h2>3. Juster</h2><p>Gjør små endringer ofte.</p>",
+        "en": "<h2>1. Start small</h2><p>Pick one goal.</p><h2>2. Measure</h2><p>Watch the numbers.</p><h2>3. Adjust</h2><p>Make small changes often.</p>"
+      }
+    }
+  ],
+  "settings": {
+    "nav": {
+      "no": [
+        {
+          "label": "Om oss",
+          "page": "about"
+        },
+        {
+          "label": "Tjenester",
+          "page": "services"
+        },
+        {
+          "label": "Folk",
+          "page": "team"
+        }
+      ],
+      "en": [
+        {
+          "label": "About",
+          "page": "about"
+        },
+        {
+          "label": "Services",
+          "page": "services"
+        },
+        {
+          "label": "People",
+          "page": "team"
+        }
+      ]
+    },
+    "contact": {
+      "no": {
+        "label": "Kontakt oss",
+        "page": "contact"
+      },
+      "en": {
+        "label": "Contact us",
+        "page": "contact"
+      }
+    },
+    "footer": {
+      "no": [
+        {
+          "heading": "Nordlys Demo",
+          "links": [
+            {
+              "label": "Om oss",
+              "page": "about"
+            },
+            {
+              "label": "Kontakt",
+              "page": "contact"
+            }
+          ]
+        },
+        {
+          "heading": "Juridisk",
+          "links": [
+            {
+              "label": "Personvern",
+              "page": "privacy"
+            },
+            {
+              "label": "Informasjonskapsler",
+              "page": "cookies"
+            }
+          ]
+        }
+      ],
+      "en": [
+        {
+          "heading": "Nordlys Demo",
+          "links": [
+            {
+              "label": "About",
+              "page": "about"
+            },
+            {
+              "label": "Contact",
+              "page": "contact"
+            }
+          ]
+        },
+        {
+          "heading": "Legal",
+          "links": [
+            {
+              "label": "Privacy",
+              "page": "privacy"
+            },
+            {
+              "label": "Cookies",
+              "page": "cookies"
+            }
+          ]
+        }
+      ]
+    },
+    "copyright": {
+      "no": "© 2026 Nordlys Demo AS",
+      "en": "© 2026 Nordlys Demo AS"
+    },
+    "phone": "+47 000 00 000",
+    "email": "nettsted@example.com",
+    "address": {
+      "street": "Eksempelveien 1",
+      "postalCode": "9008",
+      "city": "Tromsø",
+      "country": "NO"
+    }
+  },
+  "redirects": [
+    {
+      "from": "/gammel-side",
+      "toPage": "about",
+      "permanent": true
+    }
+  ]
+}

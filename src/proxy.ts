@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { DEFAULT_SITE, FEATURES, isLocale, isSiteKey, SITE_CONFIG, siteFromHost, type SiteKey } from '@/lib/sites'
 import { negotiateLocale, searchRewrite } from '@/lib/locales'
+import { claimNeededPage, firstUserAllowed } from '@/lib/admin-claim'
 
 /**
  * Host → nettsted. Offentlige stier skrives internt om til /{site}/{locale}/...
@@ -53,6 +54,18 @@ function publicUrl(req: NextRequest, pathAndQuery: string): URL {
 
 export async function proxy(req: NextRequest) {
   const { pathname, searchParams } = req.nextUrl
+
+  // Den første brukeren opprettes bare via lenken fra Hosait (src/lib/admin-claim.ts). Uten
+  // den svarer API-et 403 uten melding i skjemaet, så siden forklarer hvor lenken er.
+  if (pathname === '/admin/create-first-user') {
+    if (firstUserAllowed({ secret: process.env.ADMIN_CLAIM_SECRET, cookieHeader: req.headers.get('cookie'), nowMs: Date.now() })) {
+      return NextResponse.next()
+    }
+    return new NextResponse(claimNeededPage(SITE_CONFIG.admin.language), {
+      status: 403,
+      headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+    })
+  }
 
   let site: SiteKey | null = siteFromHost(req.headers.get('x-forwarded-host') || req.headers.get('host'))
   let setCookie: SiteKey | null = null
@@ -111,6 +124,7 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  // Alt unntatt admin, API, Next-interne filer, forhåndsvisningsruter og statiske filer.
-  matcher: ['/((?!admin|api|_next|next/|brand/|fonts/|media/|sequences/|favicon|.*\\.(?:svg|png|jpg|jpeg|webp|avif|ico|woff2?|txt|js|css|map)$).*)', '/robots.txt'],
+  // Alt unntatt admin, API, Next-interne filer, forhåndsvisningsruter og statiske filer; av
+  // admin bare siden for den første brukeren.
+  matcher: ['/((?!admin|api|_next|next/|brand/|fonts/|media/|sequences/|favicon|.*\\.(?:svg|png|jpg|jpeg|webp|avif|ico|woff2?|txt|js|css|map)$).*)', '/robots.txt', '/admin/create-first-user'],
 }
