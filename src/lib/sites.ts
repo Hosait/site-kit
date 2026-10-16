@@ -70,9 +70,26 @@ function stagingOrigin(site: SiteKey): string | null {
   return `${proto}://${site === DEFAULT_SITE ? base : `${site}.${base}`}`
 }
 
+/**
+ * Production: indexing on, canonical URLs on the own domains, the seed route locked.
+ * SITE_ORIGINS=production or =staging decides when set. Unset, the site is in production once
+ * HOSAIT_URL (the project's verified own domain, set by Hosait) is one of the configured hosts.
+ */
+export function isProduction(): boolean {
+  const set = process.env.SITE_ORIGINS
+  if (set) return set === 'production'
+  let host: string
+  try {
+    host = new URL(process.env.HOSAIT_URL || '').hostname.toLowerCase()
+  } catch {
+    return false
+  }
+  return SITE_KEYS.some((key) => SITES[key].hosts.includes(host))
+}
+
 /** Public address of a site: own domain in production, staging (sub)domain, else the server URL. */
 export function siteOrigin(site: SiteKey): string {
-  if (process.env.SITE_ORIGINS === 'production') return SITES[site].origin
+  if (isProduction()) return SITES[site].origin
   return stagingOrigin(site) ?? (process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3100')
 }
 
@@ -85,7 +102,7 @@ export function localePath(locale: Locale, path: string): string {
 /** Link to a path on a (possibly different) site. */
 export function siteHref(target: SiteKey, current: SiteKey, path: string): string {
   if ((target as string) === current) return path
-  if (process.env.SITE_ORIGINS === 'production') return SITES[target].origin + path
+  if (isProduction()) return SITES[target].origin + path
   const staging = stagingOrigin(target)
   if (staging) return staging + path
   return `${path}${path.includes('?') ? '&' : '?'}site=${target}`

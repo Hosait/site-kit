@@ -5,8 +5,10 @@ declare global {
       PAYLOAD_SECRET?: string
       NEXT_PUBLIC_SERVER_URL?: string
       CRON_SECRET?: string
+      ADMIN_CLAIM_SECRET?: string
       PREVIEW_SECRET?: string
       SITE_ORIGINS?: string
+      HOSAIT_URL?: string
       STAGING_HOST?: string
       NEXT_PUBLIC_STAGING_HOST?: string
       HOSAIT_COMMIT_SHORT?: string
