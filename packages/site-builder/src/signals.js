@@ -80,7 +80,15 @@ const hasPrice = (o) => ['price', 'lowPrice', 'highPrice', 'priceSpecification']
  * @param {string} text
  */
 export function jsonLd(text) {
-  const found = { product: false, priced: false }
+  const { product, priced } = readJsonLd(text)
+  return { product, priced }
+}
+
+const ARTICLE_TYPES = new Set(['article', 'blogposting', 'newsarticle'])
+
+/** jsonLd, plus whether a main item is an article. */
+function readJsonLd(text) {
+  const found = { product: false, priced: false, article: false }
   if (text.length > MAX_JSONLD_BYTES) return found
   let data
   try { data = JSON.parse(text) } catch { return found }
@@ -96,6 +104,7 @@ export function jsonLd(text) {
       if ([].concat(v.offers ?? []).some((o) => o && typeof o === 'object' && hasPrice(o))) found.priced = true
     }
     if (types.some((t) => OFFER_TYPES.has(t)) && hasPrice(v)) found.priced = true
+    if (types.some((t) => ARTICLE_TYPES.has(t))) found.article = true
     for (const k of ['@graph', 'mainEntity']) if (v[k] && typeof v[k] === 'object') stack.push({ v: v[k], depth: depth + 1 })
   }
   return found
@@ -126,16 +135,18 @@ export function robotsCartRules(text) {
  */
 export function pageSignals(html, url, host) {
   const $ = load(html)
-  const s = { product: false, priced: false, shop: [], payment: [], login: [], integrations: [], documents: new Set(), images: new Set(), links: new Set(), languages: new Set(), forward: null }
+  const s = { product: false, priced: false, article: false, shop: [], payment: [], login: [], integrations: [], documents: new Set(), images: new Set(), links: new Set(), languages: new Set(), lang: language($('html').attr('lang')), alternates: [], forward: null }
   const add = (list, item) => { if (list.length < MAX_MATCHES && !list.includes(item)) list.push(item) }
   const named = new Set()
   const integration = (kind, name) => { if (s.integrations.length < MAX_INTEGRATIONS && !named.has(name)) { named.add(name); s.integrations.push({ kind, name }) } }
 
   for (const el of $('script').toArray().filter((e) => String($(e).attr('type') ?? '').trim().toLowerCase() === 'application/ld+json').slice(0, MAX_JSONLD_SCRIPTS)) {
-    const f = jsonLd($(el).text())
+    const f = readJsonLd($(el).text())
     s.product ||= f.product
     s.priced ||= f.priced
+    s.article ||= f.article
   }
+  if (String($('meta[property="og:type" i]').attr('content') ?? '').trim().toLowerCase() === 'article') s.article = true
   // Microdata: only top-level items (not a property of another item) or the page's mainEntity.
   for (const el of $('[itemtype]').toArray()) {
     const prop = $(el).attr('itemprop')
@@ -194,6 +205,11 @@ export function pageSignals(html, url, host) {
   for (const v of [$('html').attr('lang'), ...$('link[rel="alternate"][hreflang]').toArray().map((e) => $(e).attr('hreflang'))]) {
     const l = language(v)
     if (l) s.languages.add(l.split('-')[0])
+  }
+  for (const el of $('link[rel="alternate"][hreflang]').toArray().slice(0, MAX_LINKS)) {
+    const l = language($(el).attr('hreflang'))
+    const href = normalize(String($(el).attr('href') ?? ''), url)
+    if (l && href) s.alternates.push({ lang: l, href })
   }
   for (const el of $('img').toArray()) {
     const n = normalize(String($(el).attr('src') || $(el).attr('data-src') || ''), url)

@@ -106,3 +106,11 @@ test('JSON-LD and microdata: only the item a page is about counts, not one named
   const s = pageSignals(html('<div itemscope itemtype="https://schema.org/Review"><div itemprop="itemReviewed" itemscope itemtype="https://schema.org/Product"><span itemprop="price">99</span></div></div>'), 'https://www.acme.no/x', 'www.acme.no')
   assert.deepEqual([s.product, s.priced, s.shop], [false, false, []])
 })
+
+test('a page says its language, its alternates, and whether it is an article', () => {
+  const s = pageSignals(html('<p>x</p>', '<link rel="alternate" hreflang="sv" href="/se/"><meta property="og:type" content="article">'), 'https://www.acme.no/x', 'www.acme.no')
+  assert.deepEqual([s.lang, s.alternates, s.article], ['nb', [{ lang: 'sv', href: 'https://www.acme.no/se/' }], true])
+  assert.equal(pageSignals(html(ld({ '@type': 'BlogPosting', headline: 'X' })), 'https://www.acme.no/x', 'www.acme.no').article, true)
+  assert.equal(pageSignals(html(ld({ '@type': 'Organization', subjectOf: { '@type': 'Article' } })), 'https://www.acme.no/x', 'www.acme.no').article, false)
+  assert.equal(pageSignals(html('<p>x</p>', '<meta property="og:type" content="website">'), 'https://www.acme.no/x', 'www.acme.no').article, false)
+})
