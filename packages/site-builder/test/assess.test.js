@@ -7,6 +7,7 @@ import zlib from 'node:zlib'
 
 import { LIMITS, assess, classify, markdown, md, spread } from '../src/assess.js'
 import { get as netGet } from '../src/net.js'
+import { makeScope } from '../src/scope.js'
 import { serve } from './server.js'
 
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'assess-'))
@@ -239,6 +240,13 @@ test('classify: any shop signal is red', () => assert.equal(verdict({ shop: ev }
 test('classify: a payment service is red', () => assert.equal(verdict({ payment: ev }).class, 'red'))
 test('classify: a product catalogue is red', () => assert.equal(verdict({ catalogue: ev }).class, 'red'))
 test('classify: a login or member area is red', () => assert.equal(verdict({ login: ev }).class, 'red'))
+// The customer's limit (Steinar's proposal, needs Bjørn's yes): with the member area left out, a
+// login is the scope of the move, not a reason to decline it.
+test('classify: a login is yellow when the customer leaves the member area out', () => {
+  const v = verdict({ login: ev, withoutMemberArea: true })
+  assert.deepEqual([v.class, v.reasons.map((r) => r.code)], ['yellow', ['member-area']])
+  assert.match(v.reasons[0].text, /left out/)
+})
 test('classify: more than declinePages pages is red', () => {
   assert.equal(verdict({ htmlPages: LIMITS.declinePages }).class, 'yellow')
   assert.equal(verdict({ htmlPages: LIMITS.declinePages + 1 }).class, 'red')
@@ -444,5 +452,44 @@ test('a check that could not read enough is run again, never accepted: the reaso
     const text = markdown(r)
     assert.match(text, /Not decided yet/)
     assert.doesNotMatch(text, /accept/i)
+  } finally { await s.close() }
+})
+
+// The customer's limits (src/scope.js): what is left out is never requested and not counted.
+function siteWithMemberArea() {
+  return contentSite({
+    '/sitemap.xml': (req) => xml(urlset(req.headers.host, ['/', '/om-oss', '/tjenester', '/kontakt', '/intranett', '/intranett/rutiner', '/intranett/ferie', '/min-side'])),
+    '/': page('Hjem', `${NAV}<main><h1>Velkommen</h1><p>Vi er et lite firma.</p><a href="/min-side">Min side</a> <a href="/intranett">Intranett</a></main>`),
+    '/intranett': page('Intranett', '<main><p>Intern.</p></main>'),
+    '/min-side': page('Min side', '<form action="/login" method="post"><input type="password" name="p"></form>'),
+  })
+}
+
+test('assess never requests an excluded path or the member area, and does not count them as pages', async () => {
+  const s = await siteWithMemberArea()
+  const out = tmp()
+  try {
+    const r = await assess(s.url + '/', { out, allowPrivate: true, delayMs: 0, scope: makeScope({ exclude: ['/intranett'], withoutMemberArea: true }) })
+    assert.ok(!s.requests.some((p) => /^\/(intranett|min-side|login)/.test(p)), JSON.stringify(s.requests))
+    assert.equal(r.estimates.htmlPages, 4)
+    assert.equal(r.counts.leftOut, 4)
+    assert.deepEqual(codes(r), ['member-area'])
+    assert.equal(r.class, 'yellow')
+    assert.deepEqual(JSON.parse(fs.readFileSync(path.join(out, 'assess.json'), 'utf8')).scope, { exclude: ['/intranett'], withoutMemberArea: true })
+    const text = fs.readFileSync(path.join(out, 'assess.md'), 'utf8')
+    assert.match(text, /## Left out at your request/)
+    assert.match(text, /\/intranett/)
+    assert.match(text, /member area/)
+  } finally { await s.close() }
+})
+
+test('without the customer\'s limits, the same site counts every page and its member area is red', async () => {
+  const s = await siteWithMemberArea()
+  try {
+    const r = await run(s)
+    assert.ok(codes(r).includes('login'), JSON.stringify(codes(r)))
+    assert.equal(r.class, 'red')
+    assert.equal(r.estimates.htmlPages, 8)
+    assert.deepEqual([r.scope, r.counts.leftOut], [{ exclude: [], withoutMemberArea: false }, 0])
   } finally { await s.close() }
 })

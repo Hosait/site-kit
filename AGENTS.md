@@ -15,6 +15,12 @@ about 200 pages. Check the site before anything else:
 In a few minutes it reads a sample of the site and writes `assess.md` (for the user) and
 `assess.json` (class, reasons and evidence) in `.site-builder/<host>/`.
 
+If the user has asked for parts of the site to be left out, pass them to `assess`:
+`--without-member-area` (nothing behind a login is requested; a login is then yellow, the move's
+scope) and `--exclude <path>` for each part, such as `--exclude /intranett`. What is left out is
+never requested or counted, and `crawl` leaves out the same, from `assess.json`. Use them only
+when the user asked for it before the check, never to turn a red answer into another colour.
+
 - **red** (the command exits 3): stop here. Tell the user plainly why, from `assess.md`: Hosait
   does not move web shops, product catalogues, sites with a login or member area, or sites of
   more than 500 pages (in one language; 1500 in all) or 500 articles. Do not offer to move part

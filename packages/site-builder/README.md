@@ -41,13 +41,19 @@ In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-buil
   pages whose JSON-LD is an Article, NewsArticle or BlogPosting (not `og:type`, which SEO plugins
   put on ordinary pages). A one-page site with text and only `#` links is enough to decide.
 
+  The customer's limits (`src/scope.js`): `--exclude <path>` (repeatable) leaves a part of the
+  site out, that path and everything under it in any case, and `--without-member-area` leaves
+  out login and «min side» addresses. What is left out is never requested and not counted. A
+  login found on the other pages is then yellow (`member-area`, the move's scope) instead of
+  red. `assess.json` keeps the limits (`scope`) and how many addresses were left out.
+
   The thresholds are `LIMITS` in `src/assess.js`. Exit code: 0 for green and yellow, 3 for red,
   2 for a usage error, 1 for other errors. A page that cannot be read is recorded and the others
   go on; a stop at the time budget is a note.
 - **crawl** starts only when `assess.json` in its out folder is for the same site and not red;
   after yellow it also needs `--accepted-scope`, given once the customer has said yes, and after
   a check that could not read enough it does not start at all. Otherwise it exits 3 and says
-  why.
+  why. It leaves out what the check left out, from `assess.json`; it takes no limits of its own.
 - **crawl** reads robots.txt and obeys it (when it answers with a server error, nothing is
   read), reads the sitemap, follows links on the same site (www and apex count as one), and
   stops at 500 pages or after 15 minutes (`--max`, `--budget <minutes>`), keeping what it has

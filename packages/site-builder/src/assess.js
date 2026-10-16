@@ -12,6 +12,7 @@ import { extractPage } from './extract.js'
 import { decode } from './html.js'
 import { get as defaultGet } from './net.js'
 import { countPages } from './pages.js'
+import { leftOut, makeScope } from './scope.js'
 import { DOCUMENT, isProductPath, pageSignals, robotsCartRules } from './signals.js'
 
 /**
@@ -103,7 +104,7 @@ export function spread(urls, n) {
  * The answer from what was found. Any red reason makes the site red; otherwise any yellow
  * reason makes it yellow; otherwise green. There is no "unknown": too little read is yellow.
  * `htmlPages` is the pages of the largest language, articles not counted.
- * @param {{ shop: {url: string, match: string}[], payment: {url: string, match: string}[], catalogue: {url: string, match: string}[], login: {url: string, match: string}[], integrations: {url: string, match: string}[], htmlPages: number, totalPages?: number, articles?: number, passwordPosts?: number, documents: number, mediaBytes: number | null, enough: boolean, enoughWhy?: string }} f
+ * @param {{ shop: {url: string, match: string}[], payment: {url: string, match: string}[], catalogue: {url: string, match: string}[], login: {url: string, match: string}[], integrations: {url: string, match: string}[], htmlPages: number, totalPages?: number, articles?: number, passwordPosts?: number, documents: number, mediaBytes: number | null, enough: boolean, enoughWhy?: string, withoutMemberArea?: boolean }} f
  */
 export function classify(f) {
   const reasons = []
@@ -111,7 +112,9 @@ export function classify(f) {
   if (f.shop.length) reason('red', 'shop', 'It is a web shop: it sells products with prices, a shopping cart or a checkout.', f.shop)
   if (f.payment.length) reason('red', 'payment', 'It takes payments: a payment or checkout service is built in.', f.payment)
   if (f.catalogue.length) reason('red', 'catalogue', 'It is a product catalogue: a large part of its pages are product pages.', f.catalogue)
-  if (f.login.length) reason('red', 'login', 'It has a login or member area.', f.login)
+  // The customer may leave the member area out (src/scope.js): then it is the move's scope, not a no.
+  if (f.login.length && f.withoutMemberArea) reason('yellow', 'member-area', 'It has a login or member area. At the customer\'s request it is left out: nothing behind the login is read or moved, and the new site has no login.', f.login)
+  else if (f.login.length) reason('red', 'login', 'It has a login or member area.', f.login)
   const total = f.totalPages ?? f.htmlPages
   if (total > LIMITS.declineTotalPages) reason('red', 'total-pages', `It has about ${total} pages in all its languages together, more than the ${LIMITS.declineTotalPages} Hosait Sites moves.`)
   if (f.htmlPages > LIMITS.declinePages) reason('red', 'pages', `It has about ${f.htmlPages} pages in its largest language, more than the ${LIMITS.declinePages} Hosait Sites moves.`)
@@ -130,10 +133,10 @@ const gigabytes = (b) => (b >= 1024 ** 3 ? `${(b / 1024 ** 3).toFixed(1)} GB` : 
 
 /**
  * @param {string} start
- * @param {{ out: string, maxPages?: number, budgetMs?: number, concurrency?: number, delayMs?: number, allowPrivate?: boolean, get?: typeof defaultGet, log?: (s: string) => void }} opts
+ * @param {{ out: string, maxPages?: number, budgetMs?: number, concurrency?: number, delayMs?: number, allowPrivate?: boolean, scope?: ReturnType<typeof makeScope>, get?: typeof defaultGet, log?: (s: string) => void }} opts
  */
 export async function assess(start, opts) {
-  const { out, maxPages = 40, budgetMs = 3 * 60_000, concurrency = 2, delayMs = 250, allowPrivate = false, log = () => {} } = opts
+  const { out, maxPages = 40, budgetMs = 3 * 60_000, concurrency = 2, delayMs = 250, allowPrivate = false, scope = makeScope(), log = () => {} } = opts
   if (!(Number.isInteger(maxPages) && maxPages > 0)) throw new Error('maxPages must be a positive whole number')
   if (!(Number.isFinite(budgetMs) && budgetMs > 0)) throw new Error('budgetMs must be a positive number')
   const get = opts.get ?? defaultGet
@@ -148,6 +151,13 @@ export async function assess(start, opts) {
   const root = new URL(first)
   const host = root.hostname
   fs.mkdirSync(out, { recursive: true })
+  // Addresses the customer left out (src/scope.js): never requested, not counted.
+  const skipped = new Set()
+  const left = (n) => {
+    if (!leftOut(scope, new URL(n))) return false
+    if (skipped.size < MAX_SITE_LINKS) skipped.add(n)
+    return true
+  }
 
   const getFollowing = followingGet(get, root, allowPrivate)
   const { robots, text: robotsText, unavailable, note } = await readRobots(getFollowing, root)
@@ -168,6 +178,7 @@ export async function assess(start, opts) {
           if (!n || !sameSite(new URL(n).hostname, host)) continue
           const u = new URL(n)
           sitemap.urls++
+          if (left(n)) continue
           if (DOCUMENT.test(u.pathname)) sitemap.documents++
           else if (IMAGE.test(u.pathname)) sitemap.images++
           else if (!isPage(u) || sitemap.pages.has(n)) continue
@@ -192,6 +203,7 @@ export async function assess(start, opts) {
     for (let hop = 0; hop <= 3; hop++) {
       if (reserved >= maxPages || overBudget()) return null
       const u = new URL(current)
+      if (left(current)) { pages.push({ url: current, role, skipped: 'left out' }); return null }
       if (!robots.allowed(u.pathname + u.search)) { pages.push({ url: current, role, skipped: 'robots.txt' }); return null }
       reserved++
       tried.add(current)
@@ -243,7 +255,7 @@ export async function assess(start, opts) {
     await Promise.all(Array.from({ length: concurrency }, worker))
   }
 
-  const pageLink = (n) => { const u = new URL(n); return sameSite(u.hostname, host) && isPage(u) }
+  const pageLink = (n) => { const u = new URL(n); return sameSite(u.hostname, host) && isPage(u) && !left(n) }
   if (!unavailable) {
     await visit(root.toString(), 'home')
     const home = read.find((p) => p.role === 'home')
@@ -253,14 +265,14 @@ export async function assess(start, opts) {
     await run(spread([...sitemap.pages].filter((u) => !tried.has(u)), maxPages - reserved).map((url) => ({ url, role: 'sample' })))
     // No sitemap: sample the links the pages read so far lead to.
     if (!sitemap.pages.size) {
-      const linked = [...new Set(read.flatMap((p) => [...p.sig.links]))].filter((u) => !tried.has(u))
+      const linked = [...new Set(read.flatMap((p) => [...p.sig.links]))].filter((u) => !tried.has(u) && !left(u))
       await run(spread(linked, maxPages - reserved).map((url) => ({ url, role: 'sample' })))
     }
   }
 
   // How many pages the site has: the sitemap's count, else the pages read and linked.
   const siteLinks = new Set(read.map((p) => p.url))
-  for (const p of read) for (const l of p.sig.links) if (siteLinks.size < MAX_SITE_LINKS) siteLinks.add(l)
+  for (const p of read) for (const l of p.sig.links) if (siteLinks.size < MAX_SITE_LINKS && !left(l)) siteLinks.add(l)
   const sitemapPages = sitemap.pages.size + sitemap.uncapped
   const htmlPages = sitemapPages || (read.length ? siteLinks.size : 0)
   if (!sitemapPages && read.length) notes.push('No sitemap was found, so the page count is the pages read and the pages they link to; it is an estimate.')
@@ -315,8 +327,8 @@ export async function assess(start, opts) {
     const extra = new Set()
     let baseRead = 0
     let sampleRead = 0
-    for (const p of read) if (p.role !== 'sample') { baseRead++; for (const x of p.sig[kind]) base.add(x) }
-    for (const p of read) if (p.role === 'sample') { sampleRead++; for (const x of p.sig[kind]) if (!base.has(x)) extra.add(x) }
+    for (const p of read) if (p.role !== 'sample') { baseRead++; for (const x of p.sig[kind]) if (!left(x)) base.add(x) }
+    for (const p of read) if (p.role === 'sample') { sampleRead++; for (const x of p.sig[kind]) if (!base.has(x) && !left(x)) extra.add(x) }
     const rest = Math.max(0, htmlPages - baseRead)
     const fromSample = sampleRead ? Math.max(extra.size, (extra.size / sampleRead) * rest) : 0
     return { found: [...base, ...extra], count: Math.round(Math.max(base.size + fromSample, inSitemap)) }
@@ -365,7 +377,7 @@ export async function assess(start, opts) {
 
   const { pagesPerLanguage, largestLanguagePages, articles } = countPages({ read, pool: sitemap.pages.size ? sitemap.pages : siteLinks, host, uncapped: sitemap.uncapped })
 
-  const verdict = classify({ shop, payment, catalogue, login, integrations: [...integrations.values()], htmlPages: largestLanguagePages, totalPages: Object.values(pagesPerLanguage).reduce((a, b) => a + b, 0), articles, passwordPosts: passwordPosts.length, documents: documents.count, mediaBytes, enough, enoughWhy })
+  const verdict = classify({ shop, payment, catalogue, login, integrations: [...integrations.values()], htmlPages: largestLanguagePages, totalPages: Object.values(pagesPerLanguage).reduce((a, b) => a + b, 0), articles, passwordPosts: passwordPosts.length, documents: documents.count, mediaBytes, enough, enoughWhy, withoutMemberArea: scope.withoutMemberArea })
   const result = {
     version: VERSION,
     source: root.toString(),
@@ -381,6 +393,7 @@ export async function assess(start, opts) {
       pagesTried: reserved,
       pagesRead: read.length,
       pagesFailed: failed.length,
+      leftOut: skipped.size,
     },
     estimates: { htmlPages, pagesPerLanguage, largestLanguagePages, articles, documents: documents.count, images: images.count, mediaBytes, mediaBytesComplete: !sizeUnknown, productPages },
     site: {
@@ -391,6 +404,7 @@ export async function assess(start, opts) {
     },
     pages: pages.map((p) => ({ ...p, url: clean(p.url, 300) })),
     limits: LIMITS,
+    scope,
     notice: NOTICE,
     notes,
   }
@@ -435,6 +449,13 @@ export function markdown(r) {
     for (const e of reason.evidence) lines.push(`  - ${md(e.match)}: ${md(e.url)}`)
   }
   if (r.reasons.length) lines.push('')
+  const scope = r.scope ?? { exclude: [], withoutMemberArea: false }
+  if (scope.withoutMemberArea || scope.exclude.length) {
+    lines.push('## Left out at your request', '')
+    if (scope.withoutMemberArea) lines.push('- The member area: login and «min side» pages are not read or moved.')
+    for (const x of scope.exclude) lines.push(`- ${md(x)} and everything under it`)
+    lines.push('', `${r.counts.leftOut} addresses were left out.`, '')
+  }
   const e = r.estimates
   const c = r.counts
   lines.push(
