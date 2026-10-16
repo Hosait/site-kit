@@ -25,6 +25,8 @@ services:
       PAYLOAD_SECRET: ${PAYLOAD_SECRET}
       PREVIEW_SECRET: ${PREVIEW_SECRET}
       CRON_SECRET: ${CRON_SECRET}
+      # Bare lenken /next/admin-claim?code=<denne> kan opprette den første administratoren.
+      ADMIN_CLAIM_SECRET: ${ADMIN_CLAIM_SECRET}
       NEXT_PUBLIC_SERVER_URL: ${PUBLIC_URL}
       # «production» når nettstedets eget domene peker hit; ellers staging (noindex).
       SITE_ORIGINS: ${SITE_ORIGINS:-staging}

@@ -12,6 +12,7 @@
     { "name": "PAYLOAD_SECRET", "required": true, "generate": "hex32", "description": "Signs CMS sign-ins" },
     { "name": "PREVIEW_SECRET", "required": true, "generate": "hex32", "description": "Protects draft previews" },
     { "name": "CRON_SECRET", "required": true, "generate": "hex32", "description": "Protects cache clearing, seeding and scheduled jobs" },
+    { "name": "ADMIN_CLAIM_SECRET", "required": true, "generate": "hex32", "description": "Only the link with this code (/next/admin-claim?code=…) can create the first admin user" },
     { "name": "PUBLIC_URL", "required": true, "from": "url", "description": "The address the admin and preview answer on, e.g. https://kit-demo.hosait.com (no trailing /)" },
     { "name": "STAGING_HOST", "required": false, "description": "Only for several sites: the Hosait address whose subdomains serve the other sites" },
     { "name": "SITE_ORIGINS", "required": false, "description": "Set to production when the site's own domains point here" }
