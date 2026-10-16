@@ -77,7 +77,15 @@ then try it locally:
 After the preview is up, run
 `pnpm site-builder compare --out .site-builder/<host> --new <preview address>` (add
 `--allow-private` for a local preview) and look at `compare.md` (old pages and the old site's
-documents, PDFs and the like) and `compare.html` in that folder; run `pnpm qa:axe`.
+documents, PDFs and the like) and `compare.html` in that folder. Then run the launch checks; fix
+every error they report before the site moves to its own domain:
+
+- `pnpm qa:launch <preview address>` fails on a sitemap page that does not answer, placeholder or
+  demo text (the seeded privacy page, «Nordlys Demo», example.com), a page without a title and a
+  broken internal link. Its warnings (no description, no share image, images without alt text) go
+  into the hand-off to the user.
+- `pnpm qa:axe <preview address>` fails on serious accessibility errors on the site's own pages.
+  It needs Playwright's Chromium (`pnpm exec playwright install chromium`).
 
 ## 7. Publish on Hosait
 
@@ -91,8 +99,12 @@ on the project page; lines starting with `[seed]`). Fix the plan and push; then 
 "Run seed again" on the project page. A push alone does not run the seed again.
 Never commit `.env` or any secret.
 
-Right after the first deploy, the user creates the first admin user at `/admin` on the
-hosait.com address: until someone has, that page lets anyone create one. Once a user exists, an
+Right after the first deploy, the user creates the first admin user. Only the claim link can:
+"Create your admin user" under Next steps on the project page in Hosait opens
+`/next/admin-claim?code=…` (the code is the variable `ADMIN_CLAIM_SECRET`, which Hosait
+generates), and that opens `/admin` for an hour. Without it `/admin` refuses the first user. If
+the step opens plain `/admin`, the user copies `ADMIN_CLAIM_SECRET` from the project's Variables
+and opens `<address>/next/admin-claim?code=<value>`. Never ask for the value. Once a user exists, an
 import cut off part-way (the web service restarted during it) leaves pages that make "Run seed
 again" refuse; the admin then replaces the content with "Legg inn innhold" in the Testinnhold
 panel on the admin dashboard.
@@ -100,15 +112,19 @@ panel on the admin dashboard.
 Before the domain switch, run `pnpm site-builder compare` again with `--new` set to the site's
 hosait.com address.
 
-When the site moves to its own domain:
+When the site moves to its own domain (only once `pnpm qa:launch` and `pnpm qa:axe` pass on the
+preview):
 
 1. In `site/config.ts`, `origin` and `hosts` name the domain (and `www.` if it is used). Commit
    and push the change.
 2. In Hosait, the user adds the domain under Settings → Domains and follows the DNS steps there.
    Each extra name (the bare domain next to `www.`, an old domain) gets "Serve the site here".
-3. The user sets the variable `SITE_ORIGINS` to `production` under the project's Variables in
-   Hosait (the plugin's sign-in cannot change variables) and redeploys. Until then every page is
-   `noindex`, `robots.txt` blocks search engines, and the sitemap uses the hosait.com address.
+3. Nothing to set. Once Hosait has verified the domain, the next deploy or restart serves it as
+   the project's address (`HOSAIT_URL`), and because it is one of the `hosts` the site switches
+   to production by itself: indexing on, canonical URLs and the sitemap on the domain, the seed
+   route locked. If the domain was verified after the last deploy, the user redeploys in Hosait.
+   Until then every page is `noindex` and `robots.txt` blocks search engines. The variable
+   `SITE_ORIGINS` (`staging` or `production`) overrides this; leave it unset.
 ---
 
 <!-- BEGIN:nextjs-agent-rules -->
