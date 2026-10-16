@@ -75,7 +75,11 @@ then try it locally:
     pnpm test:unit
 
 After the preview is up: copy `.site-builder/<host>/urls.json` to `import-data/urls.json` and run
-`pnpm qa:urls <preview address>`; run `pnpm qa:axe`.
+`pnpm qa:urls <preview address>`; run `pnpm qa:axe`. Then run `pnpm qa:launch <preview address>`.
+It fails on a sitemap page that does not answer, placeholder or demo text (the seeded privacy
+page, «Nordlys Demo», example.com), a page without a title and a broken internal link: fix every
+error before the site moves to its own domain. Its warnings (no description, no share image,
+images without alt text) go into the hand-off to the user.
 
 ## 7. Publish on Hosait
 
@@ -95,7 +99,7 @@ import cut off part-way (the web service restarted during it) leaves pages that 
 again" refuse; the admin then replaces the content with "Legg inn innhold" in the Testinnhold
 panel on the admin dashboard.
 
-When the site moves to its own domain:
+When the site moves to its own domain (only once `pnpm qa:launch` passes on the preview):
 
 1. In `site/config.ts`, `origin` and `hosts` name the domain (and `www.` if it is used). Commit
    and push the change.

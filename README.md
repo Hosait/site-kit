@@ -59,6 +59,7 @@ pnpm kit:theme-check    # theme.json contrast
 pnpm kit:schema         # regenerate schema/blocks.schema.json after block changes
 pnpm test:e2e           # Playwright against a running site (BASE_URL for a deployed one)
 pnpm qa:axe <url>       # accessibility report
+pnpm qa:launch <url>    # launch check: errors stop the move to the own domain
 ```
 
 ## Spending

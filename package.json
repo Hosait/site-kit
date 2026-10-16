@@ -21,6 +21,7 @@
     "test:unit": "tsx --test tests/unit/*.test.ts",
     "qa:urls": "tsx scripts/qa/url-parity.ts",
     "qa:axe": "tsx scripts/qa/axe-report.ts",
+    "qa:launch": "tsx scripts/qa/launch-check.ts",
     "kit:theme-check": "tsx scripts/kit/theme-check.ts",
     "kit:schema": "tsx scripts/kit/schema.ts",
     "kit:import": "tsx scripts/kit/import-plan.ts",
