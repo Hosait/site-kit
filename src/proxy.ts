@@ -16,6 +16,12 @@ import { claimNeededPage, firstUserAllowed } from '@/lib/admin-claim'
  */
 const SITE_COOKIE = `${SITE_CONFIG.cookiePrefix}-site`
 
+/**
+ * Dokumenter et gammelt nettsted lenket til (som crawlerens liste i site-builder). De går gjennom
+ * proxyen bare for å finne en omdirigering; uten treff serveres de som statiske filer (eller 404).
+ */
+const DOCUMENT = /\.(pdf|docx?|xlsx?|pptx?|zip|csv)$/i
+
 type Redirect = { from: string; to: string; site: SiteKey | null; permanent: boolean }
 let redirectCache: { at: number; list: Redirect[] } | null = null
 const REDIRECT_TTL_MS = 30_000
@@ -100,6 +106,7 @@ export async function proxy(req: NextRequest) {
     const target = /^https?:\/\//.test(hit.to) ? new URL(hit.to) : publicUrl(req, hit.to)
     return withCookie(NextResponse.redirect(target, hit.permanent ? 308 : 307))
   }
+  if (DOCUMENT.test(pathname)) return NextResponse.next()
 
   const search = FEATURES.search ? searchRewrite(pathname) : null
   if (search) {
@@ -119,5 +126,5 @@ export async function proxy(req: NextRequest) {
 export const config = {
   // Alt unntatt admin, API, Next-interne filer, forhåndsvisningsruter og statiske filer; av
   // admin bare siden for den første brukeren.
-  matcher: ['/((?!admin|api|_next|next/|brand/|fonts/|media/|sequences/|favicon|.*\\.(?:svg|png|jpg|jpeg|webp|avif|ico|woff2?|pdf|txt|js|css|map)$).*)', '/robots.txt', '/admin/create-first-user'],
+  matcher: ['/((?!admin|api|_next|next/|brand/|fonts/|media/|sequences/|favicon|.*\\.(?:svg|png|jpg|jpeg|webp|avif|ico|woff2?|txt|js|css|map)$).*)', '/robots.txt', '/admin/create-first-user'],
 }
