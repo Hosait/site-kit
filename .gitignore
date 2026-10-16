@@ -30,3 +30,5 @@ import-data/
 docker-compose.override.local.yml
 
 *.tsbuildinfo
+
+.site-builder/

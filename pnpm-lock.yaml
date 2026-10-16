@@ -59,6 +59,9 @@ importers:
       '@radix-ui/react-slot':
         specifier: ^1.0.2
         version: 1.4.0(@types/react@19.2.14)(react@19.2.6)
+      ajv:
+        specifier: ^8.20.0
+        version: 8.20.0
       class-variance-authority:
         specifier: ^0.7.0
         version: 0.7.1
@@ -71,9 +74,15 @@ importers:
       dotenv:
         specifier: 16.4.7
         version: 16.4.7
+      file-type:
+        specifier: 21.3.4
+        version: 21.3.4
       graphql:
         specifier: ^16.8.2
         version: 16.14.2
+      jsdom:
+        specifier: ^30.1.2
+        version: 30.1.2
       lucide-react:
         specifier: 0.563.0
         version: 0.563.0(react@19.2.6)
@@ -141,9 +150,6 @@ importers:
       '@types/react-dom':
         specifier: 19.2.3
         version: 19.2.3(@types/react@19.2.14)
-      ajv:
-        specifier: ^8.20.0
-        version: 8.20.0
       autoprefixer:
         specifier: ^10.4.19
         version: 10.6.1(postcss@8.5.29)
@@ -153,9 +159,6 @@ importers:
       eslint-config-next:
         specifier: 16.3.3
         version: 16.3.3(@typescript-eslint/parser@8.71.1(eslint@9.39.5(jiti@2.7.0))(typescript@5.7.3))(eslint@9.39.5(jiti@2.7.0))(typescript@5.7.3)
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
       postcss:
         specifier: ^8.5.28
         version: 8.5.29

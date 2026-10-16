@@ -6,3 +6,5 @@ import-data
 playwright-report
 test-results
 .env
+packages
+.site-builder

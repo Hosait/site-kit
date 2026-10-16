@@ -7,6 +7,8 @@ export type Theme = {
   colors: Record<ColorKey, string>
   radius: { button: string; card: string }
   logo: { src: string; width: number; height: number }
+  /** The site's icon (favicon), from the old site; without it the kit's /favicon.ico. */
+  icon?: { src: string }
 }
 
 export const COLOR_VARS: Record<ColorKey, string> = {
@@ -23,6 +25,7 @@ export const COLOR_VARS: Record<ColorKey, string> = {
 const HEX = /^#[0-9a-f]{6}$/i
 const LENGTH = /^\d+(\.\d+)?(px|rem)$/
 const LOGO = /^\/brand\/[a-z0-9._-]+\.(svg|png|webp)$/
+const ICON = /^\/brand\/[a-z0-9_-][a-z0-9._-]*\.(svg|png|webp|ico)$/
 
 export function validateTheme(input: unknown): Theme {
   const t = input as Partial<Theme> | null
@@ -37,9 +40,13 @@ export function validateTheme(input: unknown): Theme {
   }
   if (typeof t?.logo?.src !== 'string' || !LOGO.test(t.logo.src)) problems.push('logo.src must be /brand/<file>.svg|png|webp')
   if (!(Number(t?.logo?.width) > 0) || !(Number(t?.logo?.height) > 0)) problems.push('logo.width and logo.height must be positive')
+  if (t?.icon !== undefined && (typeof t.icon?.src !== 'string' || !ICON.test(t.icon.src) || t.icon.src.includes('..'))) problems.push('icon.src must be /brand/<file>.svg|png|webp|ico')
   if (problems.length) throw new Error(`site/theme.json: ${problems.join('; ')}`)
   return t as Theme
 }
+
+/** The address of the site's icon: theme.json's, else the kit's own. */
+export const siteIcon = (theme: Theme): string => theme.icon?.src ?? '/favicon.ico'
 
 export function themeToCss(theme: Theme): string {
   const vars = (Object.keys(COLOR_VARS) as ColorKey[]).map((k) => `${COLOR_VARS[k]}:${theme.colors[k]};`)
