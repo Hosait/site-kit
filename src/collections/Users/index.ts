@@ -1,8 +1,9 @@
-import type { CollectionConfig } from 'payload'
+import { APIError, type CollectionConfig } from 'payload'
 
 import { adminOnly, isAdmin } from '@/access/siteAccess'
 import { authenticated } from '@/access/authenticated'
-import { SINGLE_SITE, SITE_OPTIONS } from '@/lib/sites'
+import { firstUserAllowed } from '@/lib/admin-claim'
+import { SINGLE_SITE, SITE_CONFIG, SITE_OPTIONS } from '@/lib/sites'
 import { audit } from '@/lib/analytics/audit'
 import type { User } from '@/payload-types'
 
@@ -71,12 +72,24 @@ export const Users: CollectionConfig = {
         return doc
       },
     ],
-    // Første bruker som opprettes blir administrator.
+    // Første bruker som opprettes blir administrator. Over HTTP krever det lenken fra
+    // Hosait når ADMIN_CLAIM_SECRET er satt (src/lib/admin-claim.ts); skript på serveren
+    // (Local API) spørres ikke.
     beforeChange: [
       async ({ data, operation, req }) => {
         if (operation === 'create') {
           const { totalDocs } = await req.payload.count({ collection: 'users', req })
-          if (totalDocs === 0) data.role = 'admin'
+          if (totalDocs === 0) {
+            const allowed = req.payloadAPI === 'local' || firstUserAllowed({
+              secret: process.env.ADMIN_CLAIM_SECRET,
+              cookieHeader: req.headers?.get('cookie') ?? null,
+              nowMs: Date.now(),
+            })
+            if (!allowed) throw new APIError(SITE_CONFIG.admin.language === 'nb'
+              ? 'Den første administratoren opprettes fra lenken på prosjektsiden i Hosait.'
+              : 'The first admin user is created from the link on the project page in Hosait.', 403)
+            data.role = 'admin'
+          }
         }
         return data
       },
