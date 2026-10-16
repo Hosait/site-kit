@@ -96,3 +96,13 @@ test('a robots.txt with very many cart rules is read in linear time and gives a 
   assert.ok(Date.now() - t < 500, `took ${Date.now() - t} ms`)
   assert.equal(rules.length, 20)
 })
+
+test('JSON-LD and microdata: only the item a page is about counts, not one named inside another', () => {
+  const offer = { '@type': 'Offer', price: '199', itemOffered: { '@type': 'Product', name: 'Kurs', offers: { '@type': 'Offer', price: '199' } } }
+  assert.deepEqual(jsonLd(JSON.stringify({ '@type': 'Organization', makesOffer: offer })), { product: false, priced: false })
+  assert.deepEqual(jsonLd(JSON.stringify({ '@type': 'Review', itemReviewed: { '@type': 'Product', name: 'X' } })), { product: false, priced: false })
+  assert.deepEqual(jsonLd(JSON.stringify({ '@type': 'WebPage', mainEntity: { '@type': 'Product', offers: { '@type': 'Offer', price: '99' } } })), { product: true, priced: true })
+  assert.deepEqual(jsonLd(JSON.stringify([{ '@type': 'BreadcrumbList' }, { '@type': 'Product' }])), { product: true, priced: false })
+  const s = pageSignals(html('<div itemscope itemtype="https://schema.org/Review"><div itemprop="itemReviewed" itemscope itemtype="https://schema.org/Product"><span itemprop="price">99</span></div></div>'), 'https://www.acme.no/x', 'www.acme.no')
+  assert.deepEqual([s.product, s.priced, s.shop], [false, false, []])
+})
