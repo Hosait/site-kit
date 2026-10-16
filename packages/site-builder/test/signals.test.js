@@ -185,3 +185,57 @@ test('a page says its language, its alternates, and whether it is an article', (
   assert.equal(pageSignals(html(ld({ '@type': 'Organization', subjectOf: { '@type': 'Article' } })), 'https://www.acme.no/x', 'www.acme.no').article, false)
   assert.equal(pageSignals(html('<p>x</p>', '<meta property="og:type" content="website">'), 'https://www.acme.no/x', 'www.acme.no').article, false)
 })
+
+// Bjørn's review of #17, round 2: member wording on its own is not a login. Associations and clubs
+// link to «Bli medlem» and «Våre medlemmer», and they are the simple sites Hosait moves.
+test('member wording alone is not a login area: joining, member lists and benefits are ordinary pages', () => {
+  for (const a of ['<a href="/bli-medlem">Bli medlem</a>', '<a href="/medlemmer">Våre medlemmer</a>', '<a href="/medlemskap">Medlemskap</a>', '<a href="/fordeler">Medlemsfordeler</a>', '<a href="/membership">Membership</a>', '<a href="/members">Our members</a>', '<a href="/mitglieder">Mitglieder</a>']) {
+    const s = pageSignals(html(a), 'https://x.no/', 'x.no')
+    assert.deepEqual(s.login, [], a)
+    assert.equal(s.links.size, 1, a)
+  }
+})
+
+test('member wording still stops the CMS note: a member link to the CMS login is a login area', () => {
+  for (const a of ['<a href="/wp-admin/">Medlemsområde</a>', '<a href="/wp-login.php">Members</a>', '<a href="/wp-login.php">Logg inn for medlemmer</a>']) {
+    const s = pageSignals(html(a), 'https://x.no/', 'x.no')
+    assert.equal(s.login.length, 1, a)
+    assert.deepEqual(s.cmsLogin, [], a)
+  }
+})
+
+test('login and account wording in Swedish, Danish, German, French and Spanish is a login area', () => {
+  for (const text of ['Mina sidor', 'Mitt konto', 'Mein Konto', 'Anmelden', 'Mon compte', 'Espace membres', 'Se connecter', 'Mi cuenta', 'Iniciar sesión', 'Mitgliederbereich']) {
+    assert.equal(pageSignals(html(`<a href="/side">${text}</a>`), 'https://x.no/', 'x.no').login.length, 1, text)
+  }
+  for (const p of ['/mein-konto', '/mon-compte', '/mi-cuenta', '/mina-sidor', '/espace-membres', '/connexion']) assert.ok(isLoginUrl(new URL(`https://x.no${p}`)), p)
+})
+
+test('a login folder written with percent-encoding is still a login folder', () => {
+  assert.ok(isLoginUrl(new URL('https://x.no/min%2Dside/')))
+  const s = pageSignals(html('<a href="/min%2Dside/wp-login.php">Logg inn</a>'), 'https://x.no/', 'x.no')
+  assert.deepEqual([s.login.length, s.cmsLogin], [1, []])
+})
+
+test('WordPress acts on the last action in the address: login followed by register is not the CMS login', () => {
+  const s = pageSignals(html('<a href="/wp-login.php?action=login&action=register">Logg inn</a>'), 'https://x.no/', 'x.no')
+  assert.deepEqual([s.login.length, s.cmsLogin], [1, []])
+})
+
+test('the post-password form allows only a password, hidden fields and a button, and never under a member folder', () => {
+  const page = (f) => pageSignals(html(f), 'https://x.no/', 'x.no')
+  const form = (action, extra) => `<form action="${action}" class="post-password-form" method="post"><input name="post_password" type="password">${extra}<input type="submit"></form>`
+  const ok = page(form('https://x.no/wp-login.php?action=postpass', '<input type="hidden" name="_wp_http_referer" value="/x">'))
+  assert.deepEqual([ok.login, ok.passwordPosts], [[], ['password-protected post']])
+  for (const [action, extra] of [
+    ['https://x.no/wp-login.php?action=postpass', '<input type="search" name="log">'],
+    ['https://x.no/wp-login.php?action=postpass', '<textarea name="log"></textarea>'],
+    ['https://x.no/wp-login.php?action=postpass', '<select name="log"><option>a</option></select>'],
+    ['https://x.no/medlem/wp-login.php?action=postpass', ''],
+    ['https://x.no/wp-login.php?action=postpass&action=login', ''],
+  ]) {
+    const s = page(form(action, extra))
+    assert.ok(s.login.length >= 1, `${action} ${extra}`)
+    assert.deepEqual(s.passwordPosts, [], `${action} ${extra}`)
+  }
+})

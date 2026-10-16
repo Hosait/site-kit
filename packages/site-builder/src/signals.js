@@ -20,13 +20,18 @@ const MAX_INTEGRATIONS = 20
 const CART_SEGMENTS = new Set(['cart', 'checkout', 'basket', 'handlekurv', 'handlevogn', 'kasse', 'kassen', 'kurv', 'varukorg', 'kassa', 'warenkorb', 'panier', 'carrito', 'shopping-cart', 'shoppingcart', 'add-to-cart', 'addtocart', 'add_to_cart'])
 const CART_KEYS = new Set(['add-to-cart', 'add_to_cart', 'addtocart'])
 const CART_ACTIONS = new Set(['add', 'addtocart', 'add-to-cart', 'add_to_cart', 'cart_add', 'addtobasket'])
-const LOGIN_SEGMENTS = new Set(['login', 'log-in', 'logg-inn', 'logginn', 'signin', 'sign-in', 'min-side', 'minside', 'mine-sider', 'my-account', 'myaccount', 'account', 'konto', 'min-konto', 'wp-login'])
-const LOGIN_TEXTS = new Set(['logg inn', 'logg på', 'log in', 'login', 'sign in', 'min side', 'mine sider', 'my account', 'min konto', 'my page', 'logga in', 'log ind'])
+const LOGIN_SEGMENTS = new Set(['login', 'log-in', 'logg-inn', 'logginn', 'signin', 'sign-in', 'min-side', 'minside', 'mine-sider', 'my-account', 'myaccount', 'account', 'konto', 'min-konto', 'wp-login',
+  'mina-sidor', 'mitt-konto', 'mein-konto', 'anmelden', 'einloggen', 'mon-compte', 'connexion', 'espace-membres', 'espace-membre', 'mi-cuenta', 'iniciar-sesion'])
+const LOGIN_TEXTS = new Set(['logg inn', 'logg på', 'log in', 'login', 'sign in', 'min side', 'mine sider', 'my account', 'min konto', 'my page', 'logga in', 'log ind',
+  'anmelden', 'einloggen', 'connexion', 'se connecter', 'iniciar sesión', 'acceder'])
 // A link to the CMS's own login is a note only with plain admin wording (or none, an icon).
 const ADMIN_TEXTS = new Set(['', 'logg inn', 'log in', 'login', 'admin', 'meta'])
-// Member wording is a login area wherever the link goes.
-const MEMBER_TEXT = /(^|[\s(])(min side|mine sider|my account|min konto|my page|medlem|member)/
-const MEMBER_SEGMENT = /^(min-?side|mine-sider|my-?account|account|konto|min-konto|profil|profile|medlem|member)/
+// Account wording is a login area wherever the link goes: «Logg inn på Min side», «Mein Konto».
+const ACCOUNT_TEXT = /(^|[\s(])(min side|mine sider|my account|min konto|my page|mina sidor|mitt konto|min sida|mein konto|kundenkonto|mitgliederbereich|mon compte|espace membres?|espace client|mi cuenta|área de socios)/
+// Member wording alone is not: «Bli medlem» and «Våre medlemmer» are ordinary pages. It only
+// keeps a link to the CMS's own login from being a note: that is the members' login.
+const MEMBER_TEXT = /(^|[\s(])(medlem|member|mitglied|membre|socio)/
+const MEMBER_SEGMENT = /^(min-?side|mine-sider|mina-sidor|my-?account|account|konto|min-konto|mitt-konto|mein-konto|mon-compte|mi-cuenta|profil|profile|medlem|member|mitglied|membre|espace-membre|socio)/
 // Path segments of product pages in common shop systems (WooCommerce, Shopify, Norwegian shops).
 const PRODUCT_SEGMENTS = new Set(['product', 'products', 'produkt', 'produkter', 'produkte', 'vare', 'varer', 'shop', 'butikk', 'nettbutikk', 'item', 'items', 'catalog', 'catalogue', 'katalog', 'sku'])
 // Shop systems, by what they put in every page.
@@ -54,7 +59,11 @@ const FEEDS = ['webcruiter.no', 'jobylon.com', 'recman.no', 'teamtailor.com', 'e
 const ORDINARY_FRAMES = ['youtube.com', 'youtube-nocookie.com', 'youtu.be', 'vimeo.com', 'google.com', 'googletagmanager.com', 'doubleclick.net', 'spotify.com', 'soundcloud.com', 'facebook.com', 'instagram.com', 'twitter.com', 'x.com', 'linkedin.com']
 
 const hostIn = (host, list) => list.some((d) => host === d || host.endsWith('.' + d))
-const segments = (pathname) => pathname.toLowerCase().split('/').filter(Boolean).map((s) => s.replace(/\.[a-z0-9]{1,5}$/, ''))
+// Percent-encoding is undone, so /min%2Dside/ is /min-side/.
+const decoded = (s) => { try { return decodeURIComponent(s) } catch { return s } }
+const segments = (pathname) => pathname.toLowerCase().split('/').filter(Boolean).map((s) => decoded(s).replace(/\.[a-z0-9]{1,5}$/, ''))
+// WordPress (PHP) acts on the last value of a repeated parameter.
+const lastParam = (u, key) => { const all = u.searchParams.getAll(key); return (all[all.length - 1] ?? '').toLowerCase() }
 const shortPath = (u) => (u.pathname + u.search).slice(0, 100)
 
 /** True when an address is a cart, a checkout or an add-to-cart action. @param {URL} u */
@@ -77,7 +86,7 @@ export function isCmsAdminUrl(u) {
   // Not under a member folder, not open registration or password reset, and a WordPress
   // redirect only into wp-admin.
   if (!s.length || s.some((x) => MEMBER_SEGMENT.test(x))) return false
-  const action = (u.searchParams.get('action') ?? '').toLowerCase()
+  const action = lastParam(u, 'action')
   if (action && action !== 'login') return false
   const redirect = u.searchParams.get('redirect_to')
   if (redirect !== null) {
@@ -91,18 +100,19 @@ export function isCmsAdminUrl(u) {
 }
 
 /**
- * WordPress's own form for a password-protected post: it posts to wp-login.php?action=postpass,
- * is marked as that form, and asks for nothing but the password. Anything else is a login.
+ * WordPress's own form for a password-protected post: it posts to wp-login.php?action=postpass
+ * (not under a member folder), is marked as that form, and has nothing but the password, hidden
+ * fields and a button. Anything else is a login.
  */
 function isPostPasswordForm($, form, pageUrl) {
   const n = normalize(String($(form).attr('action') ?? ''), pageUrl)
   if (!n) return false
   const u = new URL(n)
   const s = segments(u.pathname)
-  if (s[s.length - 1] !== 'wp-login' || u.searchParams.get('action') !== 'postpass') return false
+  if (s[s.length - 1] !== 'wp-login' || lastParam(u, 'action') !== 'postpass' || s.some((x) => MEMBER_SEGMENT.test(x))) return false
   if (!$(form).hasClass('post-password-form') && !$(form).find('[name="post_password"]').length) return false
-  const other = $(form).find('input').toArray().some((i) => ['', 'text', 'email', 'tel'].includes(String($(i).attr('type') ?? '').trim().toLowerCase()))
-  return !other
+  if ($(form).find('textarea, select').length) return false
+  return $(form).find('input').toArray().every((i) => ['password', 'hidden', 'submit'].includes(String($(i).attr('type') ?? '').trim().toLowerCase()))
 }
 
 /** True when a path has a segment that shop systems use for product pages. @param {string} pathname */
@@ -245,8 +255,10 @@ export function pageSignals(html, url, host) {
     if (IMAGE.test(u.pathname)) { s.images.add(n); continue }
     if (isCartUrl(u)) { add(s.shop, `link to ${shortPath(u)}`); continue }
     const label = $(el).text().replace(/\s+/g, ' ').trim().toLowerCase()
-    if (!MEMBER_TEXT.test(label) && ADMIN_TEXTS.has(label) && isCmsAdminUrl(u)) { add(s.cmsLogin, `link to ${shortPath(u)}`); continue }
-    if (MEMBER_TEXT.test(label) || isLoginUrl(u) || LOGIN_TEXTS.has(label)) { add(s.login, `link to ${shortPath(u)}`); continue }
+    const cmsAdmin = isCmsAdminUrl(u)
+    const member = MEMBER_TEXT.test(label)
+    if (cmsAdmin && !member && ADMIN_TEXTS.has(label)) { add(s.cmsLogin, `link to ${shortPath(u)}`); continue }
+    if (isLoginUrl(u) || LOGIN_TEXTS.has(label) || ACCOUNT_TEXT.test(label) || (cmsAdmin && member)) { add(s.login, `link to ${shortPath(u)}`); continue }
     if (!SKIP.test(u.pathname)) s.links.add(n)
   }
   for (const v of [$('html').attr('lang'), ...$('link[rel="alternate"][hreflang]').toArray().map((e) => $(e).attr('hreflang'))]) {
