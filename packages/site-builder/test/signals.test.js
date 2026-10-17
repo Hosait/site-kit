@@ -276,3 +276,23 @@ test('the visible text counts a body that carries a cookie class, and joins text
   assert.equal(banner.textLength, 3, 'a banner inside the page is still left out')
 })
 
+// Bjørn's review of #37: the member-login pattern backtracked quadratically on a long link text,
+// missed common wordings and caught a few ordinary ones.
+test('a very long link text is read in linear time', () => {
+  const t = Date.now()
+  const s = pageSignals(html(`<a href="/x">${'member'.repeat(70_000)}</a>`), 'https://x.no/', 'x.no')
+  assert.ok(Date.now() - t < 1000, `took ${Date.now() - t} ms`)
+  assert.equal(s.login.length, 0)
+})
+
+test('member login wording in either order, with apostrophes, «sign in», and in Swedish and French, is a login area', () => {
+  for (const text of ['Medlem? Logg inn', 'Er du medlem? Logg inn her', 'Bli medlem eller logg inn', 'Members\' area', 'Member\'s login', 'Members sign in', 'Sign in for members', 'Member sign-in', 'Logga in för medlemmar', 'Medlemsinloggning', 'Medlemssidor', 'Connexion membres', 'Medlemsområde']) {
+    assert.equal(pageSignals(html(`<a href="/side">${text}</a>`), 'https://x.no/', 'x.no').login.length, 1, text)
+  }
+})
+
+test('«Remember login», «Sociology portal», «Medlemsareal» and member wording without a login word are not a login', () => {
+  for (const text of ['Remember login', 'Sociology portal', 'Medlemsareal', 'Medlemsmøte', 'Members\' night', 'Bli medlem', 'Våre medlemmer', 'Medlemsfordeler']) {
+    assert.deepEqual(pageSignals(html(`<a href="/side">${text}</a>`), 'https://x.no/', 'x.no').login, [], text)
+  }
+})
