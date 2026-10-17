@@ -11,6 +11,7 @@ import { detect } from './detect.js'
 import { extractPage } from './extract.js'
 import { decode } from './html.js'
 import { get as defaultGet } from './net.js'
+import { countPages } from './pages.js'
 import { DOCUMENT, isProductPath, pageSignals, robotsCartRules } from './signals.js'
 
 /**
@@ -18,10 +19,16 @@ import { DOCUMENT, isProductPath, pageSignals, robotsCartRules } from './signals
  * red: decline. yellow: possible, with the customer's OK on scope and storage. green: go ahead.
  */
 export const LIMITS = Object.freeze({
-  /** More HTML pages than this: red. */
+  /** More HTML pages than this in the largest language, articles not counted: red. */
   declinePages: 500,
-  /** More HTML pages than this: yellow. */
+  /** More HTML pages than this in the largest language, articles not counted: yellow. */
   scopePages: 200,
+  /** More HTML pages than this in all languages together, articles not counted: red. */
+  declineTotalPages: 1500,
+  /** More articles (news, blog posts) than this: red. Articles are counted apart from pages. */
+  declineArticles: 500,
+  /** More pages (largest language) and articles together than this: yellow, when neither alone is red. */
+  scopeContent: 500,
   /** More documents (PDF and Office files) than this: yellow. */
   scopeDocuments: 100,
   /** An estimated size of documents and images over this: yellow. */
@@ -36,6 +43,10 @@ export const LIMITS = Object.freeze({
   productPathShare: 0.3,
   /** Fewer pages read than this (or than the site has, if fewer): yellow, too little to decide. */
   minPagesRead: 3,
+  /** More password-protected pages than this among those read: yellow (their content cannot be read). */
+  scopePasswordPosts: 3,
+  /** A home page with less visible text than this and no links may need JavaScript to show anything. */
+  minHomeText: 200,
 })
 
 const VERSION = 1
@@ -93,7 +104,8 @@ export function spread(urls, n) {
 /**
  * The answer from what was found. Any red reason makes the site red; otherwise any yellow
  * reason makes it yellow; otherwise green. There is no "unknown": too little read is yellow.
- * @param {{ shop: {url: string, match: string}[], payment: {url: string, match: string}[], catalogue: {url: string, match: string}[], login: {url: string, match: string}[], integrations: {url: string, match: string}[], htmlPages: number, documents: number, mediaBytes: number | null, enough: boolean, enoughWhy?: string }} f
+ * `htmlPages` is the pages of the largest language, articles not counted.
+ * @param {{ shop: {url: string, match: string}[], payment: {url: string, match: string}[], catalogue: {url: string, match: string}[], login: {url: string, match: string}[], integrations: {url: string, match: string}[], htmlPages: number, totalPages?: number, articles?: number, passwordPosts?: number, documents: number, mediaBytes: number | null, enough: boolean, enoughWhy?: string }} f
  */
 export function classify(f) {
   const reasons = []
@@ -102,12 +114,19 @@ export function classify(f) {
   if (f.payment.length) reason('red', 'payment', 'It takes payments: a payment or checkout service is built in.', f.payment)
   if (f.catalogue.length) reason('red', 'catalogue', 'It is a product catalogue: a large part of its pages are product pages.', f.catalogue)
   if (f.login.length) reason('red', 'login', 'It has a login or member area.', f.login)
-  if (f.htmlPages > LIMITS.declinePages) reason('red', 'pages', `It has about ${f.htmlPages} pages, more than the ${LIMITS.declinePages} Hosait Sites moves.`)
-  else if (f.htmlPages > LIMITS.scopePages) reason('yellow', 'pages', `It has about ${f.htmlPages} pages, more than the ${LIMITS.scopePages} a standard move covers.`)
+  const total = f.totalPages ?? f.htmlPages
+  if (total > LIMITS.declineTotalPages) reason('red', 'total-pages', `It has about ${total} pages in all its languages together, more than the ${LIMITS.declineTotalPages} Hosait Sites moves.`)
+  if (f.htmlPages > LIMITS.declinePages) reason('red', 'pages', `It has about ${f.htmlPages} pages in its largest language, more than the ${LIMITS.declinePages} Hosait Sites moves.`)
+  else if (f.htmlPages > LIMITS.scopePages) reason('yellow', 'pages', `It has about ${f.htmlPages} pages in its largest language, more than the ${LIMITS.scopePages} a standard move covers.`)
+  if ((f.articles ?? 0) > LIMITS.declineArticles) reason('red', 'articles', `It has about ${f.articles} articles (news and posts), more than the ${LIMITS.declineArticles} Hosait Sites moves.`)
+  const content = f.htmlPages + (f.articles ?? 0)
+  if (content > LIMITS.scopeContent && !reasons.some((r) => r.class === 'red' && ['pages', 'total-pages', 'articles'].includes(r.code)))
+    reason('yellow', 'content', `It has about ${f.htmlPages} pages in its largest language and ${f.articles ?? 0} articles, more than the ${LIMITS.scopeContent} pages and articles together a standard move covers.`)
   if (f.documents > LIMITS.scopeDocuments) reason('yellow', 'documents', `It has about ${f.documents} documents (PDF and Office files), more than the ${LIMITS.scopeDocuments} a standard move covers.`)
   if (f.mediaBytes !== null && f.mediaBytes > LIMITS.scopeMediaBytes) reason('yellow', 'storage', `Its documents and images take about ${gigabytes(f.mediaBytes)}, more than the ${gigabytes(LIMITS.scopeMediaBytes)} of storage a standard move covers.`)
+  if ((f.passwordPosts ?? 0) > LIMITS.scopePasswordPosts) reason('yellow', 'protected-posts', `${f.passwordPosts} of the pages read are password-protected: their content cannot be read, so the customer has to give it, or they are left out.`)
   if (f.integrations.length) reason('yellow', 'integrations', 'It has built-in services the new site cannot run itself; they become links or embeds, or are left out.', f.integrations)
-  if (!f.enough) reason('yellow', 'not-enough-read', `Too little of the site could be read to decide${f.enoughWhy ? ` (${f.enoughWhy})` : ''}. Check the site by hand before going on.`)
+  if (!f.enough) reason('yellow', 'not-enough-read', `Too little of the site could be read to decide${f.enoughWhy ? ` (${f.enoughWhy})` : ''}. The check has to run again (with a longer time budget, or at the address a note names) before anything is built.`)
   const cls = reasons.some((r) => r.class === 'red') ? 'red' : reasons.length ? 'yellow' : 'green'
   return { class: cls, reasons }
 }
@@ -169,6 +188,8 @@ export async function assess(start, opts) {
   const read = []
   const tried = new Set()
   let reserved = 0
+  // Where the home page leads when that is another site (a redirect, a meta refresh or a frameset).
+  let elsewhere = null
 
   // A slot is reserved before each request (redirects included), so the cap holds with two workers.
   async function fetchHtml(url, role) {
@@ -189,6 +210,7 @@ export async function assess(start, opts) {
       log(`${r.status} ${current}`)
       if (r.status >= 300 && r.status < 400 && r.headers.location) {
         const next = normalize(String(r.headers.location), current)
+        if (next && role === 'home' && !sameSite(new URL(next).hostname, host)) elsewhere = next
         if (!next || !sameSite(new URL(next).hostname, host) || tried.has(next)) return null
         record.location = next
         current = next
@@ -230,6 +252,7 @@ export async function assess(start, opts) {
   if (!unavailable) {
     await visit(root.toString(), 'home')
     const home = read.find((p) => p.role === 'home')
+    if (home?.sig.forward && !sameSite(new URL(home.sig.forward).hostname, host)) elsewhere = home.sig.forward
     const nav = home ? [...new Set(home.nav.map((l) => normalize(l.href, home.url)).filter((n) => n && pageLink(n) && !tried.has(n)))].slice(0, Math.min(MAX_NAV, Math.floor(maxPages / 4))) : []
     await run(nav.map((url) => ({ url, role: 'nav' })))
     await run(spread([...sitemap.pages].filter((u) => !tried.has(u)), maxPages - reserved).map((url) => ({ url, role: 'sample' })))
@@ -257,6 +280,10 @@ export async function assess(start, opts) {
     for (const i of p.sig.integrations) if (!integrations.has(i.name)) integrations.set(i.name, evidence(p.url, `${i.kind}: ${i.name}`))
     for (const name of p.services) if (!integrations.has(name)) integrations.set(name, evidence(p.url, `service: ${name}`))
   }
+  const cmsLogin = read.find((p) => p.sig.cmsLogin.length)
+  if (cmsLogin) notes.push(`It links to its own admin login (${cmsLogin.sig.cmsLogin[0]} on ${cmsLogin.url}). That is how the old site's editors get in, not a member area.`)
+  const passwordPosts = read.filter((p) => p.sig.passwordPosts.length)
+  if (passwordPosts.length && passwordPosts.length <= LIMITS.scopePasswordPosts) notes.push(`${passwordPosts.length} of the pages read are password-protected posts (${passwordPosts[0].url}). Their text cannot be read: the customer gives it, or they are left out.`)
 
   // A catalogue: product markup on pages read, extrapolated per sitemap group, or product paths.
   const products = read.filter((p) => p.sig.product)
@@ -333,10 +360,17 @@ export async function assess(start, opts) {
   if (failed.length) notes.push(`${failed.length} of the pages tried could not be read; they are listed under pages.`)
   if (budgetReached) notes.push(`Stopped at the ${Math.round(budgetMs / 6000) / 10}-minute time budget; the answer is based on the ${read.length} pages read.`)
   const homeAllowed = robots.allowed(root.pathname + root.search)
-  const enough = read.length >= Math.min(LIMITS.minPagesRead, Math.max(1, htmlPages))
-  const enoughWhy = unavailable ? 'robots.txt did not answer' : !homeAllowed ? 'robots.txt does not allow reading the home page' : budgetReached ? 'the time budget ran out' : `${read.length} pages could be read`
+  if (elsewhere) notes.push(`The home page leads to ${new URL(elsewhere).origin}/, another site. Check that address instead.`)
+  // No sitemap and nothing linked from the pages read: the site may need JavaScript to show its pages.
+  // A one-page site with text and #anchor links is enough; a near-empty page is not.
+  const homeText = read.find((p) => p.role === 'home')?.sig.textLength ?? 0
+  const noLinks = !sitemapPages && read.length > 0 && homeText < LIMITS.minHomeText && !read.some((p) => [...p.sig.links].some((l) => l !== p.url && l !== root.toString()))
+  const enough = !elsewhere && !noLinks && read.length >= Math.min(LIMITS.minPagesRead, Math.max(1, htmlPages))
+  const enoughWhy = unavailable ? 'robots.txt did not answer' : !homeAllowed ? 'robots.txt does not allow reading the home page' : elsewhere ? 'the home page leads to another site' : noLinks ? 'there is no sitemap and the home page links to no other page; it may need JavaScript' : budgetReached ? 'the time budget ran out' : `${read.length} pages could be read`
 
-  const verdict = classify({ shop, payment, catalogue, login, integrations: [...integrations.values()], htmlPages, documents: documents.count, mediaBytes, enough, enoughWhy })
+  const { pagesPerLanguage, largestLanguagePages, articles } = countPages({ read, pool: sitemap.pages.size ? sitemap.pages : siteLinks, host, uncapped: sitemap.uncapped })
+
+  const verdict = classify({ shop, payment, catalogue, login, integrations: [...integrations.values()], htmlPages: largestLanguagePages, totalPages: Object.values(pagesPerLanguage).reduce((a, b) => a + b, 0), articles, passwordPosts: passwordPosts.length, documents: documents.count, mediaBytes, enough, enoughWhy })
   const result = {
     version: VERSION,
     source: root.toString(),
@@ -353,7 +387,7 @@ export async function assess(start, opts) {
       pagesRead: read.length,
       pagesFailed: failed.length,
     },
-    estimates: { htmlPages, documents: documents.count, images: images.count, mediaBytes, mediaBytesComplete: !sizeUnknown, productPages },
+    estimates: { htmlPages, pagesPerLanguage, largestLanguagePages, articles, documents: documents.count, images: images.count, mediaBytes, mediaBytesComplete: !sizeUnknown, productPages },
     site: {
       cms: [...new Set(read.flatMap((p) => p.cms))],
       languages: [...new Set(read.flatMap((p) => [...p.sig.languages]))].sort(),
@@ -389,12 +423,18 @@ const ANSWER = {
     '',
     'This is a simple content website of a size Hosait Sites moves. The next step reads the whole site and rebuilds it.',
   ],
+  unfinished: [
+    '## Answer: Not decided yet',
+    '',
+    'Too little of the site could be read to decide, so the check has to run again before anything is built:',
+  ],
 }
 
 /** assess.md: one page for the customer, in plain language. */
 export function markdown(r) {
   const host = new URL(r.source).hostname
-  const lines = [`# Can Hosait move ${md(host)}?`, '', `Checked on ${r.assessedAt.slice(0, 10)}.`, '', NOTICE, '', ...ANSWER[r.class], '']
+  const unfinished = r.class === 'yellow' && r.reasons.some((x) => x.code === 'not-enough-read')
+  const lines = [`# Can Hosait move ${md(host)}?`, '', `Checked on ${r.assessedAt.slice(0, 10)}.`, '', NOTICE, '', ...ANSWER[unfinished ? 'unfinished' : r.class], '']
   for (const reason of r.reasons) {
     lines.push(`- ${reason.text}`)
     for (const e of reason.evidence) lines.push(`  - ${md(e.match)}: ${md(e.url)}`)
@@ -405,7 +445,7 @@ export function markdown(r) {
   lines.push(
     '## What was found',
     '',
-    `- Pages: about ${e.htmlPages}${c.sitemapPages ? ` (the sitemap lists ${c.sitemapPages})` : ''}`,
+    `- Pages: about ${e.largestLanguagePages} in the largest language${Object.keys(e.pagesPerLanguage).length > 1 ? ` (${Object.entries(e.pagesPerLanguage).map(([l, n]) => `${md(l)} ${n}`).join(', ')})` : ''}, and ${e.articles ? 'about ' : ''}${e.articles} articles${c.sitemapPages ? `; the sitemap lists ${c.sitemapPages} pages in all` : ''}`,
     `- Documents (PDF and Office files): about ${e.documents} (estimate)`,
     `- Images: about ${e.images} (estimate)`,
     `- Documents and images together: ${e.mediaBytesComplete ? `about ${gigabytes(e.mediaBytes)} (estimate)` : e.mediaBytes ? `at least ${gigabytes(e.mediaBytes)} (estimate)` : 'could not be measured'}`,

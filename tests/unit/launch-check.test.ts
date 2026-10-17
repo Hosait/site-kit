@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 
-import { axeErrors, axePages, launchCheck, pageFindings, sitemapPaths } from '../../src/lib/launch-check'
+import { axeErrors, axePages, launchCheck, pageFindings, readBody, sitemapPaths } from '../../src/lib/launch-check'
 
 // The launch check runs against the preview before the site moves to its own domain. Errors stop
 // the move; warnings go into the hand-off.
@@ -203,4 +203,18 @@ test('qa:axe checks the site\'s own pages from its sitemap, not the demo\'s', ()
   assert.doesNotMatch(script, /om-oss|about/)
   assert.match(script, /sitemapPaths/)
   assert.match(script, /process\.exit\(/)
+})
+
+// Bjørn's review: qa:axe read the sitemap with an unbounded res.text(). It now uses the same capped
+// reader as qa:launch.
+test('qa:axe reads the sitemap through the capped reader; readBody stops at 5 MB', async () => {
+  const script = readFileSync('scripts/qa/axe-report.ts', 'utf8')
+  assert.doesNotMatch(script, /\.text\(\)/)
+  assert.match(script, /readBody\(/)
+  let pulled = 0
+  const mb = new Uint8Array(1024 * 1024)
+  const huge = new ReadableStream<Uint8Array>({ pull: (c) => (pulled++ < 64 ? c.enqueue(mb) : c.close()) })
+  const text = await readBody(new Response(huge))
+  assert.equal(text.length, 5 * 1024 * 1024)
+  assert.ok(pulled <= 8, `read ${pulled} MB of 64`)
 })

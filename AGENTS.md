@@ -7,7 +7,17 @@ no block fits a part of the old site, list it as a gap in the plan.
 ## 0. Check that the site fits
 
 Hosait Sites moves simple content websites: about, services, news, people and contact, up to
-about 200 pages. Check the site before anything else:
+about 200 pages. Two checks decide, before anything else is set up, read or written.
+
+First, Hosait's check. The user makes the Hosait project with «Flytt nettsiden din» on
+hosait.com, which checks the site on Hosait's side. Read that project with the Hosait MCP tools
+(`get_project_status`) and look at `project.siteMove`. Go on only when it is there, its `class`
+is green (or yellow with `acceptedScope` true), its `assessedAt` is less than 7 days old and its
+`url` is the site you are moving. Otherwise stop: tell the user plainly to run the check at
+hosait.com → New project → «Flytt nettsiden din» first; nothing is built before Hosait's check
+has said yes. Do not offer a way around it, and do not use the check below instead.
+
+Then this check, the second one:
 
     pnpm site-builder:install
     pnpm site-builder assess https://www.example.com
@@ -17,11 +27,17 @@ In a few minutes it reads a sample of the site and writes `assess.md` (for the u
 
 - **red** (the command exits 3): stop here. Tell the user plainly why, from `assess.md`: Hosait
   does not move web shops, product catalogues, sites with a login or member area, or sites of
-  more than 500 pages. Do not offer to move part of the site, and do not go on to step 1.
+  more than 500 pages (in one language; 1500 in all) or 500 articles. Do not offer to move part
+  of the site, and do not go on to step 1.
 - **yellow**: show the user `assess.md` and ask them to accept the scope and the storage it lists
-  (more pages or documents than a standard move, a lot of media, built-in services, or a site
-  that could not be read well enough). Go on only when they say yes.
+  (more pages or documents than a standard move, a lot of media, or built-in services). Go on only when they say yes, and run `crawl` with `--accepted-scope`.
+- **Not decided yet** (yellow, `not-enough-read`): do not ask the user to accept it. Run the
+  check again, with a larger `--budget` or at the address a note names. If it still cannot read
+  the site, stop and tell the user the site could not be checked.
 - **green**: go on to step 1.
+
+`crawl` starts only after a check of the same site that is not red, is less than 7 days old,
+and could read enough, and after yellow only with `--accepted-scope`.
 
 ## 1. Set up
 
@@ -32,7 +48,7 @@ In a few minutes it reads a sample of the site and writes `assess.md` (for the u
 
 ## 2. Read the old site
 
-    pnpm site-builder crawl https://www.example.com
+    pnpm site-builder crawl https://www.example.com      # with --accepted-scope after a yes to yellow
     pnpm site-builder extract --out .site-builder/www.example.com
     pnpm site-builder theme   --out .site-builder/www.example.com
     pnpm site-builder report  --out .site-builder/www.example.com
@@ -84,9 +100,11 @@ gap). Check it until it passes, then try it locally:
     pnpm lint
     pnpm test:unit
 
-After the preview is up: copy `.site-builder/<host>/urls.json` to `import-data/urls.json` and run
-`pnpm qa:urls <preview address>`. Then run the launch checks; fix every error they report before
-the site moves to its own domain:
+After the preview is up, run
+`pnpm site-builder compare --out .site-builder/<host> --new <preview address>` (add
+`--allow-private` for a local preview) and look at `compare.md` (old pages and the old site's
+documents, PDFs and the like) and `compare.html` in that folder. Then run the launch checks; fix
+every error they report before the site moves to its own domain:
 
 - `pnpm qa:launch <preview address>` fails on a sitemap page that does not answer, placeholder or
   demo text (the seeded privacy page, «Nordlys Demo», example.com), a page without a title and a
@@ -116,6 +134,9 @@ and opens `<address>/next/admin-claim?code=<value>`. Never ask for the value. On
 import cut off part-way (the web service restarted during it) leaves pages that make "Run seed
 again" refuse; the admin then replaces the content with "Legg inn innhold" in the Testinnhold
 panel on the admin dashboard.
+
+Before the domain switch, run `pnpm site-builder compare` again with `--new` set to the site's
+hosait.com address.
 
 When the site moves to its own domain (only once `pnpm qa:launch` and `pnpm qa:axe` pass on the
 preview):

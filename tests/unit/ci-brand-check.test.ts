@@ -27,3 +27,22 @@ test('the CI brand check changes the brand only, not other country keys', () => 
   assert.match(out, /contact: \{ country: 'NO' \}/)
   assert.match(out, /main: \{ country: 'NO' \}/)
 })
+
+// Bjørn's review: the step passed when only one of the two values changed, so a brand default in
+// the database for the other one would go unnoticed.
+test('the CI brand check fails unless it changed both the legal name and the country', () => {
+  const run = (brand: string) => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'brand-check-'))
+    mkdirSync(path.join(dir, 'site'))
+    writeFileSync(path.join(dir, 'site', 'config.ts'), ['export const siteConfig = {', `  ${brand}`, "  contact: { country: 'NO' },", '}'].join('\n'))
+    try {
+      execFileSync('bash', ['-c', perl ?? ''], { cwd: dir, stdio: 'pipe' })
+      return true
+    } catch {
+      return false
+    }
+  }
+  assert.equal(run("brand: { name: 'Demo', legalName: 'Demo AS', country: 'NO' },"), true)
+  assert.equal(run("brand: { name: 'Demo', legalName: 'Demo AS' },"), false, 'no country in the brand')
+  assert.equal(run("brand: { name: 'Demo', country: 'NO' },"), false, 'no legal name in the brand')
+})

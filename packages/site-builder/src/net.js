@@ -73,6 +73,19 @@ export function publicOnlyLookup(hostname, options, callback) {
 const privateError = (url, what) => Object.assign(new Error(`${url}: ${what} is a private address`), { code: 'EPRIVATE' })
 
 /**
+ * Belt and braces: whatever was resolved, the address actually connected to must be public. A
+ * kept-alive connection is already connected, so it is checked at once instead of waiting for a
+ * connect event that never comes again.
+ */
+export function guardSocket(req, url) {
+  req.on('socket', (s) => {
+    const check = () => { if (s.remoteAddress && !isPublicAddress(s.remoteAddress)) req.destroy(privateError(url, s.remoteAddress)) }
+    if (s.connecting) s.once('connect', check)
+    else check()
+  })
+}
+
+/**
  * @param {string} url
  * @param {{ maxBytes?: number, timeoutMs?: number, deadlineMs?: number, allowPrivate?: boolean, accept?: string, method?: 'GET' | 'HEAD' }} [opts]
  * @returns {Promise<{ status: number, headers: import('node:http').IncomingHttpHeaders, body: Buffer, truncated: boolean }>}
@@ -120,12 +133,7 @@ export function get(url, { maxBytes = 2 * 1024 * 1024, timeoutMs = 15000, deadli
       res.on('error', fail)
       res.on('close', () => { if (!res.complete) fail(new Error(`${url}: connection closed early`)) })
     })
-    // Belt and braces: whatever was resolved, the address actually connected to must be public.
-    if (!allowPrivate) {
-      req.on('socket', (s) => s.once('connect', () => {
-        if (s.remoteAddress && !isPublicAddress(s.remoteAddress)) req.destroy(privateError(url, s.remoteAddress))
-      }))
-    }
+    if (!allowPrivate) guardSocket(req, url)
     timer = setTimeout(() => req.destroy(new Error(`${url}: took longer than ${deadlineMs / 1000} s`)), deadlineMs)
     req.on('timeout', () => req.destroy(new Error(`${url}: timed out`)))
     req.on('error', (e) => done(reject, e))

@@ -7,6 +7,7 @@ Reads an existing website so it can be rebuilt on Hosait Site Kit. The steps tha
     site-builder extract --out .site-builder/www.example.com
     site-builder theme   --out .site-builder/www.example.com
     site-builder report  --out .site-builder/www.example.com
+    site-builder compare --out .site-builder/www.example.com --new https://preview.example.com
 
 In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-builder assess <url>`.
 
@@ -21,15 +22,38 @@ In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-buil
   - **red**, decline: a web shop (priced Product/Offer markup, cart, checkout or add-to-cart
     links and forms, robots.txt rules for cart actions, a shop system), a payment service, a
     product catalogue (Product markup on many pages, or product addresses in the sitemap), a
-    login or member area (password fields, login forms and links), or more than 500 pages.
-  - **yellow**, possible with the customer's OK on scope and storage: more than 200 pages, more
-    than 100 documents, more than 2 GB of documents and images, built-in services (booking,
-    feeds, embedded apps, forms sent elsewhere), or too little read to decide.
+    login or member area (password fields, login forms and links), more than 500 pages in the
+    largest language, more than 1500 pages in all languages together, or more than 500 articles.
+    A link to the old CMS's own admin login (WordPress, Joomla, Drupal, Umbraco, Ghost) with plain
+    admin wording («Logg inn», «Log in», «Admin», «Meta», or an icon) is a note, not a member
+    area; member wording on it («Logg inn for medlemmer»), a member folder, registration or
+    password reset, and a redirect outside wp-admin stay red. Account wording («Min side», «My
+    account», «Mein Konto», «Mon compte», «Mi cuenta» …) is a login wherever it links; member
+    wording alone («Bli medlem», «Våre medlemmer») is not. WordPress's own password form for a
+    protected post is a note; more than three such pages read is yellow.
+  - **yellow**, possible with the customer's OK on scope and storage: more than 200 pages in
+    the largest language, more than 500 pages (largest language) and articles together, more
+    than 100 documents, more than 2 GB of documents and images, or built-in services (booking,
+    feeds, embedded apps, forms sent elsewhere).
+  - **yellow, not decided yet** (`not-enough-read`): too little could be read (the time budget,
+    robots.txt, a home page that leads to another site, or a site that needs JavaScript). It is
+    not accepted: the check runs again.
   - **green**: everything else.
+
+  Pages are counted per language (a first path segment such as `/en/` or `/se/` is a language
+  when the pages say so), and articles apart from pages: dated or news-section addresses, and
+  pages whose JSON-LD is an Article, NewsArticle or BlogPosting (not `og:type`, which SEO plugins
+  put on ordinary pages). A one-page site with text and only `#` links is enough to decide; the
+  text counted is the page's `<main>` (or its body), without cookie or consent banners. A check
+  dated in the future is refused by `crawl`, like one older than 7 days.
 
   The thresholds are `LIMITS` in `src/assess.js`. Exit code: 0 for green and yellow, 3 for red,
   2 for a usage error, 1 for other errors. A page that cannot be read is recorded and the others
   go on; a stop at the time budget is a note.
+- **crawl** starts only when `assess.json` in its out folder is for the same site and not red;
+  after yellow it also needs `--accepted-scope`, given once the customer has said yes, and after
+  a check that could not read enough it does not start at all. Otherwise it exits 3 and says
+  why.
 - **crawl** reads robots.txt and obeys it (when it answers with a server error, nothing is
   read), reads the sitemap, follows links on the same site (www and apex count as one), and
   stops at 500 pages or after 15 minutes (`--max`, `--budget <minutes>`), keeping what it has
@@ -45,6 +69,20 @@ In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-buil
   `site/fonts.ts`, and save the logo under `public/brand/`. Colours are already darkened where
   Site Kit's 4.5:1 contrast check needs it; `notes` lists each change.
 - **report** writes `report.md` for the customer.
+- **compare** checks every old address that answered 200 on the new site: it must answer 200,
+  or 301/308 to a page on the new site that does (at most 3 redirects). Four requests at a time.
+  The old site's documents (PDFs and the like) are checked the same way if they still work there.
+  It writes `compare.md` and `compare.json`, and exits 1 when an address fails. With Playwright
+  installed it also takes old and new screenshots (the home page and the first page of each
+  template, desktop and mobile) into `shots/`, side by side in `compare.html`. The browser runs
+  only with its sandbox (without one there are no screenshots). It reaches the network only
+  through a local filtering proxy (`src/filter-proxy.js`, loopback included), which resolves each
+  name when it connects and refuses private addresses and ports other than 80 and 443, so
+  redirects, frames, fetch and names that turn private (DNS rebinding) are caught too. Service
+  workers, downloads and WebSockets are blocked. `--budget` (10 minutes by default) bounds the
+  whole run: the address and document checks, then the screenshots; each page times out after
+  30 seconds. With `--allow-private` only the new site's own host and port may be a private
+  address: the old site and its documents are always fetched as public.
 
 Private, loopback and link-local addresses are refused, and this is checked when connecting.
 `--allow-private` is for your own local or intranet sites.
