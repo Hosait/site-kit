@@ -92,7 +92,11 @@ test('checkIconFile: a namespaced script or foreignObject, and character referen
     '<svg xmlns="http://www.w3.org/2000/svg"><x:foreignObject xmlns:x="http://www.w3.org/2000/svg"/></svg>',
     '<svg xmlns="http://www.w3.org/2000/svg"><a href="&#106;avascript:alert(1)"><circle r="4"/></a></svg>',
     '<svg xmlns="http://www.w3.org/2000/svg"><a href="&#x6a;avascript:alert(1)"><circle r="4"/></a></svg>',
+    // Review of #32: an XML name may have letters outside ASCII.
+    '<svg xmlns="http://www.w3.org/2000/svg"><ä:script xmlns:ä="http://www.w3.org/1999/xhtml">alert(1)</ä:script></svg>',
+    '<svg xmlns="http://www.w3.org/2000/svg"><å-1:foreignObject xmlns:å-1="http://www.w3.org/2000/svg"/></svg>',
   ]) assert.ok(checkIconFile(Buffer.from(bad), 'svg').length > 0, bad)
+  assert.deepEqual(checkIconFile(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><desc>noscript</desc><circle r="4"/></svg>'), 'svg'), [], 'the word alone is fine')
   assert.deepEqual(checkIconFile(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8"><title>Fjordlys &amp; co</title><circle r="4"/></svg>'), 'svg'), [])
 })
 
