@@ -7,7 +7,17 @@ no block fits a part of the old site, list it as a gap in the plan.
 ## 0. Check that the site fits
 
 Hosait Sites moves simple content websites: about, services, news, people and contact, up to
-about 200 pages. Check the site before anything else:
+about 200 pages. Two checks decide, before anything else is set up, read or written.
+
+First, Hosait's check. The user makes the Hosait project with «Flytt nettsiden din» on
+hosait.com, which checks the site on Hosait's side. Read that project with the Hosait MCP tools
+(`get_project_status`) and look at `project.siteMove`. Go on only when it is there, its `class`
+is green (or yellow with `acceptedScope` true), its `assessedAt` is less than 7 days old and its
+`url` is the site you are moving. Otherwise stop: tell the user plainly to run the check at
+hosait.com → New project → «Flytt nettsiden din» first; nothing is built before Hosait's check
+has said yes. Do not offer a way around it, and do not use the check below instead.
+
+Then this check, the second one:
 
     pnpm site-builder:install
     pnpm site-builder assess https://www.example.com
