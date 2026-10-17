@@ -205,7 +205,7 @@ test('member wording still stops the CMS note: a member link to the CMS login is
 })
 
 test('login and account wording in Swedish, Danish, German, French and Spanish is a login area', () => {
-  for (const text of ['Mina sidor', 'Mitt konto', 'Mein Konto', 'Anmelden', 'Mon compte', 'Espace membres', 'Se connecter', 'Mi cuenta', 'Iniciar sesión', 'Mitgliederbereich']) {
+  for (const text of ['Mina sidor', 'Mitt konto', 'Mein Konto', 'Einloggen', 'Mon compte', 'Espace membres', 'Se connecter', 'Mi cuenta', 'Iniciar sesión', 'Mitgliederbereich']) {
     assert.equal(pageSignals(html(`<a href="/side">${text}</a>`), 'https://x.no/', 'x.no').login.length, 1, text)
   }
   for (const p of ['/mein-konto', '/mon-compte', '/mi-cuenta', '/mina-sidor', '/espace-membres', '/connexion']) assert.ok(isLoginUrl(new URL(`https://x.no${p}`)), p)
@@ -237,5 +237,62 @@ test('the post-password form allows only a password, hidden fields and a button,
     const s = page(form(action, extra))
     assert.ok(s.login.length >= 1, `${action} ${extra}`)
     assert.deepEqual(s.passwordPosts, [], `${action} ${extra}`)
+  }
+})
+
+// Bjørn's review after #17: plain member login wording was no longer caught, and some ordinary
+// words were.
+test('member wording together with a login or area word is a login area, wherever it links', () => {
+  for (const [text, href] of [['Medlemsinnlogging', '/medlemsomrade/'], ['Medlemsområde', '/intern/'], ['Members area', '/intern/'], ['Member login', '/x'], ['Members only', '/x'], ['Mitglieder-Login', '/x'], ['Logg inn for medlemmer', '/intern/'], ['Medlemsportal', '/x'], ['Medlemssider', '/x']]) {
+    const s = pageSignals(html(`<a href="${href}">${text}</a>`), 'https://x.no/', 'x.no')
+    assert.equal(s.login.length, 1, text)
+  }
+  for (const text of ['Bli medlem', 'Våre medlemmer', 'Medlemsfordeler', 'Membership']) {
+    assert.deepEqual(pageSignals(html(`<a href="/side">${text}</a>`), 'https://x.no/', 'x.no').login, [], text)
+  }
+})
+
+test('«Anmelden» (also signing up for a course) and words that only start like an account phrase are not a login', () => {
+  for (const [text, href] of [['Zum Kurs anmelden', '/kurs/anmelden/'], ['Anmelden', '/kurs/anmelden/'], ['Min sidemann', '/folk'], ['My accountant', '/team']]) {
+    assert.deepEqual(pageSignals(html(`<a href="${href}">${text}</a>`), 'https://x.no/', 'x.no').login, [], text)
+  }
+  assert.equal(pageSignals(html('<a href="/x">Min side</a>'), 'https://x.no/', 'x.no').login.length, 1, 'the phrase on its own still is')
+})
+
+test('a repeated redirect_to counts by its last value, as WordPress reads it', () => {
+  const s = pageSignals(html('<a href="/wp-login.php?redirect_to=%2Fwp-admin%2F&redirect_to=%2Fmin-side%2F">Logg inn</a>'), 'https://x.no/', 'x.no')
+  assert.deepEqual([s.login.length, s.cmsLogin], [1, []])
+})
+
+// Bjørn's review of #38: a banner class on <body> itself (WordPress's Cookie Notice sets
+// cookies-not-set there) zeroed the text, and text was joined with spaces where cheerio joins none.
+test('the visible text counts a body that carries a cookie class, and joins text as the page shows it', () => {
+  const text = '<p>' + 'Vi er et lite firma som lager gode ting. '.repeat(8) + '</p>'
+  const onBody = pageSignals(`<!doctype html><html lang="nb"><head></head><body class="home cookies-not-set">${text}</body></html>`, 'https://x.no/', 'x.no')
+  assert.ok(onBody.textLength >= 200, String(onBody.textLength))
+  const spans = pageSignals(html(`<main>${'<span>a</span>'.repeat(150)}</main>`), 'https://x.no/', 'x.no')
+  assert.equal(spans.textLength, 150)
+  const banner = pageSignals(html(`<main><div class="cookie-banner">${text}</div><p>Hei</p></main>`), 'https://x.no/', 'x.no')
+  assert.equal(banner.textLength, 3, 'a banner inside the page is still left out')
+})
+
+// Bjørn's review of #37: the member-login pattern backtracked quadratically on a long link text,
+// missed common wordings and caught a few ordinary ones.
+test('a very long link text is read in linear time', () => {
+  const t = Date.now()
+  const s = pageSignals(html(`<a href="/x">${'member'.repeat(70_000)}</a>`), 'https://x.no/', 'x.no')
+  assert.ok(Date.now() - t < 1000, `took ${Date.now() - t} ms`)
+  assert.equal(s.login.length, 0)
+})
+
+test('member login wording in either order, with apostrophes, «sign in», and in Swedish and French, is a login area', () => {
+  for (const text of ['Medlem? Logg inn', 'Er du medlem? Logg inn her', 'Bli medlem eller logg inn', 'Members\' area', 'Member\'s login', 'Members sign in', 'Sign in for members', 'Member sign-in', 'Logga in för medlemmar', 'Medlemsinloggning', 'Medlemssidor', 'Connexion membres', 'Medlemsområde']) {
+    assert.equal(pageSignals(html(`<a href="/side">${text}</a>`), 'https://x.no/', 'x.no').login.length, 1, text)
+  }
+})
+
+test('«Remember login», «Sociology portal», «Medlemsareal» and member wording without a login word are not a login', () => {
+  for (const text of ['Remember login', 'Sociology portal', 'Medlemsareal', 'Medlemsmøte', 'Members\' night', 'Bli medlem', 'Våre medlemmer', 'Medlemsfordeler']) {
+    assert.deepEqual(pageSignals(html(`<a href="/side">${text}</a>`), 'https://x.no/', 'x.no').login, [], text)
   }
 })

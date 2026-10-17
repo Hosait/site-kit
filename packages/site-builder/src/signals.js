@@ -21,16 +21,23 @@ const CART_SEGMENTS = new Set(['cart', 'checkout', 'basket', 'handlekurv', 'hand
 const CART_KEYS = new Set(['add-to-cart', 'add_to_cart', 'addtocart'])
 const CART_ACTIONS = new Set(['add', 'addtocart', 'add-to-cart', 'add_to_cart', 'cart_add', 'addtobasket'])
 const LOGIN_SEGMENTS = new Set(['login', 'log-in', 'logg-inn', 'logginn', 'signin', 'sign-in', 'min-side', 'minside', 'mine-sider', 'my-account', 'myaccount', 'account', 'konto', 'min-konto', 'wp-login',
-  'mina-sidor', 'mitt-konto', 'mein-konto', 'anmelden', 'einloggen', 'mon-compte', 'connexion', 'espace-membres', 'espace-membre', 'mi-cuenta', 'iniciar-sesion'])
+  'mina-sidor', 'mitt-konto', 'mein-konto', 'einloggen', 'mon-compte', 'connexion', 'espace-membres', 'espace-membre', 'mi-cuenta', 'iniciar-sesion'])
 const LOGIN_TEXTS = new Set(['logg inn', 'logg på', 'log in', 'login', 'sign in', 'min side', 'mine sider', 'my account', 'min konto', 'my page', 'logga in', 'log ind',
-  'anmelden', 'einloggen', 'connexion', 'se connecter', 'iniciar sesión', 'acceder'])
+  'einloggen', 'connexion', 'se connecter', 'iniciar sesión', 'acceder'])
 // A link to the CMS's own login is a note only with plain admin wording (or none, an icon).
 const ADMIN_TEXTS = new Set(['', 'logg inn', 'log in', 'login', 'admin', 'meta'])
 // Account wording is a login area wherever the link goes: «Logg inn på Min side», «Mein Konto».
-const ACCOUNT_TEXT = /(^|[\s(])(min side|mine sider|my account|min konto|my page|mina sidor|mitt konto|min sida|mein konto|kundenkonto|mitgliederbereich|mon compte|espace membres?|espace client|mi cuenta|área de socios)/
+const ACCOUNT_TEXT = /(^|[\s(])(min side|mine sider|my account|min konto|my page|mina sidor|mitt konto|min sida|mein konto|kundenkonto|mitgliederbereich|mon compte|espace membres?|espace client|mi cuenta|área de socios)(?![\p{L}\p{N}])/u
 // Member wording alone is not: «Bli medlem» and «Våre medlemmer» are ordinary pages. It only
 // keeps a link to the CMS's own login from being a note: that is the members' login.
 const MEMBER_TEXT = /(^|[\s(])(medlem|member|mitglied|membre|socio)/
+// Member wording with a login or area word is the members' login: «Medlemsinnlogging», «Members'
+// area», «Logg inn for medlemmer», «Medlem? Logg inn». «Bli medlem» alone is not. Every pattern is
+// bounded, and link text is cut to 200 characters first, so a long text cannot stall the check.
+const MEMBER_COMPOUND = /(?<!\p{L})(?:medlem|mitglied)\p{L}{0,20}?(?:innlogg|inlogg|område|omrade|sider|sidor|bereich|login|portal)/u
+const MEMBER_WORD = /(?<!\p{L})(?:medlem|mitglied|member|membre|socios?(?!\p{L}))/u
+const LOGIN_PHRASE = /(?<!\p{L})(?:logge? inn|logga in|log in|login|sign[ -]?in|connexion|innlogging|inloggning|area|only|portal)(?!\p{L})/u
+const memberLogin = (label) => MEMBER_COMPOUND.test(label) || (MEMBER_WORD.test(label) && LOGIN_PHRASE.test(label))
 const MEMBER_SEGMENT = /^(min-?side|mine-sider|mina-sidor|my-?account|account|konto|min-konto|mitt-konto|mein-konto|mon-compte|mi-cuenta|profil|profile|medlem|member|mitglied|membre|espace-membre|socio)/
 // Path segments of product pages in common shop systems (WooCommerce, Shopify, Norwegian shops).
 const PRODUCT_SEGMENTS = new Set(['product', 'products', 'produkt', 'produkter', 'produkte', 'vare', 'varer', 'shop', 'butikk', 'nettbutikk', 'item', 'items', 'catalog', 'catalogue', 'katalog', 'sku'])
@@ -61,7 +68,7 @@ const ORDINARY_FRAMES = ['youtube.com', 'youtube-nocookie.com', 'youtu.be', 'vim
 const hostIn = (host, list) => list.some((d) => host === d || host.endsWith('.' + d))
 // Percent-encoding is undone, so /min%2Dside/ is /min-side/.
 const decoded = (s) => { try { return decodeURIComponent(s) } catch { return s } }
-const segments = (pathname) => pathname.toLowerCase().split('/').filter(Boolean).map((s) => decoded(s).replace(/\.[a-z0-9]{1,5}$/, ''))
+const segments = (pathname) => pathname.toLowerCase().split('/').filter(Boolean).map((s) => (s.includes('%') ? decoded(s) : s).replace(/\.[a-z0-9]{1,5}$/, ''))
 // WordPress (PHP) acts on the last value of a repeated parameter.
 const lastParam = (u, key) => { const all = u.searchParams.getAll(key); return (all[all.length - 1] ?? '').toLowerCase() }
 const shortPath = (u) => (u.pathname + u.search).slice(0, 100)
@@ -88,7 +95,9 @@ export function isCmsAdminUrl(u) {
   if (!s.length || s.some((x) => MEMBER_SEGMENT.test(x))) return false
   const action = lastParam(u, 'action')
   if (action && action !== 'login') return false
-  const redirect = u.searchParams.get('redirect_to')
+  // WordPress (PHP) reads the last of a repeated redirect_to, as with action.
+  const redirects = u.searchParams.getAll('redirect_to')
+  const redirect = redirects.length ? redirects[redirects.length - 1] : null
   if (redirect !== null) {
     let to = ''
     try { to = new URL(redirect, u).pathname } catch { return false }
@@ -113,6 +122,36 @@ function isPostPasswordForm($, form, pageUrl) {
   if (!$(form).hasClass('post-password-form') && !$(form).find('[name="post_password"]').length) return false
   if ($(form).find('textarea, select').length) return false
   return $(form).find('input').toArray().every((i) => ['password', 'hidden', 'submit'].includes(String($(i).attr('type') ?? '').trim().toLowerCase()))
+}
+
+const NOT_TEXT = new Set(['script', 'style', 'noscript', 'template'])
+const BANNER = /cookie|consent/i
+/** Text counted only up to this; the one rule that uses it needs 200 characters. */
+const MAX_TEXT = 10_000
+
+/**
+ * The length of the text under a node, spaces collapsed, leaving out scripts, styles, templates
+ * and cookie or consent banners. Walked without recursion or copying, and stops at MAX_TEXT.
+ * @param {import('domhandler').AnyNode} root
+ */
+function visibleTextLength(root) {
+  const parts = []
+  let length = 0
+  const stack = [root]
+  while (stack.length && length < MAX_TEXT) {
+    const node = /** @type {any} */ (stack.pop())
+    if (node.type === 'text') {
+      parts.push(node.data)
+      length += node.data.length
+      continue
+    }
+    if (!node.children || NOT_TEXT.has(node.name) || node.type === 'script' || node.type === 'style') continue
+    // A banner inside the page is left out; a cookie class on <body> or <main> itself is not a banner.
+    if (node !== root && node.attribs && (BANNER.test(node.attribs.id ?? '') || BANNER.test(node.attribs.class ?? ''))) continue
+    for (let i = node.children.length - 1; i >= 0; i--) stack.push(node.children[i])
+  }
+  // Joined as cheerio's text() does, without spaces between nodes.
+  return Math.min(parts.join('').replace(/\s+/g, ' ').trim().length, MAX_TEXT)
 }
 
 /** True when a path has a segment that shop systems use for product pages. @param {string} pathname */
@@ -254,11 +293,16 @@ export function pageSignals(html, url, host) {
     if (!sameSite(u.hostname, host)) continue
     if (IMAGE.test(u.pathname)) { s.images.add(n); continue }
     if (isCartUrl(u)) { add(s.shop, `link to ${shortPath(u)}`); continue }
-    const label = $(el).text().replace(/\s+/g, ' ').trim().toLowerCase()
-    const cmsAdmin = isCmsAdminUrl(u)
+    const label = $(el).text().replace(/\s+/g, ' ').trim().toLowerCase().normalize('NFC').slice(0, 200)
+    // The CMS-login check is only needed for admin or member wording; most links have neither.
     const member = MEMBER_TEXT.test(label)
-    if (cmsAdmin && !member && ADMIN_TEXTS.has(label)) { add(s.cmsLogin, `link to ${shortPath(u)}`); continue }
-    if (isLoginUrl(u) || LOGIN_TEXTS.has(label) || ACCOUNT_TEXT.test(label) || (cmsAdmin && member)) { add(s.login, `link to ${shortPath(u)}`); continue }
+    const adminText = ADMIN_TEXTS.has(label)
+    if ((adminText || member) && isCmsAdminUrl(u)) {
+      if (member) add(s.login, `link to ${shortPath(u)}`)
+      else add(s.cmsLogin, `link to ${shortPath(u)}`)
+      continue
+    }
+    if (isLoginUrl(u) || LOGIN_TEXTS.has(label) || ACCOUNT_TEXT.test(label) || memberLogin(label)) { add(s.login, `link to ${shortPath(u)}`); continue }
     if (!SKIP.test(u.pathname)) s.links.add(n)
   }
   for (const v of [$('html').attr('lang'), ...$('link[rel="alternate"][hreflang]').toArray().map((e) => $(e).attr('hreflang'))]) {
@@ -278,10 +322,8 @@ export function pageSignals(html, url, host) {
   const refresh = /url[ \t]*=[ \t]*['"]?([^'"]+)/i.exec(String($('meta[http-equiv="refresh" i]').first().attr('content') ?? '').slice(0, 2048))
   const target = refresh ? refresh[1].trim() : $('frameset frame[src]').first().attr('src')
   if (target) s.forward = normalize(String(target).slice(0, 2048), url)
-  // How much a visitor can read without JavaScript: the main content, or the body without one,
-  // leaving out scripts, styles and cookie or consent banners.
-  const content = ($('main').length ? $('main') : $('body')).first().clone()
-  content.find('script, style, noscript, template, [id*="cookie" i], [class*="cookie" i], [id*="consent" i], [class*="consent" i]').remove()
-  s.textLength = content.text().replace(/\s+/g, ' ').trim().length
+  // How much a visitor can read without JavaScript: the main content, or the body without one.
+  const content = ($('main').length ? $('main') : $('body')).get(0)
+  s.textLength = content ? visibleTextLength(content) : 0
   return s
 }
