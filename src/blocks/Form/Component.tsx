@@ -8,7 +8,7 @@ import { RichText as ConvertRichText } from '@payloadcms/richtext-lexical/react'
 import type { DefaultTypedEditorState } from '@payloadcms/richtext-lexical'
 
 import { fields } from './fields'
-import { formStrings, FormStringsContext } from './strings'
+import { formErrorText, formStrings, FormStringsContext } from './strings'
 import { getClientSideURL } from '@/utilities/getURL'
 
 export type FormBlockType = {
@@ -47,7 +47,7 @@ export const FormBlock: React.FC<
   const strings = formStrings(locale)
   const [isLoading, setIsLoading] = useState(false)
   const [hasSubmitted, setHasSubmitted] = useState<boolean>()
-  const [error, setError] = useState<{ message: string; status?: string } | undefined>()
+  const [error, setError] = useState<{ message: string; status?: number } | undefined>()
   const router = useRouter()
 
   const onSubmit = useCallback(
@@ -91,7 +91,7 @@ export const FormBlock: React.FC<
 
             setError({
               message: res.errors?.[0]?.message || 'Internal Server Error',
-              status: res.status,
+              status: req.status,
             })
 
             return
@@ -137,7 +137,7 @@ export const FormBlock: React.FC<
           {isLoading && !hasSubmitted && <p role="status">{strings.sending}</p>}
           {error && (
             <p role="alert" className="mb-4 text-highlight">
-              {strings.error}
+              {formErrorText(error, strings.error)}
             </p>
           )}
           {!hasSubmitted && (

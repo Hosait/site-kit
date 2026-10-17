@@ -12,7 +12,10 @@ test('every pnpm command in the builder\'s guide is a real script', () => {
 })
 
 test('the guide uses only real site-builder commands and points at the shipped files', () => {
-  for (const m of guide.matchAll(/site-builder (\w+)/g)) if (m[1] !== 'install') assert.ok(['assess', 'crawl', 'extract', 'theme', 'report'].includes(m[1]), m[1])
+  const cli = readFileSync('packages/site-builder/bin/site-builder.js', 'utf8')
+  const commands = [...cli.matchAll(/cmd === '(\w+)'/g)].map((m) => m[1])
+  assert.ok(commands.includes('crawl') && commands.includes('assess'))
+  for (const m of guide.matchAll(/site-builder (\w+)/g)) if (m[1] !== 'install') assert.ok(commands.includes(m[1]), m[1])
   for (const f of ['seed/site-plan.json', 'schema/site-plan.schema.json', 'schema/blocks.schema.json', 'site/questions.json', 'site/config.ts', 'site/theme.json'])
     assert.ok(guide.includes(f), f)
 })
@@ -27,6 +30,18 @@ test('step 0 checks that the site fits before anything is set up or read: red st
   assert.match(step0, /Do not offer to move part of the site/)
   assert.match(step0, /\*\*yellow\*\*.*ask them to accept the scope and the storage/)
   assert.match(step0, /\*\*green\*\*: go on to step 1/)
+})
+
+test('step 0 waits for the Hosait check of the project before the local check, and never replaces it', () => {
+  const step0 = guide.slice(guide.indexOf('## 0.'), guide.indexOf('## 1.')).replace(/\s+/g, ' ')
+  const hosait = step0.indexOf('project.siteMove')
+  assert.ok(hosait !== -1 && hosait < step0.indexOf('pnpm site-builder assess '))
+  assert.match(step0, /get_project_status/)
+  assert.match(step0, /green \(or yellow with `acceptedScope` true\)/)
+  assert.match(step0, /less than 7 days old/)
+  assert.match(step0, /`url` is the site you are moving/)
+  assert.match(step0, /Otherwise stop.*New project → «Flytt nettsiden din» first/)
+  assert.match(step0, /do not use the check below instead/)
 })
 
 test('step 0 runs a check that could not read enough again, and crawl starts only after a passing check', () => {

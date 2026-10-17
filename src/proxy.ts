@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { DEFAULT_SITE, FEATURES, isLocale, isSiteKey, type Locale, LOCALES, SITE_CONFIG, siteFromHost, type SiteKey } from '@/lib/sites'
 import { negotiateLocale, searchRewrite } from '@/lib/locales'
 import { claimNeededPage, firstUserAllowed } from '@/lib/admin-claim'
+import { limitText, MAX_BODY_BYTES } from '@/lib/forms/limits'
 
 /**
  * Host → nettsted. Offentlige stier skrives internt om til /{site}/{locale}/...
@@ -85,6 +86,29 @@ function publicUrl(req: NextRequest, pathAndQuery: string): URL {
 export async function proxy(req: NextRequest) {
   const { pathname, searchParams } = req.nextUrl
 
+  // Payload leser hele kroppen før noen hook kjører, så størrelsen på en innsending (REST eller
+  // GraphQL) sjekkes her. Antall og innhold sjekkes i src/collections/formSubmissionHooks.ts.
+  // Payload-ruten dekoder stien (/api/form%2Dsubmissions), så den sammenlignes dekodet her også.
+  if (pathname.startsWith('/api/')) {
+    let api = pathname
+    try { api = decodeURIComponent(pathname) } catch { /* ugyldig koding: Payload finner ingen rute */ }
+    api = api.replace(/\/+$/, '')
+    if (api !== '/api/form-submissions' && api !== '/api/graphql') return NextResponse.next()
+    if (req.method !== 'POST') return NextResponse.next()
+    const length = req.headers.get('content-length')
+    if (length === null) return NextResponse.json({ errors: [{ message: 'Content-Length required' }] }, { status: 411 })
+    if (!/^\d{1,12}$/.test(length) || Number(length) > MAX_BODY_BYTES) {
+      let from: string | undefined
+      try {
+        from = new URL(req.headers.get('referer') ?? '').pathname.split('/')[1]
+      } catch {
+        // Ingen side å hente språket fra: nettstedets standard.
+      }
+      return NextResponse.json({ errors: [{ message: limitText('tooLarge', from) }] }, { status: 413 })
+    }
+    return NextResponse.next()
+  }
+
   // Den første brukeren opprettes bare via lenken fra Hosait (src/lib/admin-claim.ts). Uten
   // den svarer API-et 403 uten melding i skjemaet, så siden forklarer hvor lenken er.
   if (pathname === '/admin/create-first-user') {
@@ -158,6 +182,6 @@ export async function proxy(req: NextRequest) {
 
 export const config = {
   // Alt unntatt admin, API, Next-interne filer, forhåndsvisningsruter og statiske filer; av
-  // admin bare siden for den første brukeren.
-  matcher: ['/((?!admin|api|_next|next/|brand/|fonts/|media/|sequences/|favicon|.*\\.(?:svg|png|jpg|jpeg|webp|avif|ico|woff2?|txt|js|css|map)$).*)', '/robots.txt', '/admin/create-first-user'],
+  // admin bare siden for den første brukeren. API-et går gjennom for å sjekke størrelsen på innsendinger.
+  matcher: ['/((?!admin|api|_next|next/|brand/|fonts/|media/|sequences/|favicon|.*\\.(?:svg|png|jpg|jpeg|webp|avif|ico|woff2?|txt|js|css|map)$).*)', '/robots.txt', '/admin/create-first-user', '/api/:path*'],
 }
