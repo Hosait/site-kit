@@ -137,10 +137,12 @@ function visibleTextLength(root) {
       continue
     }
     if (!node.children || NOT_TEXT.has(node.name) || node.type === 'script' || node.type === 'style') continue
-    if (node.attribs && (BANNER.test(node.attribs.id ?? '') || BANNER.test(node.attribs.class ?? ''))) continue
+    // A banner inside the page is left out; a cookie class on <body> or <main> itself is not a banner.
+    if (node !== root && node.attribs && (BANNER.test(node.attribs.id ?? '') || BANNER.test(node.attribs.class ?? ''))) continue
     for (let i = node.children.length - 1; i >= 0; i--) stack.push(node.children[i])
   }
-  return Math.min(parts.join(' ').replace(/\s+/g, ' ').trim().length, MAX_TEXT)
+  // Joined as cheerio's text() does, without spaces between nodes.
+  return Math.min(parts.join('').replace(/\s+/g, ' ').trim().length, MAX_TEXT)
 }
 
 /** True when a path has a segment that shop systems use for product pages. @param {string} pathname */
