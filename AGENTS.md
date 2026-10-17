@@ -65,9 +65,11 @@ the first deploy). If you change sites, locales, document types or article kinds
 
 Copy `theme` from `theme.draft.json` into `site/theme.json`, put the logo in `public/brand/`, set
 the fonts in `site/fonts.ts`, and run `pnpm kit:theme-check` (every pair needs 4.5:1). Download the
-old site's icon (`icon.src` in the draft) into `public/brand/` too, and set `icon.src` in
-`site/theme.json` to its `/brand/…` path (`.svg`, `.png`, `.webp` or `.ico`). If it cannot be
-downloaded, leave `icon` out: the kit's own icon is used.
+old site's icon (`icon.src` in the draft, a PNG or ICO when the old site has one) into
+`public/brand/` too, and set `icon.src` in `site/theme.json` to its `/brand/…` path (`.png`,
+`.ico`, `.webp` or `.svg`). `kit:theme-check` refuses an icon over 100 KB, one whose content does
+not match its extension, and an SVG with script, event handlers or outside links. If it cannot be
+downloaded or does not pass, leave `icon` out: the kit's own icon is used.
 
 ## 5. Write the site plan
 
@@ -77,9 +79,14 @@ images and PDFs in `seed/media/` (or use public https URLs). Office files (Word,
 PowerPoint), zip and DWG cannot be imported from a URL: download them into `seed/media/` and list
 them under `documents`. SVG is not imported: the logo goes in `public/brand/` (step 4), and other
 SVG graphics are a gap. Every file is checked by its first bytes, not its name. Link with
-`$media`, `$page`, `$pageLink`, `$person`, `$document`; rich text is `$html`. Add `redirects` for
-every old URL that moves, and `gaps` for anything no block matches. Check it until it passes,
-then try it locally:
+`$media`, `$page`, `$pageLink`, `$person`, `$document`, `$form`; rich text is `$html`. Forms go in
+`forms`: their fields, the button text, the message shown after sending, and `retention` (days,
+or `"keep"`) from the intake answer; left out, the site default in `site/config.ts` applies. A
+`formBlock` points at one with `{ "$form": "<ref>" }`. Submissions are read in the admin and
+deleted each night once older than the period; the privacy page says how long each form's
+submissions are kept, with the same periods. Add `redirects` for every old URL that moves, and
+`gaps` for anything no block matches (a form that must send e-mail or take payment is still a
+gap). Check it until it passes, then try it locally:
 
     pnpm kit:check-plan seed/site-plan.json
     pnpm kit:import seed/site-plan.json --reset
@@ -137,6 +144,10 @@ preview):
    route locked. If the domain was verified after the last deploy, the user redeploys in Hosait.
    Until then every page is `noindex` and `robots.txt` blocks search engines. The variable
    `SITE_ORIGINS` (`staging` or `production`) overrides this; leave it unset.
+4. Once the domain answers, run `pnpm qa:launch https://<domain>`. On one of the site's own
+   `hosts` it also fails while search engines are shut out: `robots.txt` blocks them, a page is
+   `noindex`, or a canonical address is on another host. Then the site is still in staging: the
+   user redeploys in Hosait, and you run the check again.
 ---
 
 <!-- BEGIN:nextjs-agent-rules -->

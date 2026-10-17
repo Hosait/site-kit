@@ -3,10 +3,14 @@ import { getPayload } from 'payload'
 
 export const dynamic = 'force-dynamic'
 
-/** Helsesjekk for Hosait og overvåking: svarer 200 når appen og databasen virker. */
+/**
+ * Helsesjekk for Hosait og overvåking: svarer 200 når appen og databasen virker.
+ * cron: true starter Payloads jobbtimer (nattlig sletting av gamle skjemainnsendinger) fra
+ * oppstart; Dockerfile-ens HEALTHCHECK kaller denne ruten hvert 30. sekund.
+ */
 export async function GET() {
   try {
-    const payload = await getPayload({ config: configPromise })
+    const payload = await getPayload({ config: configPromise, cron: true })
     await payload.count({ collection: 'site-settings' })
     return Response.json({ ok: true, commit: process.env.HOSAIT_COMMIT_SHORT ?? null })
   } catch (err) {

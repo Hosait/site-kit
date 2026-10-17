@@ -45,6 +45,41 @@ export function validateTheme(input: unknown): Theme {
   return t as Theme
 }
 
+const MAX_ICON_BYTES = 100 * 1024
+const MAGIC: Record<string, (b: Buffer) => boolean> = {
+  png: (b) => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])),
+  ico: (b) => b.subarray(0, 4).equals(Buffer.from([0, 0, 1, 0])),
+  webp: (b) => b.subarray(0, 4).toString('latin1') === 'RIFF' && b.subarray(8, 12).toString('latin1') === 'WEBP',
+  svg: (b) => /^(?:\ufeff)?\s*(?:<\?xml[^>]*>\s*)?<svg[\s>]/i.test(b.subarray(0, 1024).toString('utf8')),
+}
+// What an icon SVG must not hold: script, embedded HTML, event handlers, script or outside links,
+// or a DTD (entities).
+const SVG_UNSAFE: [RegExp, string][] = [
+  [/<script/i, 'a <script>'],
+  [/<foreignObject/i, 'a <foreignObject>'],
+  [/\son[a-z]+\s*=/i, 'an on…= event handler'],
+  [/javascript:/i, 'a javascript: link'],
+  [/href\s*=\s*["']\s*(?:[a-z][a-z0-9+.-]*:)?\/\//i, 'a link to another site'],
+  [/<!DOCTYPE|<!ENTITY/i, 'a DTD'],
+]
+
+/**
+ * What is wrong with an icon file (empty when nothing): at most 100 KB, bytes that match the
+ * extension, and for SVG nothing that runs or loads from elsewhere. /brand/ is served from the
+ * same origin as /admin, and the file comes from the old site, so kit:theme-check checks it.
+ */
+export function checkIconFile(bytes: Buffer, ext: string): string[] {
+  const problems: string[] = []
+  if (bytes.length > MAX_ICON_BYTES) problems.push('the icon is larger than 100 KB')
+  const isType = MAGIC[ext]
+  if (!isType || !isType(bytes)) return [...problems, `the file is not a ${ext} (its first bytes do not match)`]
+  if (ext === 'svg') {
+    const text = bytes.toString('utf8')
+    for (const [re, what] of SVG_UNSAFE) if (re.test(text)) problems.push(`the SVG has ${what}`)
+  }
+  return problems
+}
+
 /** The address of the site's icon: theme.json's, else the kit's own. */
 export const siteIcon = (theme: Theme): string => theme.icon?.src ?? '/favicon.ico'
 

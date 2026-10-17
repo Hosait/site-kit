@@ -6,8 +6,10 @@ import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from '@payloadcms/
 import { s3Storage } from '@payloadcms/storage-s3'
 import type { Plugin } from 'payload'
 
+import { formRetentionFields } from '@/collections/formRetentionFields'
+import { ignoreClientCreatedAt } from '@/collections/formSubmissionHooks'
 import { revalidateRedirects } from '@/hooks/revalidateRedirects'
-import { DEFAULT_LOCALE, DEFAULT_SITE, isLocale, isSiteKey, localePath, siteOrigin, SITES } from '@/lib/sites'
+import { DEFAULT_LOCALE, DEFAULT_SITE, FORMS, isLocale, isSiteKey, localePath, siteOrigin, SITES } from '@/lib/sites'
 import { SITE_OPTIONS } from '@/lib/sites'
 
 const generateTitle: GenerateTitle = ({ doc }) => {
@@ -97,8 +99,8 @@ export const plugins: Plugin[] = [
     formOverrides: {
       labels: { singular: 'Skjema', plural: 'Skjemaer' },
       admin: { group: 'Skjema' },
-      fields: ({ defaultFields }) =>
-        defaultFields.map((field) =>
+      fields: ({ defaultFields }) => [
+        ...defaultFields.map((field) =>
           'name' in field && field.name === 'confirmationMessage'
             ? {
                 ...field,
@@ -112,9 +114,12 @@ export const plugins: Plugin[] = [
               }
             : field,
         ),
+        ...formRetentionFields(FORMS.retentionDays),
+      ],
     },
     formSubmissionOverrides: {
       labels: { singular: 'Innsending', plural: 'Innsendinger' },
+      hooks: { beforeChange: [ignoreClientCreatedAt] },
       admin: { group: 'Skjema', defaultColumns: ['form', 'site', 'pagePath', 'createdAt'] },
       // Hvor skjemaet ble sendt fra (siden, ikke besøket): til besøksanalysen.
       fields: ({ defaultFields }) => [

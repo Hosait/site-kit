@@ -93,6 +93,8 @@ test('the claim link sets the cookie and opens the admin; a wrong code gets noth
 test('the create-first-user page says where the link is, unless the claim cookie is there', async () => {
   const page = (cookie?: string) =>
     proxy(new NextRequest('http://localhost:3101/admin/create-first-user', { headers: cookie ? { cookie } : {} }))
+  const realFetch = globalThis.fetch
+  globalThis.fetch = (async () => Response.json({ initialized: false })) as unknown as typeof fetch
   process.env.ADMIN_CLAIM_SECRET = SECRET
   try {
     const blocked = await page()
@@ -102,10 +104,41 @@ test('the create-first-user page says where the link is, unless the claim cookie
     const open = await page(`${CLAIM_COOKIE}=${claimCookieValue(SECRET, Date.now())}`)
     assert.equal(open.headers.get('x-middleware-next'), '1')
   } finally {
+    globalThis.fetch = realFetch
     delete process.env.ADMIN_CLAIM_SECRET
   }
   assert.equal((await page()).headers.get('x-middleware-next'), '1', 'no secret: the page is open as before')
   assert.ok(proxyConfig.matcher.includes('/admin/create-first-user'))
+})
+
+// Bjørn's review: once the site has users, the page still said "create it from Hosait" with a 403.
+// The proxy asks Payload (GET /api/users/init) and sends people to the sign-in instead.
+test('once a user exists, the create-first-user page sends people to /admin to sign in', async () => {
+  const realFetch = globalThis.fetch
+  const asked: string[] = []
+  const init = (answer: boolean | 'down') => {
+    globalThis.fetch = (async (url: string | URL) => {
+      asked.push(String(url))
+      if (answer === 'down') throw new Error('connect ECONNREFUSED')
+      return Response.json({ initialized: answer })
+    }) as typeof fetch
+  }
+  const page = () => proxy(new NextRequest('https://kit-demo.hosait.com/admin/create-first-user'))
+  process.env.ADMIN_CLAIM_SECRET = SECRET
+  try {
+    init(true)
+    const signIn = await page()
+    assert.equal(signIn.status, 303)
+    assert.equal(signIn.headers.get('location'), 'https://kit-demo.hosait.com/admin')
+    assert.match(asked[0], /^http:\/\/127\.0\.0\.1:\d+\/api\/users\/init$/)
+    init(false)
+    assert.equal((await page()).status, 403, 'no users yet: the explanation')
+    init('down')
+    assert.equal((await page()).status, 403, 'no answer: the explanation, as before')
+  } finally {
+    globalThis.fetch = realFetch
+    delete process.env.ADMIN_CLAIM_SECRET
+  }
 })
 
 test('Hosait generates the secret and hands it to the web service', () => {

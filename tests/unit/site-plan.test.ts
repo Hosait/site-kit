@@ -65,3 +65,59 @@ test('a plan the import cannot use is refused with its path', () => {
     assert.ok(!r.ok && r.errors.some((e) => e.startsWith(path)), `${what}: ${JSON.stringify(r)}`)
   }
 })
+
+const withForm = () => {
+  const p = minimal()
+  p.forms = [
+    {
+      ref: 'contact',
+      title: { no: 'Kontakt' },
+      fields: [
+        { type: 'text', name: 'navn', label: { no: 'Navn' }, required: true, width: 50 },
+        { type: 'select', name: 'emne', label: { no: 'Emne' }, options: [{ value: 'pris', label: { no: 'Pris' } }] },
+        { type: 'message', text: { no: 'Vi svarer snart.' } },
+      ],
+      submitLabel: { no: 'Send' },
+      confirmation: { no: 'Takk!' },
+      retention: 30,
+    },
+  ]
+  p.pages[0].layout.no.push({ blockType: 'formBlock', form: { $form: 'contact' } })
+  return p
+}
+
+test('a plan with a form is valid', () => {
+  const r = validateSitePlan(withForm())
+  assert.equal(r.ok, true, JSON.stringify(r))
+  const keep = withForm()
+  keep.forms[0].retention = 'keep'
+  assert.equal(validateSitePlan(keep).ok, true)
+  const dflt = withForm()
+  delete dflt.forms[0].retention
+  assert.equal(validateSitePlan(dflt).ok, true)
+})
+
+test('a broken form is refused with its path', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each case edits a plan copy
+  const cases: [string, (p: any) => void, string][] = [
+    ['unknown field type', (p) => (p.forms[0].fields[0].type = 'radio'), '/forms/0/fields/0/type'],
+    ['select without options', (p) => delete p.forms[0].fields[1].options, '/forms/0/fields/1'],
+    ['field name with capitals', (p) => (p.forms[0].fields[0].name = 'Navn'), '/forms/0/fields/0/name'],
+    ['field without a label', (p) => delete p.forms[0].fields[0].label, '/forms/0/fields/0'],
+    ['info text without text', (p) => delete p.forms[0].fields[2].text, '/forms/0/fields/2'],
+    ['width 40', (p) => (p.forms[0].fields[0].width = 40), '/forms/0/fields/0/width'],
+    ['retention 0', (p) => (p.forms[0].retention = 0), '/forms/0/retention'],
+    ['retention 3651', (p) => (p.forms[0].retention = 3651), '/forms/0/retention'],
+    ['retention forever', (p) => (p.forms[0].retention = 'forever'), '/forms/0/retention'],
+    ['no confirmation', (p) => delete p.forms[0].confirmation, '/forms/0'],
+    ['duplicate field name', (p) => (p.forms[0].fields[1].name = 'navn'), '/forms/0/fields/1/name'],
+    ['duplicate form ref', (p) => p.forms.push(structuredClone(p.forms[0])), '/forms/1/ref'],
+  ]
+  for (const [what, change, path] of cases) {
+    const p = withForm()
+    change(p)
+    const r = validateSitePlan(p)
+    assert.equal(r.ok, false, what)
+    assert.ok(!r.ok && r.errors.some((e) => e.startsWith(path)), `${what}: ${JSON.stringify(r)}`)
+  }
+})

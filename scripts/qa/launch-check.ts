@@ -4,9 +4,12 @@
  * Prints errors and warnings, grouped by what was found, and exits 1 when there are errors.
  */
 import { launchCheck, type Finding } from '../../src/lib/launch-check'
+import { SITES } from '../../src/lib/sites'
 
 const base = (process.argv[2] || 'http://localhost:3100').replace(/\/$/, '')
-const r = await launchCheck(base)
+// The site's own domains from site/config.ts; on them it must be open to search engines.
+const ownHosts = Object.values(SITES).flatMap((s) => s.hosts).filter((h) => h !== 'localhost' && !h.endsWith('.localhost'))
+const r = await launchCheck(base, { ownHosts })
 
 function grouped(list: Finding[]): string[] {
   const by = new Map<string, string[]>()
