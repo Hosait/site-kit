@@ -35,6 +35,8 @@ export type SiteConfigInput = {
   documentTypes: Record<string, Record<string, string>>
   articleKinds: Record<string, Record<string, string>>
   features: { analytics: 'builtin' | 'none'; search: boolean }
+  /** Form submissions are deleted after this many days unless a form sets its own; null keeps them. */
+  forms: { retentionDays: number | null }
 }
 
 const KEY = /^[a-z][a-z0-9]*$/
@@ -70,5 +72,8 @@ export function checkSiteConfig(c: SiteConfigInput, stringLocales: readonly stri
       for (const l of locales) if (!labels[l]) problems.push(`${group}.${value}: no label for "${l}"`)
     }
   }
+  const days = c.forms?.retentionDays
+  if (days !== null && !(Number.isInteger(days) && (days as number) >= 1 && (days as number) <= 3650))
+    problems.push('forms.retentionDays must be a whole number of days from 1 to 3650, or null to keep submissions')
   return problems
 }

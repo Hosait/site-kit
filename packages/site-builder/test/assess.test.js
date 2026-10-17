@@ -103,6 +103,20 @@ test('a site with a login form is red', async () => {
   } finally { await s.close() }
 })
 
+test('a WordPress site whose footer links to its own login is green, with a note', async () => {
+  const footer = '<footer><a href="/wp-login.php">Logg inn</a></footer>'
+  const s = await contentSite({
+    '/': page('Hjem', `${NAV}<main><h1>Velkommen</h1><p>Vi er et lite firma.</p></main>${footer}`),
+    '/nyheter/sommerfest': page('Sommerfest', `${NAV}<main><form action="/wp-login.php?action=postpass" class="post-password-form" method="post"><input name="post_password" type="password"></form></main>`),
+  })
+  try {
+    const r = await run(s)
+    assert.equal(r.class, 'green', JSON.stringify(r.reasons))
+    assert.ok(r.notes.some((n) => /own admin login/.test(n) && n.includes('/wp-login.php')), JSON.stringify(r.notes))
+    assert.ok(r.notes.some((n) => /password-protected/.test(n) && n.includes('/nyheter/sommerfest')), JSON.stringify(r.notes))
+  } finally { await s.close() }
+})
+
 test('a sitemap of 900 product pages with Product markup on the sampled pages is red, without reading more than the page cap', async () => {
   const items = Array.from({ length: 900 }, (_, i) => `/utstyr/modell-${i}`)
   const routes = Object.fromEntries(items.map((p, i) => [p, page(`Modell ${i}`, `${NAV}<main><h1>Modell ${i}</h1><p>Datablad.</p></main>`, ld({ '@type': 'Product', name: `Modell ${i}`, sku: String(i) }))]))
@@ -240,6 +254,10 @@ test('classify: more than scopeDocuments documents is yellow', () => {
 test('classify: an estimated media size over scopeMediaBytes is yellow', () => {
   assert.equal(verdict({ mediaBytes: LIMITS.scopeMediaBytes }).class, 'green')
   assert.equal(verdict({ mediaBytes: LIMITS.scopeMediaBytes + 1 }).class, 'yellow')
+})
+test('classify: more than scopePasswordPosts password-protected pages read is yellow', () => {
+  assert.equal(verdict({ passwordPosts: LIMITS.scopePasswordPosts }).class, 'green')
+  assert.deepEqual(verdict({ passwordPosts: LIMITS.scopePasswordPosts + 1 }).reasons.map((r) => [r.class, r.code]), [['yellow', 'protected-posts']])
 })
 test('classify: integrations are yellow, not red', () => assert.equal(verdict({ integrations: ev }).class, 'yellow'))
 test('classify: too little read is yellow with its reason', () => {

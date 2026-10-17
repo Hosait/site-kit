@@ -125,9 +125,11 @@ export interface Config {
   fallbackLocale: ('false' | 'none' | 'null') | false | null | ('no' | 'en') | ('no' | 'en')[];
   globals: {
     'analytics-settings': AnalyticsSetting;
+    'payload-jobs-stats': PayloadJobsStat;
   };
   globalsSelect: {
     'analytics-settings': AnalyticsSettingsSelect<false> | AnalyticsSettingsSelect<true>;
+    'payload-jobs-stats': PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
   };
   locale: 'no' | 'en';
   widgets: {
@@ -136,6 +138,7 @@ export interface Config {
   user: User;
   jobs: {
     tasks: {
+      'prune-form-submissions': TaskPruneFormSubmissions;
       schedulePublish: TaskSchedulePublish;
       inline: {
         input: unknown;
@@ -1030,6 +1033,11 @@ export interface Form {
         id?: string | null;
       }[]
     | null;
+  /**
+   * Innsendinger som er eldre, slettes hver natt.
+   */
+  retention: 'default' | 'days' | 'keep';
+  retentionDays?: number | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1443,7 +1451,7 @@ export interface PayloadJob {
     | {
         executedAt: string;
         completedAt: string;
-        taskSlug: 'inline' | 'schedulePublish';
+        taskSlug: 'inline' | 'prune-form-submissions' | 'schedulePublish';
         taskID: string;
         input?:
           | {
@@ -1476,10 +1484,19 @@ export interface PayloadJob {
         id?: string | null;
       }[]
     | null;
-  taskSlug?: ('inline' | 'schedulePublish') | null;
+  taskSlug?: ('inline' | 'prune-form-submissions' | 'schedulePublish') | null;
   queue?: string | null;
   waitUntil?: string | null;
   processing?: boolean | null;
+  meta?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -2509,6 +2526,8 @@ export interface FormsSelect<T extends boolean = true> {
         message?: T;
         id?: T;
       };
+  retention?: T;
+  retentionDays?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -2567,6 +2586,7 @@ export interface PayloadJobsSelect<T extends boolean = true> {
   queue?: T;
   waitUntil?: T;
   processing?: T;
+  meta?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -2641,6 +2661,24 @@ export interface AnalyticsSetting {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-jobs-stats".
+ */
+export interface PayloadJobsStat {
+  id: number;
+  stats?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "analytics-settings_select".
  */
 export interface AnalyticsSettingsSelect<T extends boolean = true> {
@@ -2654,6 +2692,16 @@ export interface AnalyticsSettingsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-jobs-stats_select".
+ */
+export interface PayloadJobsStatsSelect<T extends boolean = true> {
+  stats?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "collections_widget".
  */
 export interface CollectionsWidget {
@@ -2661,6 +2709,16 @@ export interface CollectionsWidget {
     [k: string]: unknown;
   };
   width: 'full';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskPrune-form-submissions".
+ */
+export interface TaskPruneFormSubmissions {
+  input?: unknown;
+  output: {
+    deleted?: number | null;
+  };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

@@ -1,13 +1,13 @@
 import type { Locale } from '../sites'
 import type { SitePlan } from './types'
 
-type Ids = { media: Map<string, number>; pages: Map<string, number>; people?: Map<string, number>; documents?: Map<string, number> }
+type Ids = { media: Map<string, number>; pages: Map<string, number>; people?: Map<string, number>; documents?: Map<string, number>; forms?: Map<string, number> }
 
 function walk(value: unknown, visit: (marker: string, ref: string) => void) {
   if (Array.isArray(value)) return value.forEach((v) => walk(v, visit))
   if (!value || typeof value !== 'object') return
   const o = value as Record<string, unknown>
-  for (const m of ['$media', '$page', '$pageLink', '$person', '$document'])
+  for (const m of ['$media', '$page', '$pageLink', '$person', '$document', '$form'])
     if (typeof o[m] === 'string' && Object.keys(o).length === 1) return visit(m, o[m] as string)
   for (const v of Object.values(o)) walk(v, visit)
 }
@@ -18,6 +18,7 @@ export function findMissingRefs(plan: SitePlan): string[] {
   const pages = new Set(plan.pages.map((p) => p.ref))
   const people = new Set((plan.people ?? []).map((p) => p.ref))
   const documents = new Set((plan.documents ?? []).map((d) => d.ref))
+  const forms = new Set((plan.forms ?? []).map((f) => f.ref))
   const missing = new Set<string>()
   const needMedia = (r?: string) => r && !media.has(r) && missing.add(`media "${r}"`)
   const needPage = (r?: string) => r && !pages.has(r) && missing.add(`page "${r}"`)
@@ -25,6 +26,7 @@ export function findMissingRefs(plan: SitePlan): string[] {
     if (marker === '$media') needMedia(ref)
     else if (marker === '$person') void (!people.has(ref) && missing.add(`person "${ref}"`))
     else if (marker === '$document') void (!documents.has(ref) && missing.add(`document "${ref}"`))
+    else if (marker === '$form') void (!forms.has(ref) && missing.add(`form "${ref}"`))
     else needPage(ref)
   })
   for (const p of plan.pages) {
@@ -68,6 +70,7 @@ export async function resolveValue(value: unknown, ids: Ids, html: (h: string) =
     if (typeof o.$pageLink === 'string') return { relationTo: 'pages', value: ids.pages.get(o.$pageLink) }
     if (typeof o.$person === 'string') return ids.people?.get(o.$person)
     if (typeof o.$document === 'string') return ids.documents?.get(o.$document)
+    if (typeof o.$form === 'string') return ids.forms?.get(o.$form)
     if (typeof o.$html === 'string') return html(o.$html)
   }
   const out: Record<string, unknown> = {}

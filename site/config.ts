@@ -44,4 +44,7 @@ export const siteConfig = {
     blog: { no: 'Fagblogg', en: 'Blog' },
   },
   features: { analytics: 'builtin', search: true },
+  // How long form submissions are kept, in days; a form can set its own period or "keep".
+  // null keeps them. Hosait Sites sets it from the intake answer.
+  forms: { retentionDays: 90 },
 } as const satisfies SiteConfigInput

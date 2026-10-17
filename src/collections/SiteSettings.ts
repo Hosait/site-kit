@@ -79,8 +79,10 @@ export const SiteSettings: CollectionConfig = {
         {
           label: 'Organisasjon',
           description: 'Brukes i strukturerte data (Google) og kontaktinfo.',
+          // Standardverdier fra site/config.ts er funksjoner: de settes når dokumentet opprettes
+          // (import, admin) og blir ikke databasestandarder, så nytt merkenavn krever ingen migrasjon.
           fields: [
-            { name: 'legalName', type: 'text', label: 'Juridisk navn', defaultValue: SITE_CONFIG.brand.legalName },
+            { name: 'legalName', type: 'text', label: 'Juridisk navn', defaultValue: () => SITE_CONFIG.brand.legalName },
             { name: 'orgNumber', type: 'text', label: 'Organisasjonsnummer' },
             { name: 'phone', type: 'text', label: 'Telefon' },
             { name: 'email', type: 'email', label: 'E-post' },
@@ -92,7 +94,7 @@ export const SiteSettings: CollectionConfig = {
                 { name: 'street', type: 'text', label: 'Gate' },
                 { name: 'postalCode', type: 'text', label: 'Postnr.' },
                 { name: 'city', type: 'text', label: 'Sted' },
-                { name: 'country', type: 'text', label: 'Land', defaultValue: SITE_CONFIG.brand.country },
+                { name: 'country', type: 'text', label: 'Land', defaultValue: () => SITE_CONFIG.brand.country },
               ],
             },
             {

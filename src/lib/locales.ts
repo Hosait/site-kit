@@ -5,13 +5,16 @@ export function otherLocale(locale: Locale): Locale | null {
   return LOCALES.find((l) => l !== locale) ?? null
 }
 
-/** First Accept-Language tag → a configured locale; unknown languages get English if offered. */
-export function negotiateLocale(acceptLanguage: string | null | undefined): Locale {
+/**
+ * First Accept-Language tag → a configured locale; unknown languages get English if offered.
+ * A locale not in `available` (e.g. one without a published home page) gives the default locale.
+ */
+export function negotiateLocale(acceptLanguage: string | null | undefined, available: readonly Locale[] = LOCALES): Locale {
   const first = (acceptLanguage ?? '').split(',')[0]?.trim().toLowerCase().split(/[-;]/)[0]
   if (!first) return DEFAULT_LOCALE
   const hit = LOCALES.find((l) => l === first || (LOCALE_CONFIG[l].aliases as readonly string[]).includes(first))
-  if (hit) return hit
-  return (LOCALES as string[]).includes('en') ? ('en' as Locale) : DEFAULT_LOCALE
+  const wanted = hit ?? ((LOCALES as string[]).includes('en') ? ('en' as Locale) : DEFAULT_LOCALE)
+  return available.includes(wanted) ? wanted : DEFAULT_LOCALE
 }
 
 /** `/no/sok` → { locale: 'no' } when that is the locale's own search segment. */
