@@ -1,5 +1,6 @@
 import { APIError, type CollectionBeforeChangeHook, type CollectionBeforeValidateHook } from 'payload'
 
+import { clientAddress } from '@/lib/forms/client-address'
 import { ipLimited, limitText, PER_FORM_PER_DAY, tooLarge } from '@/lib/forms/limits'
 
 /**
@@ -19,7 +20,7 @@ export const limitSubmissions: CollectionBeforeValidateHook = async ({ operation
   if (operation !== 'create' || !data || req.payloadAPI === 'local' || req.user) return data
   const locale = data.locale
   if (tooLarge(data)) throw new APIError(limitText('tooLarge', locale), 413)
-  const ip = req.headers?.get('x-forwarded-for')?.split(',')[0]?.trim() || 'local'
+  const ip = clientAddress(req.headers?.get('x-forwarded-for'))
   if (ipLimited(ip, Date.now())) throw new APIError(limitText('tooMany', locale), 429)
   const form = data.form
   if (typeof form === 'number' || typeof form === 'string') {

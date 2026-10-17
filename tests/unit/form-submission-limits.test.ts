@@ -6,6 +6,7 @@ import { NextRequest } from 'next/server'
 
 import { limitSubmissions } from '../../src/collections/formSubmissionHooks'
 import { formErrorText } from '../../src/blocks/Form/strings'
+import { clientAddress } from '../../src/lib/forms/client-address'
 import { ipLimited, MAX_BODY_BYTES, PER_FORM_PER_DAY, PER_IP } from '../../src/lib/forms/limits'
 import { config as proxyConfig, proxy } from '../../src/proxy'
 
@@ -110,4 +111,23 @@ test('the form shows the limit\'s message for 413 and 429, and its own text for 
   assert.equal(formErrorText({ status: 413, message: 'Skjemaet er for stort til å sendes.' }, generic), 'Skjemaet er for stort til å sendes.')
   for (const status of [400, 403, 500]) assert.equal(formErrorText({ status, message: 'The following field is invalid: form' }, generic), generic, String(status))
   assert.equal(formErrorText({ status: 429, message: '' }, generic), generic)
+})
+
+// Review of #30: the first X-Forwarded-For value is whatever the visitor sends. Hosait's edge (NPM)
+// appends the real address, and the worker's ingress appends the edge's internal one, so the
+// visitor is the rightmost public address.
+test('the visitor is the rightmost public address in X-Forwarded-For, not a value the visitor sent', () => {
+  assert.equal(clientAddress('198.51.100.20, 10.50.30.10'), '198.51.100.20')
+  assert.equal(clientAddress('1.2.3.4, 198.51.100.20, 10.50.30.10'), '198.51.100.20', 'a forged first value is ignored')
+  assert.equal(clientAddress('2a01:4f8::1, ::1'), '2a01:4f8::1')
+  assert.equal(clientAddress('::ffff:10.50.30.10'), '10.50.30.10', 'all internal (a local test): the leftmost')
+  assert.equal(clientAddress('203.0.113.9'), '203.0.113.9')
+  assert.equal(clientAddress(null), 'local')
+})
+
+test('a forged X-Forwarded-For neither gets round the address limit nor locks out the address it names', async () => {
+  const real = '198.51.100.30'
+  for (let i = 0; i < PER_IP.max; i++) await run(ok, fakeReq({ ip: `9.9.9.${i}, ${real}, 10.50.30.10` }).req)
+  await assert.rejects(run(ok, fakeReq({ ip: `9.9.9.99, ${real}, 10.50.30.10` }).req), status(429, /For mange innsendinger/))
+  assert.deepEqual(await run(ok, fakeReq({ ip: '9.9.9.1, 10.50.30.10' }).req), ok, 'the forged address itself is not locked out')
 })
