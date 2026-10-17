@@ -10,6 +10,7 @@ import { detect } from './detect.js'
 import { decode, language, load, title } from './html.js'
 import { get as defaultGet } from './net.js'
 import { parseRobots } from './robots.js'
+import { leftOut, makeScope } from './scope.js'
 
 export const IMAGE = /\.(jpe?g|png|gif|webp|svg|avif|ico|bmp|tiff?)$/i
 const DOCUMENT = /\.(pdf|docx?|xlsx?|pptx?|zip|csv|txt|mp4|mov|webm)$/i
@@ -125,10 +126,10 @@ export async function readSitemaps(getFollowing, root, robots, { onUrls, stop = 
 
 /**
  * @param {string} start
- * @param {{ out: string, maxPages?: number, budgetMs?: number, concurrency?: number, delayMs?: number, allowPrivate?: boolean, get?: typeof defaultGet, log?: (s: string) => void }} opts
+ * @param {{ out: string, maxPages?: number, budgetMs?: number, concurrency?: number, delayMs?: number, allowPrivate?: boolean, scope?: ReturnType<typeof makeScope>, get?: typeof defaultGet, log?: (s: string) => void }} opts
  */
 export async function crawl(start, opts) {
-  const { out, maxPages = 500, budgetMs = 15 * 60_000, concurrency = 2, delayMs = 250, allowPrivate = false, log = () => {} } = opts
+  const { out, maxPages = 500, budgetMs = 15 * 60_000, concurrency = 2, delayMs = 250, allowPrivate = false, scope = makeScope(), log = () => {} } = opts
   if (!(Number.isInteger(maxPages) && maxPages > 0)) throw new Error('maxPages must be a positive whole number')
   if (!(Number.isFinite(budgetMs) && budgetMs > 0)) throw new Error('budgetMs must be a positive number')
   const get = opts.get ?? defaultGet
@@ -169,12 +170,15 @@ export async function crawl(start, opts) {
   // Only so many addresses are worth remembering when only maxPages are read.
   const maxSeen = maxPages * 3
   let notQueued = 0
+  // What the customer left out (src/scope.js): never requested, counted once.
+  const skipped = new Set()
 
   function enqueue(href, from) {
     const n = normalize(href, from)
     if (!n) return
     const u = new URL(n)
     if (!sameSite(u.hostname, root.hostname)) return
+    if (leftOut(scope, u)) { if (skipped.size < maxSeen) skipped.add(n); return }
     if (SKIP.test(u.pathname)) return
     if (IMAGE.test(u.pathname)) return note(media, n, from)
     if (DOCUMENT.test(u.pathname)) return note(documents, n, from)
@@ -254,12 +258,15 @@ export async function crawl(start, opts) {
   if (full.has(media)) notes.push(`Only the first ${MAX_MEDIA} images are listed.`)
   if (full.has(documents)) notes.push(`Only the first ${MAX_DOCUMENTS} documents are listed.`)
   if (budgetReached) notes.push(`Stopped at the ${Math.round(budgetMs / 6000) / 10}-minute time budget; ${queue.length} queued addresses were not read.`)
+  if (skipped.size) notes.push(`${skipped.size} addresses were left out at the customer's request (${scope.exclude.join(', ')}).`)
 
   const inventory = {
     version: 1,
     source: root.toString(),
     crawledAt: new Date().toISOString(),
     robots: { sitemaps: robots.sitemaps, blocked: [...blocked] },
+    scope,
+    leftOut: skipped.size,
     pages,
     notQueued,
     media: [...media].map(([url, on]) => ({ url, foundOn: [...on].slice(0, 5) })),

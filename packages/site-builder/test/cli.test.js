@@ -78,3 +78,25 @@ test('after red crawl refuses even with --accepted-scope; after yellow it needs 
     assert.ok(fs.existsSync(path.join(yellowOut, 'inventory.json')))
   } finally { await red.close(); await yellow.close() }
 })
+
+// The customer's limits: set on assess, kept in assess.json, used by crawl.
+test('assess takes the customer\'s limits; crawl uses them from assess.json and refuses its own', async () => {
+  const s = await serve({ '/': nb('<p>Hei</p><a href="/om">Om</a> <a href="/intranett">Intern</a>'), '/om': nb('<p>Om oss</p>'), '/intranett': nb('<p>Intern</p>') })
+  const out = tmp()
+  try {
+    assert.equal(await exitCode(run('node', [BIN, 'assess', s.url + '/', '--out', out, '--allow-private', '--exclude', '/intranett'])), 0)
+    assert.deepEqual(JSON.parse(fs.readFileSync(path.join(out, 'assess.json'), 'utf8')).scope, { exclude: ['/intranett'] })
+    await assert.rejects(run('node', [BIN, 'crawl', s.url + '/', '--out', out, '--allow-private', '--exclude', '/om']), (e) => e.code === 2 && /assess\.json/.test(e.stderr))
+    const before = s.requests.length
+    await run('node', [BIN, 'crawl', s.url + '/', '--out', out, '--allow-private'])
+    assert.ok(!s.requests.slice(before).some((r) => r.startsWith('/intranett')), JSON.stringify(s.requests.slice(before)))
+    assert.equal(JSON.parse(fs.readFileSync(path.join(out, 'inventory.json'), 'utf8')).leftOut, 1)
+  } finally { await s.close() }
+})
+
+test('an --exclude that is not a path on the site is a usage error', async () => {
+  for (const v of [['intranett'], ['/'], ['/a/../b'], [''], ['/produkter'], ['/%61rkiv'], ['//produkter']]) {
+    await assert.rejects(run('node', [BIN, 'assess', 'http://localhost/', '--exclude', ...v]), (e) => e.code === 2 && /exclude/.test(e.stderr), v[0])
+  }
+  await assert.rejects(run('node', [BIN, 'assess', 'http://localhost/', '--exclude']), (e) => e.code === 2 && /exclude/.test(e.stderr), 'no value')
+})

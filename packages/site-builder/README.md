@@ -47,13 +47,22 @@ In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-buil
   text counted is the page's `<main>` (or its body), without cookie or consent banners. A check
   dated in the future is refused by `crawl`, like one older than 7 days.
 
+  The customer's limits (`src/scope.js`): `--exclude <path>` (repeatable) leaves a content part
+  out of the move, that path and everything under it in any case. The path is written as it is,
+  without `%` or `//`. What is left out is not moved or counted. A shop, a catalogue, payment and
+  a member area stay red whatever is left out: the check always reads one or two pages of each
+  excluded path (and others in its spread) for them, and counts product addresses across the
+  whole sitemap. A shop, cart, catalogue or login path cannot be excluded. With fewer than 3
+  sitemap pages left after the exclusions, the check has not read enough. `assess.json` keeps the
+  limits (`scope`) and how many addresses were left out.
+
   The thresholds are `LIMITS` in `src/assess.js`. Exit code: 0 for green and yellow, 3 for red,
   2 for a usage error, 1 for other errors. A page that cannot be read is recorded and the others
   go on; a stop at the time budget is a note.
 - **crawl** starts only when `assess.json` in its out folder is for the same site and not red;
   after yellow it also needs `--accepted-scope`, given once the customer has said yes, and after
   a check that could not read enough it does not start at all. Otherwise it exits 3 and says
-  why.
+  why. It leaves out what the check left out, from `assess.json`; it takes no limits of its own.
 - **crawl** reads robots.txt and obeys it (when it answers with a server error, nothing is
   read), reads the sitemap, follows links on the same site (www and apex count as one), and
   stops at 500 pages or after 15 minutes (`--max`, `--budget <minutes>`), keeping what it has
