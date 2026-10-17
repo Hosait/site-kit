@@ -12,7 +12,10 @@ test('every pnpm command in the builder\'s guide is a real script', () => {
 })
 
 test('the guide uses only real site-builder commands and points at the shipped files', () => {
-  for (const m of guide.matchAll(/site-builder (\w+)/g)) if (m[1] !== 'install') assert.ok(['assess', 'crawl', 'extract', 'theme', 'report'].includes(m[1]), m[1])
+  const cli = readFileSync('packages/site-builder/bin/site-builder.js', 'utf8')
+  const commands = [...cli.matchAll(/cmd === '(\w+)'/g)].map((m) => m[1])
+  assert.ok(commands.includes('crawl') && commands.includes('assess'))
+  for (const m of guide.matchAll(/site-builder (\w+)/g)) if (m[1] !== 'install') assert.ok(commands.includes(m[1]), m[1])
   for (const f of ['seed/site-plan.json', 'schema/site-plan.schema.json', 'schema/blocks.schema.json', 'site/questions.json', 'site/config.ts', 'site/theme.json'])
     assert.ok(guide.includes(f), f)
 })

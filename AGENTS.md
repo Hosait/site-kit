@@ -100,9 +100,11 @@ gap). Check it until it passes, then try it locally:
     pnpm lint
     pnpm test:unit
 
-After the preview is up: copy `.site-builder/<host>/urls.json` to `import-data/urls.json` and run
-`pnpm qa:urls <preview address>`. Then run the launch checks; fix every error they report before
-the site moves to its own domain:
+After the preview is up, run
+`pnpm site-builder compare --out .site-builder/<host> --new <preview address>` (add
+`--allow-private` for a local preview) and look at `compare.md` (old pages and the old site's
+documents, PDFs and the like) and `compare.html` in that folder. Then run the launch checks; fix
+every error they report before the site moves to its own domain:
 
 - `pnpm qa:launch <preview address>` fails on a sitemap page that does not answer, placeholder or
   demo text (the seeded privacy page, «Nordlys Demo», example.com), a page without a title and a
@@ -132,6 +134,9 @@ and opens `<address>/next/admin-claim?code=<value>`. Never ask for the value. On
 import cut off part-way (the web service restarted during it) leaves pages that make "Run seed
 again" refuse; the admin then replaces the content with "Legg inn innhold" in the Testinnhold
 panel on the admin dashboard.
+
+Before the domain switch, run `pnpm site-builder compare` again with `--new` set to the site's
+hosait.com address.
 
 When the site moves to its own domain (only once `pnpm qa:launch` and `pnpm qa:axe` pass on the
 preview):

@@ -7,6 +7,7 @@ Reads an existing website so it can be rebuilt on Hosait Site Kit. The steps tha
     site-builder extract --out .site-builder/www.example.com
     site-builder theme   --out .site-builder/www.example.com
     site-builder report  --out .site-builder/www.example.com
+    site-builder compare --out .site-builder/www.example.com --new https://preview.example.com
 
 In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-builder assess <url>`.
 
@@ -68,6 +69,20 @@ In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-buil
   `site/fonts.ts`, and save the logo under `public/brand/`. Colours are already darkened where
   Site Kit's 4.5:1 contrast check needs it; `notes` lists each change.
 - **report** writes `report.md` for the customer.
+- **compare** checks every old address that answered 200 on the new site: it must answer 200,
+  or 301/308 to a page on the new site that does (at most 3 redirects). Four requests at a time.
+  The old site's documents (PDFs and the like) are checked the same way if they still work there.
+  It writes `compare.md` and `compare.json`, and exits 1 when an address fails. With Playwright
+  installed it also takes old and new screenshots (the home page and the first page of each
+  template, desktop and mobile) into `shots/`, side by side in `compare.html`. The browser runs
+  only with its sandbox (without one there are no screenshots). It reaches the network only
+  through a local filtering proxy (`src/filter-proxy.js`, loopback included), which resolves each
+  name when it connects and refuses private addresses and ports other than 80 and 443, so
+  redirects, frames, fetch and names that turn private (DNS rebinding) are caught too. Service
+  workers, downloads and WebSockets are blocked. `--budget` (10 minutes by default) bounds the
+  whole run: the address and document checks, then the screenshots; each page times out after
+  30 seconds. With `--allow-private` only the new site's own host and port may be a private
+  address: the old site and its documents are always fetched as public.
 
 Private, loopback and link-local addresses are refused, and this is checked when connecting.
 `--allow-private` is for your own local or intranet sites.
