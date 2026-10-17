@@ -23,6 +23,13 @@ In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-buil
     product catalogue (Product markup on many pages, or product addresses in the sitemap), a
     login or member area (password fields, login forms and links), more than 500 pages in the
     largest language, more than 1500 pages in all languages together, or more than 500 articles.
+    A link to the old CMS's own admin login (WordPress, Joomla, Drupal, Umbraco, Ghost) with plain
+    admin wording («Logg inn», «Log in», «Admin», «Meta», or an icon) is a note, not a member
+    area; member wording on it («Logg inn for medlemmer»), a member folder, registration or
+    password reset, and a redirect outside wp-admin stay red. Account wording («Min side», «My
+    account», «Mein Konto», «Mon compte», «Mi cuenta» …) is a login wherever it links; member
+    wording alone («Bli medlem», «Våre medlemmer») is not. WordPress's own password form for a
+    protected post is a note; more than three such pages read is yellow.
   - **yellow**, possible with the customer's OK on scope and storage: more than 200 pages in
     the largest language, more than 100 documents, more than 2 GB of documents and images, or
     built-in services (booking, feeds, embedded apps, forms sent elsewhere).
