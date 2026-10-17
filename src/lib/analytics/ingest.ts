@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import { sql } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
 
+import { clientAddress } from '@/lib/client-address'
 import { DEFAULT_LOCALE, isLocale, isSiteKey, SITE_CONFIG, SITE_KEYS, type SiteKey, SITES } from '@/lib/sites'
 import { cleanPath, deviceFrom, hostOf, isBot, sourceFrom, type Source } from './classify'
 import { CONSENT_COOKIE, isVisitorId, parseConsent, randomId, readCookie, VISITOR_COOKIE } from './consent'
@@ -109,8 +110,8 @@ export async function ingest(payload: Payload, headers: Headers, e: IncomingEven
   const consented = Boolean(consent?.statistics && isVisitorId(vid))
   if (!consented && !settings.basicWithoutConsent) return { stored: false, reason: 'no-consent' }
 
-  const ip = headers.get('x-forwarded-for')?.split(',')[0]?.trim() || headers.get('x-real-ip') || null
-  const visitor = consented ? `c:${hash(vid!)}` : `a:${hash(`${await dailySalt(payload)}|${site}|${ip ?? ''}|${ua}`)}`
+  const ip = clientAddress(headers.get('x-forwarded-for'))
+  const visitor = consented ? `c:${hash(vid!)}` : `a:${hash(`${await dailySalt(payload)}|${site}|${ip}|${ua}`)}`
   const path = e.p ? cleanPath(e.p) : null
 
   // Pågående økt for denne besøkende (siste hendelse innen 30 minutter).

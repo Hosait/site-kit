@@ -1,6 +1,6 @@
 import { APIError, type CollectionBeforeChangeHook, type CollectionBeforeValidateHook } from 'payload'
 
-import { clientAddress } from '@/lib/forms/client-address'
+import { clientAddress } from '@/lib/client-address'
 import { ipLimited, limitText, PER_FORM_PER_DAY, tooLarge } from '@/lib/forms/limits'
 
 /**
