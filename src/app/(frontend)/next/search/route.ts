@@ -1,3 +1,4 @@
+import { clientAddress } from '@/lib/client-address'
 import { payload } from '@/lib/data'
 import { hitHref } from '@/lib/search/href'
 import { search, SEARCH_KINDS } from '@/lib/search/query'
@@ -29,7 +30,7 @@ function limited(ip: string): boolean {
 }
 
 export async function GET(req: Request) {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'local'
+  const ip = clientAddress(req.headers.get('x-forwarded-for'))
   if (limited(ip)) return Response.json({ error: 'For mange søk. Vent litt.' }, { status: 429 })
 
   const url = new URL(req.url)

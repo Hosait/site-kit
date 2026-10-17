@@ -6,7 +6,7 @@ import { NextRequest } from 'next/server'
 
 import { limitSubmissions } from '../../src/collections/formSubmissionHooks'
 import { formErrorText } from '../../src/blocks/Form/strings'
-import { clientAddress } from '../../src/lib/forms/client-address'
+import { clientAddress } from '../../src/lib/client-address'
 import { ipLimited, MAX_BODY_BYTES, PER_FORM_PER_DAY, PER_IP } from '../../src/lib/forms/limits'
 import { config as proxyConfig, proxy } from '../../src/proxy'
 

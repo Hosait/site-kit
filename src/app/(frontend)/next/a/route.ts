@@ -1,3 +1,4 @@
+import { clientAddress } from '@/lib/client-address'
 import { payload } from '@/lib/data'
 import { ingest, type IncomingEvent } from '@/lib/analytics/ingest'
 
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
   const origin = req.headers.get('origin')
   const host = req.headers.get('x-forwarded-host') || req.headers.get('host')
   if (origin && host && new URL(origin).host !== host) return noContent
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'local'
+  const ip = clientAddress(req.headers.get('x-forwarded-for'))
   if (limited(ip)) return noContent
 
   const text = await req.text()
