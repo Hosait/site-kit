@@ -110,7 +110,7 @@ export function sitemapPaths(xml: string): string[] {
 }
 
 /** The body as text, read only up to MAX_BODY bytes; the rest is not downloaded. */
-async function body(res: Response): Promise<string> {
+export async function readBody(res: Response): Promise<string> {
   if (!res.body) return ''
   const reader = res.body.getReader()
   const decoder = new TextDecoder()
@@ -194,12 +194,12 @@ export async function launchCheck(base: string, opts: { fetch?: Fetch; maxPages?
     result.errors.push({ page: `${root}/sitemap.xml`, text: `the site has no sitemap.xml (${map.status})` })
     return result
   }
-  const all = sitemapPaths(await body(map))
+  const all = sitemapPaths(await readBody(map))
   const paths = all.slice(0, maxPages)
   if (all.length > paths.length) result.notes.push(`Checked the first ${paths.length} of ${all.length} pages in the sitemap.`)
   if (own) {
     const robots = await fetchImpl(`${root}/robots.txt`, { signal: AbortSignal.timeout(20_000) })
-    if (robots.status === 200 && robotsBlocksAll(await body(robots))) {
+    if (robots.status === 200 && robotsBlocksAll(await readBody(robots))) {
       result.errors.push({ page: `${root}/robots.txt`, text: 'robots.txt blocks search engines on the site\'s own domain' })
     }
   }
@@ -217,7 +217,7 @@ export async function launchCheck(base: string, opts: { fetch?: Fetch; maxPages?
         return
       }
       answered.add(page)
-      const f = pageFindings(await body(res), page, root, own)
+      const f = pageFindings(await readBody(res), page, root, own)
       if (own && /noindex/i.test(res.headers.get('x-robots-tag') ?? '') && !f.errors.includes(NOINDEX)) f.errors.unshift(NOINDEX)
       out.errors.push(...f.errors.map((text) => ({ page, text })))
       out.warnings.push(...f.warnings.map((text) => ({ page, text })))
