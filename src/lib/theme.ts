@@ -57,7 +57,6 @@ const MAGIC: Record<string, (b: Buffer) => boolean> = {
 const SVG_UNSAFE: [RegExp, string][] = [
   // ISO-2022-JP and the like switch character sets with escape bytes inside a tag name.
   [/<\?xml[^>]*\sencoding\s*=\s*["'](?!utf-8["'])/i, 'an encoding other than UTF-8'],
-  // eslint-disable-next-line no-control-regex -- the control characters are what it looks for
   [/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/, 'a control character'],
   // Also in another namespace, with any letters in its prefix: <h:script>, <ä:script>.
   [/<(?:[^\s<>/:]+:)?script/i, 'a <script>'],
