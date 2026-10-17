@@ -36,3 +36,9 @@ test('a shop, cart, catalogue or login path cannot be excluded', () => {
   }
   assert.deepEqual(makeScope({ exclude: ['/arkiv', '/intranett'] }).exclude, ['/arkiv', '/intranett'])
 })
+
+// Review of #31, round 2: an excluded path written with percent-encoding is the same path.
+test('an excluded path matches its percent-encoded form', () => {
+  const s = makeScope({ exclude: ['/arkiv'] })
+  for (const p of ['/%61rkiv/2019/sak', '/ARKIV', '/%61%72%6B%69%76']) assert.equal(leftOut(s, u(p)), true, p)
+})

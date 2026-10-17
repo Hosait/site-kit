@@ -163,7 +163,13 @@ export async function assess(start, opts) {
     if (skipped.size < MAX_SITE_LINKS) skipped.add(n)
     return true
   }
-  const never = (n) => neverRead(scope, new URL(n))
+  // A login address that is never opened still shows the site has a member area: it is evidence.
+  const memberAddresses = new Set()
+  const never = (n) => {
+    if (!neverRead(scope, new URL(n))) return false
+    if (memberAddresses.size < MAX_EVIDENCE) memberAddresses.add(n)
+    return true
+  }
 
   const getFollowing = followingGet(get, root, allowPrivate)
   const { robots, text: robotsText, unavailable, note } = await readRobots(getFollowing, root)
@@ -289,6 +295,7 @@ export async function assess(start, opts) {
   const payment = []
   const login = []
   const integrations = new Map()
+  for (const n of memberAddresses) login.push(evidence(n, 'a login or «min side» address (not opened)'))
   for (const p of read) {
     for (const m of p.sig.shop) shop.push(evidence(p.url, m))
     for (const m of p.sig.payment) payment.push(evidence(p.url, m))

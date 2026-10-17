@@ -39,7 +39,10 @@ export const neverRead = (scope, u) => scope.withoutMemberArea && isLoginUrl(u)
  * @param {{ exclude: string[], withoutMemberArea: boolean }} scope @param {URL} u
  */
 export function leftOut(scope, u) {
-  const p = u.pathname.toLowerCase().replace(/\/+$/, '')
+  // Percent-encoding is undone, so /%61rkiv/ is /arkiv/.
+  let path = u.pathname
+  try { path = decodeURIComponent(path) } catch { /* not valid encoding: compared as written */ }
+  const p = path.toLowerCase().replace(/\/+$/, '')
   if (scope.exclude.some((x) => p === x || p.startsWith(x + '/'))) return true
   return scope.withoutMemberArea && isLoginUrl(u)
 }

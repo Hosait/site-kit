@@ -51,7 +51,7 @@ In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-buil
   means login and «min side» addresses are never requested. What is left out is not counted. A
   shop, a catalogue or a member area is never left out: the check may still read excluded pages
   for a shop or a catalogue, counts product addresses across the whole sitemap, and a login found
-  anywhere stays red. A shop, cart, catalogue or login path cannot be excluded. `assess.json`
+  anywhere stays red (a login address that is not opened counts too). A shop, cart, catalogue or login path cannot be excluded. `assess.json`
   keeps the limits (`scope`) and how many addresses were left out.
 
   The thresholds are `LIMITS` in `src/assess.js`. Exit code: 0 for green and yellow, 3 for red,

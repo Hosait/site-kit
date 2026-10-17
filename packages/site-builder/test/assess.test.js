@@ -522,3 +522,17 @@ test('a catalogue stays red when its product pages are left out under another na
     assert.equal(r.estimates.htmlPages, 3, 'the left-out pages are not counted')
   } finally { await s.close() }
 })
+
+// Review of #31, round 2: with --without-member-area, login pages listed in the sitemap were never
+// read and counted nowhere, so a site whose home page has no login link came out green.
+test('with the member area left out, login addresses in the sitemap still make the site red, unread', async () => {
+  const routes = { '/': doc('nb', 'Hjem', `${NAV}<p>Hei</p>`), '/om-oss': doc('nb', 'Om', '<p>Om oss.</p>'), '/kontakt': doc('nb', 'Kontakt', '<p>Ring.</p>') }
+  for (let i = 0; i < 5; i++) routes[`/min-side/side${i}`] = doc('nb', `Min side ${i}`, '<form action="/login" method="post"><input type="password" name="p"></form>')
+  const s = await siteOf(routes)
+  try {
+    const r = await run(s, { scope: makeScope({ withoutMemberArea: true }) })
+    assert.ok(!s.requests.some((p) => p.startsWith('/min-side')), JSON.stringify(s.requests))
+    assert.ok(codes(r).includes('login'), JSON.stringify(r.reasons))
+    assert.equal(r.class, 'red')
+  } finally { await s.close() }
+})
