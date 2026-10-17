@@ -88,7 +88,12 @@ export async function proxy(req: NextRequest) {
 
   // Payload leser hele kroppen før noen hook kjører, så størrelsen på en innsending (REST eller
   // GraphQL) sjekkes her. Antall og innhold sjekkes i src/collections/formSubmissionHooks.ts.
-  if (pathname === '/api/form-submissions' || pathname === '/api/graphql') {
+  // Payload-ruten dekoder stien (/api/form%2Dsubmissions), så den sammenlignes dekodet her også.
+  if (pathname.startsWith('/api/')) {
+    let api = pathname
+    try { api = decodeURIComponent(pathname) } catch { /* ugyldig koding: Payload finner ingen rute */ }
+    api = api.replace(/\/+$/, '')
+    if (api !== '/api/form-submissions' && api !== '/api/graphql') return NextResponse.next()
     if (req.method !== 'POST') return NextResponse.next()
     const length = req.headers.get('content-length')
     if (length === null) return NextResponse.json({ errors: [{ message: 'Content-Length required' }] }, { status: 411 })
@@ -177,6 +182,6 @@ export async function proxy(req: NextRequest) {
 
 export const config = {
   // Alt unntatt admin, API, Next-interne filer, forhåndsvisningsruter og statiske filer; av
-  // admin bare siden for den første brukeren, og av API-et bare de to veiene inn for innsendinger.
-  matcher: ['/((?!admin|api|_next|next/|brand/|fonts/|media/|sequences/|favicon|.*\\.(?:svg|png|jpg|jpeg|webp|avif|ico|woff2?|txt|js|css|map)$).*)', '/robots.txt', '/admin/create-first-user', '/api/form-submissions', '/api/graphql'],
+  // admin bare siden for den første brukeren. API-et går gjennom for å sjekke størrelsen på innsendinger.
+  matcher: ['/((?!admin|api|_next|next/|brand/|fonts/|media/|sequences/|favicon|.*\\.(?:svg|png|jpg|jpeg|webp|avif|ico|woff2?|txt|js|css|map)$).*)', '/robots.txt', '/admin/create-first-user', '/api/:path*'],
 }
