@@ -48,12 +48,13 @@ In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-buil
   dated in the future is refused by `crawl`, like one older than 7 days.
 
   The customer's limits (`src/scope.js`): `--exclude <path>` (repeatable) leaves a content part
-  out of the move, that path and everything under it in any case, and `--without-member-area`
-  means login and «min side» addresses are never requested. What is left out is not counted. A
-  shop, a catalogue or a member area is never left out: the check may still read excluded pages
-  for a shop or a catalogue, counts product addresses across the whole sitemap, and a login found
-  anywhere stays red (a login address that is not opened counts too). A shop, cart, catalogue or login path cannot be excluded. `assess.json`
-  keeps the limits (`scope`) and how many addresses were left out.
+  out of the move, that path and everything under it in any case. The path is written as it is,
+  without `%` or `//`. What is left out is not moved or counted. A shop, a catalogue, payment and
+  a member area stay red whatever is left out: the check always reads one or two pages of each
+  excluded path (and others in its spread) for them, and counts product addresses across the
+  whole sitemap. A shop, cart, catalogue or login path cannot be excluded. With fewer than 3
+  sitemap pages left after the exclusions, the check has not read enough. `assess.json` keeps the
+  limits (`scope`) and how many addresses were left out.
 
   The thresholds are `LIMITS` in `src/assess.js`. Exit code: 0 for green and yellow, 3 for red,
   2 for a usage error, 1 for other errors. A page that cannot be read is recorded and the others

@@ -34,9 +34,6 @@ Options:
   --accepted-scope   For crawl after a yellow assess, once the customer has accepted its scope
   --exclude <path>   For assess: leave this content part out of the move, such as /intranett (repeat
                      for more); crawl leaves out the same, from assess.json
-  --without-member-area
-                     For assess: never open login and member pages; a site with a member area is
-                     still red, and crawl does the same
   --new <url>        The new site's address, for compare
   --allow-private    Allow private and local addresses (for testing and intranet sites; compare: the new site only)
 `
@@ -62,7 +59,7 @@ try {
     try {
       const exclude = all('--exclude')
       if (exclude.some((v) => v === undefined || v.startsWith('--'))) throw new Error('--exclude needs a path on the site, such as /intranett')
-      scope = makeScope({ exclude, withoutMemberArea: has('--without-member-area') })
+      scope = makeScope({ exclude })
     } catch (e) { usage(e.message) }
     const out = flag('--out') ?? path.join('.site-builder', new URL(target).hostname)
     const r = await assess(target, { out, maxPages: positive('--max-pages', 40, true), budgetMs: positive('--budget', 3) * 60_000, allowPrivate: has('--allow-private'), scope, log: (s) => console.log(s) })
@@ -73,7 +70,7 @@ ${r.class.toUpperCase()}: ${r.counts.pagesRead} pages read → ${path.join(out, 
     if (r.class === 'red') process.exitCode = 3
   } else if (cmd === 'crawl') {
     if (!target || target.startsWith('--')) usage('crawl needs a URL')
-    if (has('--exclude') || has('--without-member-area')) usage('crawl uses the limits in assess.json: set them on assess (--exclude, --without-member-area) and run it again')
+    if (has('--exclude')) usage('crawl uses the limits in assess.json: set them on assess (--exclude) and run it again')
     const out = flag('--out') ?? path.join('.site-builder', new URL(target).hostname)
     const maxPages = positive('--max', 500, true)
     const budgetMs = positive('--budget', 15) * 60_000

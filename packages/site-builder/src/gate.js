@@ -42,8 +42,8 @@ export function crawlGate(out, target, acceptedScope) {
 }
 
 /**
- * The customer's limits the fit check in `out` was made with (assess --exclude and
- * --without-member-area), so crawl leaves out the same. A check without them has none.
+ * The customer's limits the fit check in `out` was made with (assess --exclude), so crawl
+ * leaves out the same. A check without them has none.
  * Throws when they are not valid limits.
  * @param {string} out
  */

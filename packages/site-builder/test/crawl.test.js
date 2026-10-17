@@ -311,16 +311,15 @@ test('pages of unclosed <p><font> or <tr><td><span> tags are read past the nesti
 // The customer's limits (src/scope.js), taken from assess.json: crawl leaves out the same addresses.
 test('crawl never requests what the customer left out, and says how many addresses that was', async () => {
   const s = await site({
-    '/': page('Home', '<nav><a href="/about">About</a> <a href="/intranett">Intranett</a> <a href="/min-side">Min side</a></nav><main><a href="/intranett/handbok.pdf">Handbok</a></main>'),
+    '/': page('Home', '<nav><a href="/about">About</a> <a href="/intranett">Intranett</a></nav><main><a href="/intranett/handbok.pdf">Handbok</a></main>'),
     '/intranett': page('Intranett', '<p>Intern</p>'),
-    '/min-side': page('Min side', '<p>Logg inn</p>'),
   })
   try {
-    const inv = await crawl(s.url + '/', { out: tmp(), allowPrivate: true, delayMs: 0, scope: makeScope({ exclude: ['/intranett'], withoutMemberArea: true }) })
-    assert.ok(!s.requests.some((r) => /^\/(intranett|min-side)/.test(r)), JSON.stringify(s.requests))
+    const inv = await crawl(s.url + '/', { out: tmp(), allowPrivate: true, delayMs: 0, scope: makeScope({ exclude: ['/intranett'] }) })
+    assert.ok(!s.requests.some((r) => r.startsWith('/intranett')), JSON.stringify(s.requests))
     assert.ok(!inv.documents.some((d) => d.url.includes('/intranett/')))
     assert.ok(inv.pages.some((p) => p.url.endsWith('/about')))
-    assert.deepEqual([inv.scope, inv.leftOut], [{ exclude: ['/intranett'], withoutMemberArea: true }, 3])
-    assert.ok(inv.notes.some((n) => /3 addresses were left out/.test(n)), JSON.stringify(inv.notes))
+    assert.deepEqual([inv.scope, inv.leftOut], [{ exclude: ['/intranett'] }, 2])
+    assert.ok(inv.notes.some((n) => /2 addresses were left out at the customer's request \(\/intranett\)/.test(n)), JSON.stringify(inv.notes))
   } finally { await s.close() }
 })

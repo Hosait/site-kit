@@ -258,7 +258,7 @@ export async function crawl(start, opts) {
   if (full.has(media)) notes.push(`Only the first ${MAX_MEDIA} images are listed.`)
   if (full.has(documents)) notes.push(`Only the first ${MAX_DOCUMENTS} documents are listed.`)
   if (budgetReached) notes.push(`Stopped at the ${Math.round(budgetMs / 6000) / 10}-minute time budget; ${queue.length} queued addresses were not read.`)
-  if (skipped.size) notes.push(`${skipped.size} addresses were left out at the customer's request (${[scope.withoutMemberArea ? 'the member area' : '', ...scope.exclude].filter(Boolean).join(', ')}).`)
+  if (skipped.size) notes.push(`${skipped.size} addresses were left out at the customer's request (${scope.exclude.join(', ')}).`)
 
   const inventory = {
     version: 1,

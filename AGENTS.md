@@ -27,11 +27,10 @@ In a few minutes it reads a sample of the site and writes `assess.md` (for the u
 
 If the user has asked for parts of the site to be left out, pass them to `assess`:
 `--exclude <path>` for each content part not to move, such as `--exclude /intranett` or
-`--exclude /arkiv`, and `--without-member-area` so login and «min side» pages are never opened.
-What is left out is not moved or counted, and `crawl` leaves out the same, from `assess.json`.
-A shop, a catalogue or a member area is never left out: such a site is red whatever is excluded,
-and a shop, cart, catalogue or login path cannot be excluded. Use the limits only when the user
-asked before the check, never to turn a red answer into another colour.
+`--exclude /arkiv`. What is left out is not moved or counted, and `crawl` leaves out the same,
+from `assess.json`. A shop, a catalogue, payment and a member area stay red whatever is left
+out, and a shop, cart, catalogue or login path cannot be excluded; the size can change by leaving
+out content pages. Use the limits only when the user asked for them before the check.
 
 - **red** (the command exits 3): stop here. Tell the user plainly why, from `assess.md`: Hosait
   does not move web shops, product catalogues, sites with a login or member area, or sites of
