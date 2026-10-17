@@ -19,12 +19,20 @@ globalThis.fetch = (async (url: string) => {
 
 const run = (path: string) => proxy(new NextRequest(new URL(path, 'http://www.example.com'), { headers: { host: 'www.example.com' } }))
 
-test('document paths reach the proxy; assets, media and the API still do not', () => {
+test('document paths reach the proxy; assets and media still do not', () => {
   const matches = (url: string) => unstable_doesMiddlewareMatch({ config, url })
   for (const p of ['/wp-content/uploads/2020/brochure.pdf', '/files/Prisliste.XLSX', '/docs/report.docx', '/a.pptx', '/b.zip', '/c.csv'])
     assert.equal(matches(p), true, p)
-  for (const p of ['/brand/logo.svg', '/media/brochure.pdf', '/api/documents/file/brochure.pdf', '/_next/static/x.js', '/fonts/a.woff2', '/llms.txt', '/hero.jpg'])
+  for (const p of ['/brand/logo.svg', '/media/brochure.pdf', '/_next/static/x.js', '/fonts/a.woff2', '/llms.txt', '/hero.jpg'])
     assert.equal(matches(p), false, p)
+})
+
+// The API reaches the proxy only for the size check on form submissions (src/proxy.ts), whatever
+// the path's encoding; every other API request passes on untouched.
+test('an API request reaches the proxy and passes on untouched', async () => {
+  assert.equal(unstable_doesMiddlewareMatch({ config, url: '/api/documents/file/brochure.pdf' }), true)
+  const res = await run('/api/documents/file/brochure.pdf')
+  assert.equal(res.headers.get('x-middleware-next'), '1')
 })
 
 test('an old PDF with a redirect in the CMS is redirected permanently', async () => {

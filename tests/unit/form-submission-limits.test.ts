@@ -100,7 +100,7 @@ test('the proxy refuses a submission body over 64 KB, or one without a length, b
   }
   const get = await proxy(new NextRequest('https://kit-demo.hosait.com/api/form-submissions?limit=10'))
   assert.equal(get.headers.get('x-middleware-next'), '1', 'the admin\'s list is untouched')
-  for (const path of ['/api/form-submissions', '/api/graphql']) assert.ok(proxyConfig.matcher.includes(path), path)
+  assert.ok(proxyConfig.matcher.includes('/api/:path*'), 'every API path goes through the proxy')
 })
 
 // The form showed its own "something went wrong" for every error, so a visitor never learnt why.
@@ -130,4 +130,17 @@ test('a forged X-Forwarded-For neither gets round the address limit nor locks ou
   for (let i = 0; i < PER_IP.max; i++) await run(ok, fakeReq({ ip: `9.9.9.${i}, ${real}, 10.50.30.10` }).req)
   await assert.rejects(run(ok, fakeReq({ ip: `9.9.9.99, ${real}, 10.50.30.10` }).req), status(429, /For mange innsendinger/))
   assert.deepEqual(await run(ok, fakeReq({ ip: '9.9.9.1, 10.50.30.10' }).req), ok, 'the forged address itself is not locked out')
+})
+
+// Review of #30, round 2: Payload's route decodes the path, so /api/form%2Dsubmissions reached it
+// past the size check, and it parsed the whole body. The proxy decodes the path the same way.
+test('an encoded path to the submissions or GraphQL endpoint gets the same size check', async () => {
+  const post = (path: string, headers: Record<string, string>) =>
+    proxy(new NextRequest(`https://kit-demo.hosait.com${path}`, { method: 'POST', headers }))
+  for (const path of ['/api/form%2Dsubmissions', '/api/%66orm-submissions', '/api/form-submissions/', '/api/%67raphql']) {
+    assert.equal((await post(path, { 'content-length': String(MAX_BODY_BYTES + 1) })).status, 413, path)
+    assert.equal((await post(path, {})).status, 411, path)
+  }
+  assert.equal((await post('/api/media/file/my%20logo.png', { 'content-length': String(MAX_BODY_BYTES + 1) })).headers.get('x-middleware-next'), '1', 'other API paths are untouched')
+  assert.ok(proxyConfig.matcher.includes('/api/:path*'))
 })
