@@ -3,8 +3,9 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
+import zlib from 'node:zlib'
 
-import { LIMITS, assess, classify, md, spread } from '../src/assess.js'
+import { LIMITS, assess, classify, markdown, md, spread } from '../src/assess.js'
 import { get as netGet } from '../src/net.js'
 import { serve } from './server.js'
 
@@ -285,4 +286,145 @@ test('spread picks deterministically across path groups and positions, never mor
 test('assess.md escapes Markdown in text taken from the site', () => {
   assert.equal(md('[a](http://x) *b* <img src=x> `c`'), '\\[a\\]\\(http://x\\) \\*b\\* \\<img src=x\\> \\`c\\`')
   assert.equal(md('a\nb\u202Ec'), 'a b c')
+})
+
+test('a gzipped sitemap is read', async () => {
+  const s = await serve({
+    '/robots.txt': (req) => ({ headers: { 'content-type': 'text/plain' }, body: `Sitemap: http://${req.headers.host}/sitemap.xml.gz\n` }),
+    '/sitemap.xml.gz': (req) => ({ headers: { 'content-type': 'application/gzip' }, body: zlib.gzipSync(urlset(req.headers.host, ['/', '/om-oss', '/kontakt'])) }),
+    '/': page('Hjem', `${NAV}<main><p>Hei</p></main>`),
+    '/om-oss': page('Om oss', `${NAV}<main><p>x</p></main>`),
+    '/kontakt': page('Kontakt', `${NAV}<main><p>x</p></main>`),
+  })
+  try {
+    const r = await run(s)
+    assert.equal(r.counts.sitemapPages, 3)
+  } finally { await s.close() }
+})
+
+test('a home page that leads to another site, by redirect, meta refresh or frameset, is not enough to decide, and the note names it', async () => {
+  for (const [what, home] of [
+    ['redirect', { status: 301, headers: { location: 'https://www.acme-ny.example/' } }],
+    ['meta refresh', page('Acme', '<p>Vent</p>', '<meta http-equiv="refresh" content="0; url=https://www.acme-ny.example/">')],
+    ['frameset', { body: '<html><head><title>Acme</title></head><frameset><frame src="https://www.acme-ny.example/"></frameset></html>' }],
+  ]) {
+    const s = await serve({ '/': home })
+    try {
+      const r = await run(s)
+      assert.deepEqual([r.class, codes(r)], ['yellow', ['not-enough-read']], what)
+      assert.ok(r.notes.some((n) => /www\.acme-ny\.example/.test(n)), `${what}: ${JSON.stringify(r.notes)}`)
+      assert.ok(!s.requests.some((u) => /acme/.test(u)))
+    } finally { await s.close() }
+  }
+})
+
+test('a one-page site with text and only #anchor links is enough to decide, and green', async () => {
+  const text = '<p>' + 'Vi er et lite firma som lager gode ting. '.repeat(20) + '</p>'
+  const s = await serve({ '/': page('Én side', `<nav><a href="#om">Om</a> <a href="#kontakt">Kontakt</a></nav><main><h1>Hei</h1>${text}<h2 id="om">Om</h2>${text}<h2 id="kontakt">Kontakt</h2><p>Ring oss.</p></main>`) })
+  try {
+    const r = await run(s)
+    assert.deepEqual([r.class, codes(r)], ['green', []])
+  } finally { await s.close() }
+})
+
+test('no sitemap and a home page that links to nothing is not enough to decide', async () => {
+  const s = await serve({ '/': page('App', '<div id="root"></div><script src="/app.js"></script>') })
+  try {
+    const r = await run(s)
+    assert.deepEqual([r.class, codes(r)], ['yellow', ['not-enough-read']])
+  } finally { await s.close() }
+})
+
+// --- Pages per language, with articles apart ------------------------------------------------
+const doc = (lang, title, body, head = '') => ({ body: `<!doctype html><html lang="${lang}"><head><title>${title}</title>${head}</head><body>${body}</body></html>` })
+/** A site from a map of path → route; the sitemap lists every path. */
+function siteOf(routes) {
+  return serve({
+    '/robots.txt': (req) => ({ headers: { 'content-type': 'text/plain' }, body: `User-agent: *\nDisallow:\nSitemap: http://${req.headers.host}/sitemap.xml\n` }),
+    '/sitemap.xml': (req) => xml(urlset(req.headers.host, Object.keys(routes))),
+    ...routes,
+  })
+}
+
+test('classify: more than declineArticles articles is red', () => {
+  assert.equal(LIMITS.declineArticles, 500)
+  assert.equal(verdict({ articles: LIMITS.declineArticles }).class, 'green')
+  assert.deepEqual([verdict({ articles: LIMITS.declineArticles + 1 }).class, verdict({ articles: LIMITS.declineArticles + 1 }).reasons.map((r) => r.code)], ['red', ['articles']])
+})
+
+test('classify: more than declineTotalPages pages in all languages together is red', () => {
+  assert.equal(LIMITS.declineTotalPages, 1500)
+  assert.equal(verdict({ htmlPages: 450, totalPages: LIMITS.declineTotalPages }).class, 'yellow', 'three languages of 500: yellow by language only')
+  assert.deepEqual(verdict({ htmlPages: 450, totalPages: LIMITS.declineTotalPages + 1 }).reasons.map((r) => [r.class, r.code]), [['red', 'total-pages'], ['yellow', 'pages']])
+})
+
+test('a site whose ordinary pages carry og:type=article (Yoast) counts them as pages', async () => {
+  const routes = { '/': doc('nb', 'Hjem', `${NAV}<p>Hei</p>`) }
+  for (let i = 0; i < 900; i++) routes[`/tjeneste-${i}`] = doc('nb', `T ${i}`, '<p>x</p>', '<meta property="og:type" content="article">')
+  const s = await siteOf(routes)
+  try {
+    const r = await run(s)
+    assert.equal(r.estimates.articles, 0)
+    assert.equal(r.class, 'red')
+    assert.ok(codes(r).includes('pages'), JSON.stringify(r.reasons))
+  } finally { await s.close() }
+})
+
+test('pages are counted per language: two languages of 150 pages each is green', async () => {
+  const alt = '<link rel="alternate" hreflang="nb" href="/"><link rel="alternate" hreflang="en" href="/en/">'
+  const routes = { '/': doc('nb', 'Hjem', `${NAV}<p>Hei</p>`, alt), '/en/': doc('en', 'Home', '<p>Hi</p>', alt) }
+  for (let i = 0; i < 150; i++) { routes[`/side-${i}`] = doc('nb', `Side ${i}`, '<p>x</p>'); routes[`/en/page-${i}`] = doc('en', `Page ${i}`, '<p>x</p>') }
+  const s = await siteOf(routes)
+  try {
+    const r = await run(s)
+    assert.deepEqual(r.estimates.pagesPerLanguage, { nb: 151, en: 151 })
+    assert.equal(r.class, 'green', JSON.stringify(r.reasons))
+    assert.match(markdown(r), /Pages: about 151 in the largest language \(nb 151, en 151\), and 0 articles/)
+  } finally { await s.close() }
+})
+
+test('country codes named by hreflang (/se/, /dk/) are language prefixes', async () => {
+  const alt = '<link rel="alternate" hreflang="nb" href="/no/"><link rel="alternate" hreflang="sv" href="/se/"><link rel="alternate" hreflang="da" href="/dk/">'
+  const routes = { '/': doc('nb', 'Hjem', `${NAV}<p>Hei</p>`, alt) }
+  for (const [p, lang] of [['no', 'nb'], ['se', 'sv'], ['dk', 'da']]) {
+    routes[`/${p}/`] = doc(lang, p, '<p>x</p>', alt)
+    for (let i = 0; i < 180; i++) routes[`/${p}/side-${i}`] = doc(lang, `${p} ${i}`, '<p>x</p>')
+  }
+  const s = await siteOf(routes)
+  try {
+    const r = await run(s)
+    assert.deepEqual(r.estimates.pagesPerLanguage, { nb: 182, sv: 181, da: 181 })
+    assert.equal(r.class, 'green', JSON.stringify(r.reasons))
+  } finally { await s.close() }
+})
+
+test('dated news and posts with article markup are articles, not pages', async () => {
+  const news = { '/': doc('nb', 'Hjem', `${NAV}<p>Hei</p>`) }
+  for (let i = 0; i < 300; i++) news[`/nyheter/2024-05-${i}-tittel`] = doc('nb', `N ${i}`, '<p>x</p>')
+  for (let i = 0; i < 30; i++) news[`/side-${i}`] = doc('nb', `S ${i}`, '<p>x</p>')
+  const post = '<script type="application/ld+json">{"@type":"BlogPosting","headline":"X"}</script>'
+  const blog = { '/': doc('nb', 'Hjem', `${NAV}<p>Hei</p>`) }
+  for (let i = 0; i < 400; i++) blog[`/innlegg-nummer-${i}`] = doc('nb', `P ${i}`, '<p>x</p>', post)
+  for (let i = 0; i < 40; i++) blog[`/side-${i}`] = doc('nb', `S ${i}`, '<p>x</p>')
+  for (const [what, routes, check] of [['news', news, (r) => assert.equal(r.estimates.articles, 300)], ['blog', blog, (r) => assert.ok(r.estimates.articles >= 360 && r.estimates.articles <= 440, String(r.estimates.articles))]]) {
+    const s = await siteOf(routes)
+    try {
+      const r = await run(s)
+      check(r)
+      assert.ok(r.estimates.pagesPerLanguage.nb <= 200, `${what}: ${JSON.stringify(r.estimates.pagesPerLanguage)}`)
+      assert.equal(r.class, 'green', `${what}: ${JSON.stringify(r.reasons)}`)
+    } finally { await s.close() }
+  }
+})
+
+test('a check that could not read enough is run again, never accepted: the reason and assess.md say so', async () => {
+  const v = verdict({ enough: false, enoughWhy: 'the time budget ran out' })
+  assert.match(v.reasons[0].text, /again/)
+  const s = await serve({ '/': page('App', '<div id="root"></div>') })
+  try {
+    const r = await run(s)
+    const text = markdown(r)
+    assert.match(text, /Not decided yet/)
+    assert.doesNotMatch(text, /accept/i)
+  } finally { await s.close() }
 })

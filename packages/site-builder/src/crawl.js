@@ -4,6 +4,7 @@
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
+import zlib from 'node:zlib'
 
 import { detect } from './detect.js'
 import { decode, language, load, title } from './html.js'
@@ -106,7 +107,10 @@ export async function readSitemaps(getFollowing, root, robots, { onUrls, stop = 
     let locs
     let images
     try {
-      const $ = load(r.body.toString('utf8'), { xml: true })
+      // A gzipped sitemap (sitemap.xml.gz) is known by its first bytes and unzipped under a cap.
+      const gzipped = r.body.length >= 2 && r.body[0] === 0x1f && r.body[1] === 0x8b
+      const text = (gzipped ? zlib.gunzipSync(r.body, { maxOutputLength: 50 * 1024 * 1024 }) : r.body).toString('utf8')
+      const $ = load(text, { xml: true })
       subs = $('sitemap > loc').toArray().map((e) => $(e).text().trim())
       locs = $('url > loc').toArray().map((e) => $(e).text().trim())
       images = $('image\\:loc').length

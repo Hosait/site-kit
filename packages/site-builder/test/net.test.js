@@ -120,3 +120,29 @@ test('a HEAD request sends HEAD and returns the headers without a body', async (
     assert.equal(r.body.length, 0)
   } finally { await site.close() }
 })
+
+test('a kept-alive connection is checked without piling up a connect listener per request', async () => {
+  const { EventEmitter } = await import('node:events')
+  const { guardSocket } = await import('../src/net.js')
+  const reused = Object.assign(new EventEmitter(), { connecting: false, remoteAddress: '93.184.216.34' })
+  for (let i = 0; i < 12; i++) {
+    const req = Object.assign(new EventEmitter(), { destroy: () => assert.fail('a public address is not refused') })
+    guardSocket(req, 'https://www.acme.no/')
+    req.emit('socket', reused)
+  }
+  assert.equal(reused.listenerCount('connect'), 0)
+  const refuse = (socket) => {
+    let error = null
+    const req = Object.assign(new EventEmitter(), { destroy: (e) => { error = e } })
+    guardSocket(req, 'https://www.acme.no/')
+    req.emit('socket', socket)
+    return () => error
+  }
+  const fresh = Object.assign(new EventEmitter(), { connecting: true, remoteAddress: undefined })
+  const freshError = refuse(fresh)
+  assert.equal(fresh.listenerCount('connect'), 1)
+  fresh.remoteAddress = '10.0.0.5'
+  fresh.emit('connect')
+  assert.equal(freshError()?.code, 'EPRIVATE')
+  assert.equal(refuse(Object.assign(new EventEmitter(), { connecting: false, remoteAddress: '10.0.0.5' }))()?.code, 'EPRIVATE', 'a reused connection to a private address is refused too')
+})
