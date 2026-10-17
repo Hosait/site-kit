@@ -17,8 +17,11 @@ const MAX_HEIGHT = 4000
 const VIEWPORTS = [['desktop', { width: 1280, height: 800 }], ['mobile', { width: 390, height: 844 }]]
 const NO_PLAYWRIGHT = 'Screenshots skipped: Playwright is not available (pnpm exec playwright install chromium).'
 const PAGE_TIMEOUT_MS = 30_000
-/** The browser always runs with its sandbox; if it cannot start with it, there are no screenshots. */
-export const LAUNCH = Object.freeze({ chromiumSandbox: true })
+/**
+ * The browser always runs with its sandbox; if it cannot start with it, there are no screenshots.
+ * WebRTC may not send UDP past the proxy (STUN to 127.0.0.1 or the LAN).
+ */
+export const LAUNCH = Object.freeze({ chromiumSandbox: true, args: Object.freeze(['--force-webrtc-ip-handling-policy=disable_non_proxied_udp']) })
 const reason = (e) => (e.code === 'EPRIVATE' ? `${e.message}. Use --allow-private only for your own local or intranet sites.` : e.message)
 const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'))
 const pathOf = (url) => { const u = new URL(url); return u.pathname + u.search }
@@ -162,7 +165,7 @@ async function screenshots(out, { origin, allowPrivate, launchBrowser, log, note
   const site = new URL(origin)
   const proxy = await startFilterProxy({ allow: allowPrivate ? { host: site.hostname, port: site.port || (site.protocol === 'https:' ? '443' : '80') } : null })
   let browser
-  try { browser = await launchBrowser({ ...LAUNCH, proxy: { server: proxy.url, bypass: '<-loopback>' } }) } catch (e) {
+  try { browser = await launchBrowser({ ...LAUNCH, args: [...LAUNCH.args], proxy: { server: proxy.url, bypass: '<-loopback>', username: proxy.username, password: proxy.password } }) } catch (e) {
     await proxy.close()
     if (e.code === 'NO_PLAYWRIGHT') return { shots: [], skipped: NO_PLAYWRIGHT }
     return { shots: [], skipped: `Screenshots skipped: the browser could not start with its sandbox (${String(e.message).split('\n')[0]}). It is never run without one.` }

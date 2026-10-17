@@ -4,6 +4,7 @@
 // or a name that turns private (DNS rebinding) cannot reach the intranet or a metadata service.
 // Only the new site's own host and port may be private, and only when `allow` names them
 // (--allow-private). Off the new site, only ports 80 and 443, as the fetcher (net.js).
+import crypto from 'node:crypto'
 import dns from 'node:dns'
 import http from 'node:http'
 import net from 'node:net'
@@ -13,6 +14,13 @@ import { isPublicAddress } from './net.js'
 const STANDARD = new Set(['80', '443'])
 const IDLE_MS = 30_000
 const FORBIDDEN = 'HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n'
+const ASK_PASSWORD = 'HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm="compare"\r\nContent-Length: 0\r\nConnection: close\r\n\r\n'
+
+/** Host (lower case, without IPv6 brackets) and port of a CONNECT target, as written; port 80 stays 80. */
+export function connectTarget(target) {
+  const m = /^\[([^\]]+)\]:(\d{1,5})$/.exec(target) ?? /^([^:[\]]+):(\d{1,5})$/.exec(target)
+  return m ? { host: m[1].toLowerCase(), port: m[2] } : null
+}
 
 /** Host (without IPv6 brackets, lower case) and port of an absolute URL or a CONNECT target. */
 function target(u, defaultPort) {
@@ -20,10 +28,19 @@ function target(u, defaultPort) {
 }
 
 /**
- * @param {{ allow?: { host: string, port: string } | null, lookup?: typeof dns.lookup }} [opts]
- * @returns {Promise<{ url: string, close: () => Promise<void> }>}
+ * Only the browser compare starts may use it (a random user name and password, passed to
+ * Playwright), at most `maxConnections` at a time, each for at most `maxConnectionMs`.
+ * @param {{ allow?: { host: string, port: string } | null, lookup?: typeof dns.lookup, maxConnections?: number, maxConnectionMs?: number }} [opts]
+ * @returns {Promise<{ url: string, username: string, password: string, close: () => Promise<void> }>}
  */
-export async function startFilterProxy({ allow = null, lookup = dns.lookup } = {}) {
+export async function startFilterProxy({ allow = null, lookup = dns.lookup, maxConnections = 64, maxConnectionMs = 120_000 } = {}) {
+  const username = crypto.randomBytes(6).toString('hex')
+  const password = crypto.randomBytes(24).toString('hex')
+  const expected = Buffer.from(`Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`)
+  const authorized = (req) => {
+    const got = Buffer.from(String(req.headers['proxy-authorization'] ?? ''))
+    return got.length === expected.length && crypto.timingSafeEqual(got, expected)
+  }
   const isNewSite = (t) => !!allow && t.host === allow.host.replace(/^\[|\]$/g, '').toLowerCase() && t.port === String(allow.port)
   // Why the browser may not go there before anything is resolved, or null. An address in the URL
   // never reaches the lookup, so it is checked here.
@@ -46,6 +63,7 @@ export async function startFilterProxy({ allow = null, lookup = dns.lookup } = {
 
   const sockets = new Set()
   const server = http.createServer((req, res) => {
+    if (!authorized(req)) return res.writeHead(407, { 'proxy-authenticate': 'Basic realm="compare"' }).end()
     let u
     try { u = new URL(req.url ?? '') } catch { return res.writeHead(400).end() }
     if (u.protocol !== 'http:') return res.writeHead(400).end()
@@ -64,10 +82,9 @@ export async function startFilterProxy({ allow = null, lookup = dns.lookup } = {
   })
   // HTTPS and secure WebSockets: a tunnel to a checked address. The proxy never sees inside it.
   server.on('connect', (req, socket, head) => {
-    let u
-    try { u = new URL(`http://${req.url}`) } catch { return socket.end(FORBIDDEN) }
-    const t = target(u, '443')
-    if (refused(t)) return socket.end(FORBIDDEN)
+    if (!authorized(req)) return socket.end(ASK_PASSWORD)
+    const t = connectTarget(req.url ?? '')
+    if (!t || refused(t)) return socket.end(FORBIDDEN)
     let open = false
     const up = net.connect({ host: t.host, port: Number(t.port), lookup: lookupFor(t) }, () => {
       open = true
@@ -83,12 +100,19 @@ export async function startFilterProxy({ allow = null, lookup = dns.lookup } = {
   })
   // A plain WebSocket (ws://) is not opened: compare closes WebSockets anyway.
   server.on('upgrade', (_req, socket) => socket.end(FORBIDDEN))
-  server.on('connection', (s) => { sockets.add(s); s.on('close', () => sockets.delete(s)) })
+  server.maxConnections = maxConnections
+  server.on('connection', (s) => {
+    sockets.add(s)
+    const limit = setTimeout(() => s.destroy(), maxConnectionMs)
+    s.on('close', () => { sockets.delete(s); clearTimeout(limit) })
+  })
 
   await new Promise((ok, fail) => server.listen(0, '127.0.0.1', ok).on('error', fail))
   const { port } = /** @type {import('node:net').AddressInfo} */ (server.address())
   return {
     url: `http://127.0.0.1:${port}`,
+    username,
+    password,
     close: () => new Promise((ok) => { server.close(() => ok()); for (const s of sockets) s.destroy() }),
   }
 }

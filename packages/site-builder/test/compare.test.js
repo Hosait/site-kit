@@ -461,3 +461,16 @@ test('the address and document checks stop at the time budget too, with a note',
     assert.ok(notes.some((n) => /time budget/.test(n) && /of 40 old addresses/.test(n)), notes.join('\n'))
   } finally { await s.close() }
 })
+
+// Bjørn's review of #8, round 3: WebRTC sends STUN over UDP straight to an address, past the proxy.
+test('the browser starts with WebRTC limited to the proxy, and with the proxy\'s password', async () => {
+  assert.ok(LAUNCH.args.includes('--force-webrtc-ip-handling-policy=disable_non_proxied_udp'))
+  const s = await serve({ '/': { body: 'ok' } })
+  try {
+    const fake = fakeBrowser()
+    await compare(folder([['/', 200]]), { newBase: s.url, allowPrivate: true, launchBrowser: fake.launchBrowser, get: localOld })
+    const { args, proxy } = fake.calls.launchOptions
+    assert.ok(args.includes('--force-webrtc-ip-handling-policy=disable_non_proxied_udp'))
+    assert.ok(proxy.username && proxy.password, 'the proxy password is passed to the browser')
+  } finally { await s.close() }
+})
