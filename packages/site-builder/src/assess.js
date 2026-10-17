@@ -12,7 +12,7 @@ import { extractPage } from './extract.js'
 import { decode } from './html.js'
 import { get as defaultGet } from './net.js'
 import { countPages } from './pages.js'
-import { leftOut, makeScope } from './scope.js'
+import { leftOut, makeScope, neverRead } from './scope.js'
 import { DOCUMENT, isProductPath, pageSignals, robotsCartRules } from './signals.js'
 
 /**
@@ -104,7 +104,7 @@ export function spread(urls, n) {
  * The answer from what was found. Any red reason makes the site red; otherwise any yellow
  * reason makes it yellow; otherwise green. There is no "unknown": too little read is yellow.
  * `htmlPages` is the pages of the largest language, articles not counted.
- * @param {{ shop: {url: string, match: string}[], payment: {url: string, match: string}[], catalogue: {url: string, match: string}[], login: {url: string, match: string}[], integrations: {url: string, match: string}[], htmlPages: number, totalPages?: number, articles?: number, passwordPosts?: number, documents: number, mediaBytes: number | null, enough: boolean, enoughWhy?: string, withoutMemberArea?: boolean }} f
+ * @param {{ shop: {url: string, match: string}[], payment: {url: string, match: string}[], catalogue: {url: string, match: string}[], login: {url: string, match: string}[], integrations: {url: string, match: string}[], htmlPages: number, totalPages?: number, articles?: number, passwordPosts?: number, documents: number, mediaBytes: number | null, enough: boolean, enoughWhy?: string }} f
  */
 export function classify(f) {
   const reasons = []
@@ -112,9 +112,7 @@ export function classify(f) {
   if (f.shop.length) reason('red', 'shop', 'It is a web shop: it sells products with prices, a shopping cart or a checkout.', f.shop)
   if (f.payment.length) reason('red', 'payment', 'It takes payments: a payment or checkout service is built in.', f.payment)
   if (f.catalogue.length) reason('red', 'catalogue', 'It is a product catalogue: a large part of its pages are product pages.', f.catalogue)
-  // The customer may leave the member area out (src/scope.js): then it is the move's scope, not a no.
-  if (f.login.length && f.withoutMemberArea) reason('yellow', 'member-area', 'It has a login or member area. At the customer\'s request it is left out: nothing behind the login is read or moved, and the new site has no login.', f.login)
-  else if (f.login.length) reason('red', 'login', 'It has a login or member area.', f.login)
+  if (f.login.length) reason('red', 'login', 'It has a login or member area.', f.login)
   const total = f.totalPages ?? f.htmlPages
   if (total > LIMITS.declineTotalPages) reason('red', 'total-pages', `It has about ${total} pages in all its languages together, more than the ${LIMITS.declineTotalPages} Hosait Sites moves.`)
   if (f.htmlPages > LIMITS.declinePages) reason('red', 'pages', `It has about ${f.htmlPages} pages in its largest language, more than the ${LIMITS.declinePages} Hosait Sites moves.`)
@@ -151,13 +149,16 @@ export async function assess(start, opts) {
   const root = new URL(first)
   const host = root.hostname
   fs.mkdirSync(out, { recursive: true })
-  // Addresses the customer left out (src/scope.js): never requested, not counted.
+  // Addresses the customer left out (src/scope.js) are not counted. Login addresses (without the
+  // member area) are never requested; other left-out pages may still be read for the red checks,
+  // so leaving out a catalogue's pages does not make it a content site.
   const skipped = new Set()
   const left = (n) => {
     if (!leftOut(scope, new URL(n))) return false
     if (skipped.size < MAX_SITE_LINKS) skipped.add(n)
     return true
   }
+  const never = (n) => neverRead(scope, new URL(n))
 
   const getFollowing = followingGet(get, root, allowPrivate)
   const { robots, text: robotsText, unavailable, note } = await readRobots(getFollowing, root)
@@ -166,7 +167,7 @@ export async function assess(start, opts) {
   const shop = robotsCartRules(robotsText).map((rule) => evidence(robotsUrl, rule))
 
   // Every sitemap address is counted; page addresses are kept (up to a cap) to sample from.
-  const sitemap = { files: 0, urls: 0, pages: new Set(), uncapped: 0, documents: 0, images: 0 }
+  const sitemap = { files: 0, urls: 0, pages: new Set(), excluded: new Set(), uncapped: 0, documents: 0, images: 0 }
   const isPage = (u) => !DOCUMENT.test(u.pathname) && !IMAGE.test(u.pathname) && !SKIP.test(u.pathname)
   if (!unavailable) {
     sitemap.files = await readSitemaps(getFollowing, root, robots, {
@@ -178,7 +179,10 @@ export async function assess(start, opts) {
           if (!n || !sameSite(new URL(n).hostname, host)) continue
           const u = new URL(n)
           sitemap.urls++
-          if (left(n)) continue
+          if (left(n)) {
+            if (!never(n) && isPage(u) && sitemap.excluded.size < MAX_SITEMAP_URLS) sitemap.excluded.add(n)
+            continue
+          }
           if (DOCUMENT.test(u.pathname)) sitemap.documents++
           else if (IMAGE.test(u.pathname)) sitemap.images++
           else if (!isPage(u) || sitemap.pages.has(n)) continue
@@ -203,7 +207,7 @@ export async function assess(start, opts) {
     for (let hop = 0; hop <= 3; hop++) {
       if (reserved >= maxPages || overBudget()) return null
       const u = new URL(current)
-      if (left(current)) { pages.push({ url: current, role, skipped: 'left out' }); return null }
+      if (never(current)) { left(current); pages.push({ url: current, role, skipped: 'member area' }); return null }
       if (!robots.allowed(u.pathname + u.search)) { pages.push({ url: current, role, skipped: 'robots.txt' }); return null }
       reserved++
       tried.add(current)
@@ -255,17 +259,17 @@ export async function assess(start, opts) {
     await Promise.all(Array.from({ length: concurrency }, worker))
   }
 
-  const pageLink = (n) => { const u = new URL(n); return sameSite(u.hostname, host) && isPage(u) && !left(n) }
+  const pageLink = (n) => { const u = new URL(n); return sameSite(u.hostname, host) && isPage(u) && !never(n) }
   if (!unavailable) {
     await visit(root.toString(), 'home')
     const home = read.find((p) => p.role === 'home')
     if (home?.sig.forward && !sameSite(new URL(home.sig.forward).hostname, host)) elsewhere = home.sig.forward
     const nav = home ? [...new Set(home.nav.map((l) => normalize(l.href, home.url)).filter((n) => n && pageLink(n) && !tried.has(n)))].slice(0, Math.min(MAX_NAV, Math.floor(maxPages / 4))) : []
     await run(nav.map((url) => ({ url, role: 'nav' })))
-    await run(spread([...sitemap.pages].filter((u) => !tried.has(u)), maxPages - reserved).map((url) => ({ url, role: 'sample' })))
+    await run(spread([...sitemap.pages, ...sitemap.excluded].filter((u) => !tried.has(u)), maxPages - reserved).map((url) => ({ url, role: 'sample' })))
     // No sitemap: sample the links the pages read so far lead to.
     if (!sitemap.pages.size) {
-      const linked = [...new Set(read.flatMap((p) => [...p.sig.links]))].filter((u) => !tried.has(u) && !left(u))
+      const linked = [...new Set(read.flatMap((p) => [...p.sig.links]))].filter((u) => !tried.has(u) && !never(u))
       await run(spread(linked, maxPages - reserved).map((url) => ({ url, role: 'sample' })))
     }
   }
@@ -293,15 +297,17 @@ export async function assess(start, opts) {
   if (passwordPosts.length && passwordPosts.length <= LIMITS.scopePasswordPosts) notes.push(`${passwordPosts.length} of the pages read are password-protected posts (${passwordPosts[0].url}). Their text cannot be read: the customer gives it, or they are left out.`)
 
   // A catalogue: product markup on pages read, extrapolated per sitemap group, or product paths.
+  // A catalogue is judged on the whole sitemap, left-out pages too.
+  const allPages = new Set([...sitemap.pages, ...sitemap.excluded])
   const products = read.filter((p) => p.sig.product)
   let productPages = 0
   if (products.length) {
-    if (sitemap.pages.size) {
+    if (allPages.size) {
       const size = new Map()
-      for (const u of sitemap.pages) size.set(prefix(u), (size.get(prefix(u)) ?? 0) + 1)
+      for (const u of allPages) size.set(prefix(u), (size.get(prefix(u)) ?? 0) + 1)
       const sampled = new Map()
       for (const p of read) {
-        if (!sitemap.pages.has(p.url)) continue
+        if (!allPages.has(p.url)) continue
         const s = sampled.get(prefix(p.url)) ?? { n: 0, products: 0 }
         s.n++
         if (p.sig.product) s.products++
@@ -316,9 +322,9 @@ export async function assess(start, opts) {
     catalogue.push(evidence(products[0].url, `product markup on ${products.length} of ${read.length} pages read; about ${productPages} product pages in all`))
     for (const p of products.slice(1, 3)) catalogue.push(evidence(p.url, 'product markup'))
   }
-  const productPaths = [...sitemap.pages].filter((u) => isProductPath(new URL(u).pathname))
-  if (productPaths.length >= LIMITS.productPathMin && productPaths.length >= LIMITS.productPathShare * sitemap.pages.size)
-    catalogue.push(evidence(productPaths[0], `${productPaths.length} of ${sitemap.pages.size} sitemap pages have product addresses`))
+  const productPaths = [...allPages].filter((u) => isProductPath(new URL(u).pathname))
+  if (productPaths.length >= LIMITS.productPathMin && productPaths.length >= LIMITS.productPathShare * allPages.size)
+    catalogue.push(evidence(productPaths[0], `${productPaths.length} of ${allPages.size} sitemap pages have product addresses`))
 
   // Documents and images: what the home page and navigation link to is counted once; what the
   // spread sample finds besides is extrapolated to the pages not read.
@@ -377,7 +383,7 @@ export async function assess(start, opts) {
 
   const { pagesPerLanguage, largestLanguagePages, articles } = countPages({ read, pool: sitemap.pages.size ? sitemap.pages : siteLinks, host, uncapped: sitemap.uncapped })
 
-  const verdict = classify({ shop, payment, catalogue, login, integrations: [...integrations.values()], htmlPages: largestLanguagePages, totalPages: Object.values(pagesPerLanguage).reduce((a, b) => a + b, 0), articles, passwordPosts: passwordPosts.length, documents: documents.count, mediaBytes, enough, enoughWhy, withoutMemberArea: scope.withoutMemberArea })
+  const verdict = classify({ shop, payment, catalogue, login, integrations: [...integrations.values()], htmlPages: largestLanguagePages, totalPages: Object.values(pagesPerLanguage).reduce((a, b) => a + b, 0), articles, passwordPosts: passwordPosts.length, documents: documents.count, mediaBytes, enough, enoughWhy })
   const result = {
     version: VERSION,
     source: root.toString(),
@@ -452,8 +458,8 @@ export function markdown(r) {
   const scope = r.scope ?? { exclude: [], withoutMemberArea: false }
   if (scope.withoutMemberArea || scope.exclude.length) {
     lines.push('## Left out at your request', '')
-    if (scope.withoutMemberArea) lines.push('- The member area: login and «min side» pages are not read or moved.')
-    for (const x of scope.exclude) lines.push(`- ${md(x)} and everything under it`)
+    if (scope.withoutMemberArea) lines.push('- The member area: login and «min side» pages are not read. A site with a login or member area is still not moved.')
+    for (const x of scope.exclude) lines.push(`- ${md(x)} and everything under it: not moved or counted (the check still looks at it for a shop or a catalogue)`)
     lines.push('', `${r.counts.leftOut} addresses were left out.`, '')
   }
   const e = r.estimates

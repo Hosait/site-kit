@@ -28,3 +28,11 @@ test('a path that is not a plain site path is refused, as are the whole site and
   assert.throws(() => makeScope({ exclude: Array.from({ length: MAX_EXCLUDE + 1 }, (_, i) => `/p${i}`) }), /exclude/)
   assert.deepEqual(makeScope({ exclude: ['/a', '/a/'] }).exclude, ['/a'], 'the same path once')
 })
+
+// Review of #31 (Steinar's decision): a shop, a catalogue and a member area are never left out.
+test('a shop, cart, catalogue or login path cannot be excluded', () => {
+  for (const p of ['/produkter', '/shop/sko', '/handlekurv', '/checkout', '/min-side', '/login', '/products']) {
+    assert.throws(() => makeScope({ exclude: [p] }), /shop, catalogue or login path/, p)
+  }
+  assert.deepEqual(makeScope({ exclude: ['/arkiv', '/intranett'] }).exclude, ['/arkiv', '/intranett'])
+})

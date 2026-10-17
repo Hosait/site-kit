@@ -240,13 +240,6 @@ test('classify: any shop signal is red', () => assert.equal(verdict({ shop: ev }
 test('classify: a payment service is red', () => assert.equal(verdict({ payment: ev }).class, 'red'))
 test('classify: a product catalogue is red', () => assert.equal(verdict({ catalogue: ev }).class, 'red'))
 test('classify: a login or member area is red', () => assert.equal(verdict({ login: ev }).class, 'red'))
-// The customer's limit (Steinar's proposal, needs Bjørn's yes): with the member area left out, a
-// login is the scope of the move, not a reason to decline it.
-test('classify: a login is yellow when the customer leaves the member area out', () => {
-  const v = verdict({ login: ev, withoutMemberArea: true })
-  assert.deepEqual([v.class, v.reasons.map((r) => r.code)], ['yellow', ['member-area']])
-  assert.match(v.reasons[0].text, /left out/)
-})
 test('classify: more than declinePages pages is red', () => {
   assert.equal(verdict({ htmlPages: LIMITS.declinePages }).class, 'yellow')
   assert.equal(verdict({ htmlPages: LIMITS.declinePages + 1 }).class, 'red')
@@ -465,16 +458,18 @@ function siteWithMemberArea() {
   })
 }
 
-test('assess never requests an excluded path or the member area, and does not count them as pages', async () => {
+// Review of #31 (Steinar's decision): the member area is never opened, but a site with one stays red;
+// left-out content is not counted.
+test('assess never opens the member area, leaves out what the customer excluded, and a member area stays red', async () => {
   const s = await siteWithMemberArea()
   const out = tmp()
   try {
     const r = await assess(s.url + '/', { out, allowPrivate: true, delayMs: 0, scope: makeScope({ exclude: ['/intranett'], withoutMemberArea: true }) })
-    assert.ok(!s.requests.some((p) => /^\/(intranett|min-side|login)/.test(p)), JSON.stringify(s.requests))
+    assert.ok(!s.requests.some((p) => /^\/(min-side|login)/.test(p)), JSON.stringify(s.requests))
     assert.equal(r.estimates.htmlPages, 4)
     assert.equal(r.counts.leftOut, 4)
-    assert.deepEqual(codes(r), ['member-area'])
-    assert.equal(r.class, 'yellow')
+    assert.ok(codes(r).includes('login'), JSON.stringify(codes(r)))
+    assert.equal(r.class, 'red')
     assert.deepEqual(JSON.parse(fs.readFileSync(path.join(out, 'assess.json'), 'utf8')).scope, { exclude: ['/intranett'], withoutMemberArea: true })
     const text = fs.readFileSync(path.join(out, 'assess.md'), 'utf8')
     assert.match(text, /## Left out at your request/)
@@ -491,5 +486,18 @@ test('without the customer\'s limits, the same site counts every page and its me
     assert.equal(r.class, 'red')
     assert.equal(r.estimates.htmlPages, 8)
     assert.deepEqual([r.scope, r.counts.leftOut], [{ exclude: [], withoutMemberArea: false }, 0])
+  } finally { await s.close() }
+})
+
+test('a catalogue stays red when its product pages are left out under another name', async () => {
+  const product = (i) => doc('nb', `Lampe ${i}`, '<p>En lampe.</p>', ld({ '@context': 'https://schema.org', '@type': 'Product', name: `Lampe ${i}` }))
+  const routes = { '/': doc('nb', 'Hjem', `${NAV}<p>Hei</p>`), '/om-oss': doc('nb', 'Om', '<p>Om oss.</p>'), '/kontakt': doc('nb', 'Kontakt', '<p>Ring.</p>') }
+  for (let i = 0; i < 60; i++) routes[`/sortiment/lampe-${i}`] = product(i)
+  const s = await siteOf(routes)
+  try {
+    const r = await run(s, { scope: makeScope({ exclude: ['/sortiment'] }) })
+    assert.ok(codes(r).includes('catalogue'), JSON.stringify(r.reasons))
+    assert.equal(r.class, 'red')
+    assert.equal(r.estimates.htmlPages, 3, 'the left-out pages are not counted')
   } finally { await s.close() }
 })

@@ -43,11 +43,13 @@ In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-buil
   pages whose JSON-LD is an Article, NewsArticle or BlogPosting (not `og:type`, which SEO plugins
   put on ordinary pages). A one-page site with text and only `#` links is enough to decide.
 
-  The customer's limits (`src/scope.js`): `--exclude <path>` (repeatable) leaves a part of the
-  site out, that path and everything under it in any case, and `--without-member-area` leaves
-  out login and «min side» addresses. What is left out is never requested and not counted. A
-  login found on the other pages is then yellow (`member-area`, the move's scope) instead of
-  red. `assess.json` keeps the limits (`scope`) and how many addresses were left out.
+  The customer's limits (`src/scope.js`): `--exclude <path>` (repeatable) leaves a content part
+  out of the move, that path and everything under it in any case, and `--without-member-area`
+  means login and «min side» addresses are never requested. What is left out is not counted. A
+  shop, a catalogue or a member area is never left out: the check may still read excluded pages
+  for a shop or a catalogue, counts product addresses across the whole sitemap, and a login found
+  anywhere stays red. A shop, cart, catalogue or login path cannot be excluded. `assess.json`
+  keeps the limits (`scope`) and how many addresses were left out.
 
   The thresholds are `LIMITS` in `src/assess.js`. Exit code: 0 for green and yellow, 3 for red,
   2 for a usage error, 1 for other errors. A page that cannot be read is recorded and the others
