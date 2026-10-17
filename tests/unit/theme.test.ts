@@ -100,6 +100,26 @@ test('checkIconFile: a namespaced script or foreignObject, and character referen
   assert.deepEqual(checkIconFile(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8"><title>Fjordlys &amp; co</title><circle r="4"/></svg>'), 'svg'), [])
 })
 
+// Review of #32, round 2: two bypasses found in a browser, and more ways to load from elsewhere.
+test('checkIconFile: another encoding, control characters, another namespace, srcdoc and outside links or styles are refused', () => {
+  const svg = (inner: string, head = '') => `${head}<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">${inner}</svg>`
+  for (const bad of [
+    svg('<circle r="4"/>', '<?xml version="1.0" encoding="ISO-2022-JP"?>'),
+    svg('<scr\u001b(Jipt>alert(1)</script>'),
+    svg('<h:iframe xmlns:h="http://www.w3.org/1999/xhtml" srcdoc="x"/>'),
+    svg('<g xmlns:x="http://example.com/other"><circle r="4"/></g>'),
+    svg('<iframe srcdoc="x"/>'),
+    svg('<a href="\\\\evil/x"><circle r="4"/></a>'),
+    svg('<a href="http:evil/x"><circle r="4"/></a>'),
+    svg('<a xlink:href="https:/\\evil"><circle r="4"/></a>'),
+    svg('<image href="data:image/svg+xml;base64,AAAA"/>'),
+    svg('<circle r="4" style="fill:url(https://evil.example/x)"/>'),
+    svg('<style>@import "x.css";</style>'),
+  ]) assert.ok(checkIconFile(Buffer.from(bad), 'svg').length > 0, bad)
+  const fine = svg('<defs><linearGradient id="g"/></defs><circle r="4" fill="url(#g)"/><use xlink:href="#g"/>', '<?xml version="1.0" encoding="UTF-8"?>\n')
+  assert.deepEqual(checkIconFile(Buffer.from(fine), 'svg'), [])
+})
+
 test('kit:theme-check checks the icon file that theme.json names', () => {
   const script = readFileSync('scripts/kit/theme-check.ts', 'utf8')
   assert.match(script, /checkIconFile/)

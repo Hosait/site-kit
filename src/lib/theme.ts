@@ -53,8 +53,12 @@ const MAGIC: Record<string, (b: Buffer) => boolean> = {
   svg: (b) => /^(?:\ufeff)?\s*(?:<\?xml[^>]*>\s*)?<svg[\s>]/i.test(b.subarray(0, 1024).toString('utf8')),
 }
 // What an icon SVG must not hold: script, embedded HTML, event handlers, script or outside links,
-// or a DTD (entities).
+// a DTD (entities), or bytes a browser could read differently (another encoding, control characters).
 const SVG_UNSAFE: [RegExp, string][] = [
+  // ISO-2022-JP and the like switch character sets with escape bytes inside a tag name.
+  [/<\?xml[^>]*\sencoding\s*=\s*["'](?!utf-8["'])/i, 'an encoding other than UTF-8'],
+  // eslint-disable-next-line no-control-regex -- the control characters are what it looks for
+  [/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/, 'a control character'],
   // Also in another namespace, with any letters in its prefix: <h:script>, <ä:script>.
   [/<(?:[^\s<>/:]+:)?script/i, 'a <script>'],
   [/<(?:[^\s<>/:]+:)?foreignObject/i, 'a <foreignObject>'],
@@ -62,9 +66,17 @@ const SVG_UNSAFE: [RegExp, string][] = [
   [/&#/, 'a character reference (&#…;)'],
   [/\son[a-z]+\s*=/i, 'an on…= event handler'],
   [/javascript:/i, 'a javascript: link'],
-  [/href\s*=\s*["']\s*(?:[a-z][a-z0-9+.-]*:)?\/\//i, 'a link to another site'],
+  [/\ssrcdoc\s*=/i, 'a srcdoc attribute'],
+  // A link may only point inside the icon (#id) or be a plain relative path: no scheme (http:,
+  // data:), no // or \\ at the start.
+  [/[\s:]href\s*=\s*["']\s*(?:[a-z][a-z0-9+.-]*:|[\\/]{2}|\\)/i, 'a link to another site or another scheme'],
+  [/url\(\s*["']?\s*(?:[a-z][a-z0-9+.-]*:|[\\/]{2}|\\)/i, 'a style that loads from elsewhere (url())'],
+  [/@import/i, 'a style that loads from elsewhere (@import)'],
   [/<!DOCTYPE|<!ENTITY/i, 'a DTD'],
 ]
+
+// The only namespaces an icon needs; XHTML (an <h:iframe> without foreignObject) and the rest are refused.
+const SVG_NAMESPACES = new Set(['http://www.w3.org/2000/svg', 'http://www.w3.org/1999/xlink'])
 
 /**
  * What is wrong with an icon file (empty when nothing): at most 100 KB, bytes that match the
@@ -79,6 +91,9 @@ export function checkIconFile(bytes: Buffer, ext: string): string[] {
   if (ext === 'svg') {
     const text = bytes.toString('utf8')
     for (const [re, what] of SVG_UNSAFE) if (re.test(text)) problems.push(`the SVG has ${what}`)
+    for (const m of text.matchAll(/\sxmlns(?::[^\s=]+)?\s*=\s*["']([^"']*)["']/gi)) {
+      if (!SVG_NAMESPACES.has(m[1].trim())) { problems.push(`the SVG has a namespace other than SVG and xlink (${m[1].slice(0, 60)})`); break }
+    }
   }
   return problems
 }
