@@ -11,7 +11,7 @@ import configPromise from '@payload-config'
 import themeJson from '@site/theme.json'
 import { getPayload } from 'payload'
 import { siteFont } from '@site/fonts'
-import { themeToCss, validateTheme } from '@/lib/theme'
+import { siteIcon, themeToCss, validateTheme } from '@/lib/theme'
 
 import '../../globals.css'
 
@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   return {
     metadataBase: new URL(siteOrigin(key)),
     title: { default: SITES[key].name, template: `%s | ${SITES[key].name}` },
-    icons: { icon: '/favicon.ico' },
+    icons: { icon: siteIcon(THEME) },
     // Staging skal aldri indekseres; bare produksjonsdomenene.
     robots: isProduction() ? undefined : { index: false, follow: false },
   }

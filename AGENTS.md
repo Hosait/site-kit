@@ -17,11 +17,17 @@ In a few minutes it reads a sample of the site and writes `assess.md` (for the u
 
 - **red** (the command exits 3): stop here. Tell the user plainly why, from `assess.md`: Hosait
   does not move web shops, product catalogues, sites with a login or member area, or sites of
-  more than 500 pages. Do not offer to move part of the site, and do not go on to step 1.
+  more than 500 pages (in one language; 1500 in all) or 500 articles. Do not offer to move part
+  of the site, and do not go on to step 1.
 - **yellow**: show the user `assess.md` and ask them to accept the scope and the storage it lists
-  (more pages or documents than a standard move, a lot of media, built-in services, or a site
-  that could not be read well enough). Go on only when they say yes.
+  (more pages or documents than a standard move, a lot of media, or built-in services). Go on only when they say yes, and run `crawl` with `--accepted-scope`.
+- **Not decided yet** (yellow, `not-enough-read`): do not ask the user to accept it. Run the
+  check again, with a larger `--budget` or at the address a note names. If it still cannot read
+  the site, stop and tell the user the site could not be checked.
 - **green**: go on to step 1.
+
+`crawl` starts only after a check of the same site that is not red, is less than 7 days old,
+and could read enough, and after yellow only with `--accepted-scope`.
 
 ## 1. Set up
 
@@ -32,7 +38,7 @@ In a few minutes it reads a sample of the site and writes `assess.md` (for the u
 
 ## 2. Read the old site
 
-    pnpm site-builder crawl https://www.example.com
+    pnpm site-builder crawl https://www.example.com      # with --accepted-scope after a yes to yellow
     pnpm site-builder extract --out .site-builder/www.example.com
     pnpm site-builder theme   --out .site-builder/www.example.com
     pnpm site-builder report  --out .site-builder/www.example.com
@@ -50,7 +56,12 @@ the first deploy). If you change sites, locales, document types or article kinds
 ## 4. Theme
 
 Copy `theme` from `theme.draft.json` into `site/theme.json`, put the logo in `public/brand/`, set
-the fonts in `site/fonts.ts`, and run `pnpm kit:theme-check` (every pair needs 4.5:1).
+the fonts in `site/fonts.ts`, and run `pnpm kit:theme-check` (every pair needs 4.5:1). Download the
+old site's icon (`icon.src` in the draft, a PNG or ICO when the old site has one) into
+`public/brand/` too, and set `icon.src` in `site/theme.json` to its `/brand/…` path (`.png`,
+`.ico`, `.webp` or `.svg`). `kit:theme-check` refuses an icon over 100 KB, one whose content does
+not match its extension, and an SVG with script, event handlers or outside links. If it cannot be
+downloaded or does not pass, leave `icon` out: the kit's own icon is used.
 
 ## 5. Write the site plan
 
@@ -60,9 +71,14 @@ images and PDFs in `seed/media/` (or use public https URLs). Office files (Word,
 PowerPoint), zip and DWG cannot be imported from a URL: download them into `seed/media/` and list
 them under `documents`. SVG is not imported: the logo goes in `public/brand/` (step 4), and other
 SVG graphics are a gap. Every file is checked by its first bytes, not its name. Link with
-`$media`, `$page`, `$pageLink`, `$person`, `$document`; rich text is `$html`. Add `redirects` for
-every old URL that moves, and `gaps` for anything no block matches. Check it until it passes,
-then try it locally:
+`$media`, `$page`, `$pageLink`, `$person`, `$document`, `$form`; rich text is `$html`. Forms go in
+`forms`: their fields, the button text, the message shown after sending, and `retention` (days,
+or `"keep"`) from the intake answer; left out, the site default in `site/config.ts` applies. A
+`formBlock` points at one with `{ "$form": "<ref>" }`. Submissions are read in the admin and
+deleted each night once older than the period; the privacy page says how long each form's
+submissions are kept, with the same periods. Add `redirects` for every old URL that moves, and
+`gaps` for anything no block matches (a form that must send e-mail or take payment is still a
+gap). Check it until it passes, then try it locally:
 
     pnpm kit:check-plan seed/site-plan.json
     pnpm kit:import seed/site-plan.json --reset
@@ -125,6 +141,10 @@ preview):
    route locked. If the domain was verified after the last deploy, the user redeploys in Hosait.
    Until then every page is `noindex` and `robots.txt` blocks search engines. The variable
    `SITE_ORIGINS` (`staging` or `production`) overrides this; leave it unset.
+4. Once the domain answers, run `pnpm qa:launch https://<domain>`. On one of the site's own
+   `hosts` it also fails while search engines are shut out: `robots.txt` blocks them, a page is
+   `noindex`, or a canonical address is on another host. Then the site is still in staging: the
+   user redeploys in Hosait, and you run the check again.
 ---
 
 <!-- BEGIN:nextjs-agent-rules -->

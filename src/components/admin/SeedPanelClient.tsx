@@ -43,7 +43,7 @@ export function SeedPanelClient() {
   }, [running, refresh])
 
   const seedDb = async () => {
-    if (!window.confirm('Dette erstatter alt innhold (sider, artikler, personer, dokumenter, bilder) med testinnholdet. Brukere berøres ikke. Fortsette?')) return
+    if (!window.confirm('Dette erstatter alt innhold (sider, artikler, personer, dokumenter, bilder, skjemaer og innsendinger) med testinnholdet. Innsendingene kan ikke hentes tilbake. Brukere berøres ikke. Fortsette?')) return
     setBusy(true)
     setMessage('Legger inn innhold …')
     const body = await call('db?replace=1', 'POST')
@@ -67,7 +67,7 @@ export function SeedPanelClient() {
   return (
     <div style={{ border: '1px solid var(--theme-elevation-150)', borderRadius: 4, padding: 'var(--base)', marginBottom: 'calc(var(--base) * 2)' }}>
       <h3 style={{ marginTop: 0 }}>Testinnhold</h3>
-      <p>Fyller denne installasjonen med innholdet i seed/ (erstatter alt innhold; brukere berøres ikke).</p>
+      <p>Fyller denne installasjonen med innholdet i seed/ (erstatter alt innhold, også skjemaer og innsendinger; brukere berøres ikke).</p>
       <div style={{ display: 'flex', gap: 'var(--base)', flexWrap: 'wrap' }}>
         <Button buttonStyle="secondary" disabled={busy || running} onClick={seedDb}>
           {sources ? '1. Legg inn innhold' : 'Legg inn innhold'}

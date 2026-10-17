@@ -5,9 +5,10 @@
  * visitors made (forms, analytics, consent), and it runs in one transaction, so pages mean it
  * finished.
  */
-export function seedDbDecision(i: { source: 'plan' | 'sql'; pages: number; users: number; replace: boolean; production: boolean }) {
+export function seedDbDecision(i: { source: 'plan' | 'sql'; pages: number; users: number; submissions: number; replace: boolean; production: boolean }) {
   if (i.production) return 'refuse_production' as const
-  if (i.pages > 0 && !i.replace && (i.source === 'sql' || i.users > 0)) return 'refuse_existing' as const
+  // Form submissions are what visitors sent, and a plan import's reset deletes them.
+  if (i.pages > 0 && !i.replace && (i.source === 'sql' || i.users > 0 || i.submissions > 0)) return 'refuse_existing' as const
   return 'run' as const
 }
 

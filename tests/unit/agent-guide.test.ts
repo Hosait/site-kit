@@ -32,6 +32,15 @@ test('step 0 checks that the site fits before anything is set up or read: red st
   assert.match(step0, /\*\*green\*\*: go on to step 1/)
 })
 
+test('step 0 runs a check that could not read enough again, and crawl starts only after a passing check', () => {
+  const step0 = guide.slice(guide.indexOf('## 0.'), guide.indexOf('## 1.')).replace(/\s+/g, ' ')
+  assert.match(step0, /not-enough-read.*run the check again/i)
+  assert.doesNotMatch(step0, /could not be read well enough\)/)
+  assert.match(step0, /--accepted-scope/)
+  const step2 = guide.slice(guide.indexOf('## 2.'), guide.indexOf('## 3.'))
+  assert.match(step2, /crawl .*--accepted-scope/)
+})
+
 test('CLAUDE.md scopes the staff-only rules to the Hosait/site-kit repository itself', () => {
   const claude = readFileSync('CLAUDE.md', 'utf8')
   assert.match(claude.split('\n').slice(0, 12).join('\n'), /AGENTS\.md/)

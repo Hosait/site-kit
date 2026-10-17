@@ -56,3 +56,16 @@ test('a textSearch value that is not a plain config name is refused (it reaches 
   c.locales.en.textSearch = "english'::regconfig; --"
   assert.ok(checkSiteConfig(c, ['no', 'en']).some((p) => p.startsWith('locale "en": textSearch')))
 })
+
+test('forms.retentionDays is a whole number of days from 1 to 3650, or null to keep', () => {
+  for (const ok of [1, 90, 3650, null]) {
+    const c = clone()
+    c.forms = { retentionDays: ok }
+    assert.deepEqual(checkSiteConfig(c, ['no', 'en']), [], String(ok))
+  }
+  for (const bad of [0, 3651, 1.5, '90', undefined]) {
+    const c = clone()
+    c.forms = { retentionDays: bad as never }
+    assert.ok(checkSiteConfig(c, ['no', 'en']).some((p) => p.startsWith('forms.retentionDays')), String(bad))
+  }
+})

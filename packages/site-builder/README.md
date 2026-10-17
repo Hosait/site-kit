@@ -22,15 +22,35 @@ In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-buil
   - **red**, decline: a web shop (priced Product/Offer markup, cart, checkout or add-to-cart
     links and forms, robots.txt rules for cart actions, a shop system), a payment service, a
     product catalogue (Product markup on many pages, or product addresses in the sitemap), a
-    login or member area (password fields, login forms and links), or more than 500 pages.
-  - **yellow**, possible with the customer's OK on scope and storage: more than 200 pages, more
-    than 100 documents, more than 2 GB of documents and images, built-in services (booking,
-    feeds, embedded apps, forms sent elsewhere), or too little read to decide.
+    login or member area (password fields, login forms and links), more than 500 pages in the
+    largest language, more than 1500 pages in all languages together, or more than 500 articles.
+    A link to the old CMS's own admin login (WordPress, Joomla, Drupal, Umbraco, Ghost) with plain
+    admin wording («Logg inn», «Log in», «Admin», «Meta», or an icon) is a note, not a member
+    area; member wording on it («Logg inn for medlemmer»), a member folder, registration or
+    password reset, and a redirect outside wp-admin stay red. Account wording («Min side», «My
+    account», «Mein Konto», «Mon compte», «Mi cuenta» …) is a login wherever it links; member
+    wording alone («Bli medlem», «Våre medlemmer») is not. WordPress's own password form for a
+    protected post is a note; more than three such pages read is yellow.
+  - **yellow**, possible with the customer's OK on scope and storage: more than 200 pages in
+    the largest language, more than 100 documents, more than 2 GB of documents and images, or
+    built-in services (booking, feeds, embedded apps, forms sent elsewhere).
+  - **yellow, not decided yet** (`not-enough-read`): too little could be read (the time budget,
+    robots.txt, a home page that leads to another site, or a site that needs JavaScript). It is
+    not accepted: the check runs again.
   - **green**: everything else.
+
+  Pages are counted per language (a first path segment such as `/en/` or `/se/` is a language
+  when the pages say so), and articles apart from pages: dated or news-section addresses, and
+  pages whose JSON-LD is an Article, NewsArticle or BlogPosting (not `og:type`, which SEO plugins
+  put on ordinary pages). A one-page site with text and only `#` links is enough to decide.
 
   The thresholds are `LIMITS` in `src/assess.js`. Exit code: 0 for green and yellow, 3 for red,
   2 for a usage error, 1 for other errors. A page that cannot be read is recorded and the others
   go on; a stop at the time budget is a note.
+- **crawl** starts only when `assess.json` in its out folder is for the same site and not red;
+  after yellow it also needs `--accepted-scope`, given once the customer has said yes, and after
+  a check that could not read enough it does not start at all. Otherwise it exits 3 and says
+  why.
 - **crawl** reads robots.txt and obeys it (when it answers with a server error, nothing is
   read), reads the sitemap, follows links on the same site (www and apex count as one), and
   stops at 500 pages or after 15 minutes (`--max`, `--budget <minutes>`), keeping what it has

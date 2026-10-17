@@ -10,6 +10,7 @@ import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 
 import { Articles } from './collections/Articles'
 import { AnalyticsDaily, AnalyticsEvents, AnalyticsSalts, AnalyticsSettings, AuditLog, ConsentLog } from './collections/Analytics'
+import { jobs } from './jobs'
 import { migrations } from './migrations'
 import { Documents } from './collections/Documents'
 import { Media } from './collections/Media'
@@ -66,6 +67,7 @@ export default buildConfig({
   globals: [AnalyticsSettings],
   cors: [getServerSideURL()].filter(Boolean),
   plugins,
+  jobs,
   // E-post (kvitteringer fra kontaktskjema) når SMTP er satt opp; ellers skrives e-post til loggen.
   email: process.env.SMTP_HOST
     ? nodemailerAdapter({

@@ -20,8 +20,8 @@ const fmt = (e: ErrorObject) => {
 
 /**
  * What JSON Schema cannot say, and the import would refuse or get wrong: unique refs per kind,
- * unique redirect addresses, no cycle among page parents, and a title in the default language.
- * Paths as Ajv writes them.
+ * unique field names per form, unique redirect addresses, no cycle among page parents, and a title
+ * in the default language. Paths as Ajv writes them.
  */
 function crossCheck(plan: SitePlan): string[] {
   const errors: string[] = []
@@ -47,6 +47,17 @@ function crossCheck(plan: SitePlan): string[] {
     (list ?? []).forEach((item, i) => {
       if (!item.title[DEFAULT_LOCALE]) errors.push(`/${kind}/${i}/title needs a title in "${DEFAULT_LOCALE}", the default language`)
     })
+  const formRefs = new Set<string>()
+  ;(plan.forms ?? []).forEach((form, i) => {
+    if (formRefs.has(form.ref)) errors.push(`/forms/${i}/ref duplicate form "${form.ref}"`)
+    formRefs.add(form.ref)
+    const names = new Set<string>()
+    form.fields.forEach((field, j) => {
+      if (!field.name) return
+      if (names.has(field.name)) errors.push(`/forms/${i}/fields/${j}/name duplicate field "${field.name}"`)
+      names.add(field.name)
+    })
+  })
   return errors
 }
 
