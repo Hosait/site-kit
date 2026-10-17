@@ -29,6 +29,8 @@ export function crawlGate(out, target, acceptedScope) {
   // A site changes: a check older than this is run again.
   const at = Date.parse(String(a.assessedAt ?? ''))
   if (Number.isNaN(at)) return `The fit check in ${file} has no date. ${again}`
+  // A date in the future would never grow old; an hour covers a clock that is a little off.
+  if (at - Date.now() > 60 * 60 * 1000) return `The fit check in ${file} is dated in the future (${new Date(at).toISOString().slice(0, 10)}). ${again}`
   if (Date.now() - at > MAX_AGE_DAYS * 24 * 60 * 60 * 1000) return `The fit check in ${file} is more than ${MAX_AGE_DAYS} days old (${new Date(at).toISOString().slice(0, 10)}). ${again}`
   const reasons = Array.isArray(a.reasons) ? a.reasons : []
   const codes = (cls) => reasons.filter((r) => r?.class === cls).map((r) => String(r.code)).join(', ')

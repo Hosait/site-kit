@@ -31,8 +31,9 @@ In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-buil
     wording alone («Bli medlem», «Våre medlemmer») is not. WordPress's own password form for a
     protected post is a note; more than three such pages read is yellow.
   - **yellow**, possible with the customer's OK on scope and storage: more than 200 pages in
-    the largest language, more than 100 documents, more than 2 GB of documents and images, or
-    built-in services (booking, feeds, embedded apps, forms sent elsewhere).
+    the largest language, more than 500 pages (largest language) and articles together, more
+    than 100 documents, more than 2 GB of documents and images, or built-in services (booking,
+    feeds, embedded apps, forms sent elsewhere).
   - **yellow, not decided yet** (`not-enough-read`): too little could be read (the time budget,
     robots.txt, a home page that leads to another site, or a site that needs JavaScript). It is
     not accepted: the check runs again.
@@ -41,7 +42,9 @@ In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-buil
   Pages are counted per language (a first path segment such as `/en/` or `/se/` is a language
   when the pages say so), and articles apart from pages: dated or news-section addresses, and
   pages whose JSON-LD is an Article, NewsArticle or BlogPosting (not `og:type`, which SEO plugins
-  put on ordinary pages). A one-page site with text and only `#` links is enough to decide.
+  put on ordinary pages). A one-page site with text and only `#` links is enough to decide; the
+  text counted is the page's `<main>` (or its body), without cookie or consent banners. A check
+  dated in the future is refused by `crawl`, like one older than 7 days.
 
   The customer's limits (`src/scope.js`): `--exclude <path>` (repeatable) leaves a content part
   out of the move, that path and everything under it in any case, and `--without-member-area`

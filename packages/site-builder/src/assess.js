@@ -28,6 +28,8 @@ export const LIMITS = Object.freeze({
   declineTotalPages: 1500,
   /** More articles (news, blog posts) than this: red. Articles are counted apart from pages. */
   declineArticles: 500,
+  /** More pages (largest language) and articles together than this: yellow, when neither alone is red. */
+  scopeContent: 500,
   /** More documents (PDF and Office files) than this: yellow. */
   scopeDocuments: 100,
   /** An estimated size of documents and images over this: yellow. */
@@ -118,6 +120,9 @@ export function classify(f) {
   if (f.htmlPages > LIMITS.declinePages) reason('red', 'pages', `It has about ${f.htmlPages} pages in its largest language, more than the ${LIMITS.declinePages} Hosait Sites moves.`)
   else if (f.htmlPages > LIMITS.scopePages) reason('yellow', 'pages', `It has about ${f.htmlPages} pages in its largest language, more than the ${LIMITS.scopePages} a standard move covers.`)
   if ((f.articles ?? 0) > LIMITS.declineArticles) reason('red', 'articles', `It has about ${f.articles} articles (news and posts), more than the ${LIMITS.declineArticles} Hosait Sites moves.`)
+  const content = f.htmlPages + (f.articles ?? 0)
+  if (content > LIMITS.scopeContent && !reasons.some((r) => r.class === 'red' && ['pages', 'total-pages', 'articles'].includes(r.code)))
+    reason('yellow', 'content', `It has about ${f.htmlPages} pages in its largest language and ${f.articles ?? 0} articles, more than the ${LIMITS.scopeContent} pages and articles together a standard move covers.`)
   if (f.documents > LIMITS.scopeDocuments) reason('yellow', 'documents', `It has about ${f.documents} documents (PDF and Office files), more than the ${LIMITS.scopeDocuments} a standard move covers.`)
   if (f.mediaBytes !== null && f.mediaBytes > LIMITS.scopeMediaBytes) reason('yellow', 'storage', `Its documents and images take about ${gigabytes(f.mediaBytes)}, more than the ${gigabytes(LIMITS.scopeMediaBytes)} of storage a standard move covers.`)
   if ((f.passwordPosts ?? 0) > LIMITS.scopePasswordPosts) reason('yellow', 'protected-posts', `${f.passwordPosts} of the pages read are password-protected: their content cannot be read, so the customer has to give it, or they are left out.`)
