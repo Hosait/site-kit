@@ -263,3 +263,16 @@ test('a repeated redirect_to counts by its last value, as WordPress reads it', (
   const s = pageSignals(html('<a href="/wp-login.php?redirect_to=%2Fwp-admin%2F&redirect_to=%2Fmin-side%2F">Logg inn</a>'), 'https://x.no/', 'x.no')
   assert.deepEqual([s.login.length, s.cmsLogin], [1, []])
 })
+
+// Bjørn's review of #38: a banner class on <body> itself (WordPress's Cookie Notice sets
+// cookies-not-set there) zeroed the text, and text was joined with spaces where cheerio joins none.
+test('the visible text counts a body that carries a cookie class, and joins text as the page shows it', () => {
+  const text = '<p>' + 'Vi er et lite firma som lager gode ting. '.repeat(8) + '</p>'
+  const onBody = pageSignals(`<!doctype html><html lang="nb"><head></head><body class="home cookies-not-set">${text}</body></html>`, 'https://x.no/', 'x.no')
+  assert.ok(onBody.textLength >= 200, String(onBody.textLength))
+  const spans = pageSignals(html(`<main>${'<span>a</span>'.repeat(150)}</main>`), 'https://x.no/', 'x.no')
+  assert.equal(spans.textLength, 150)
+  const banner = pageSignals(html(`<main><div class="cookie-banner">${text}</div><p>Hei</p></main>`), 'https://x.no/', 'x.no')
+  assert.equal(banner.textLength, 3, 'a banner inside the page is still left out')
+})
+

@@ -64,7 +64,7 @@ const ORDINARY_FRAMES = ['youtube.com', 'youtube-nocookie.com', 'youtu.be', 'vim
 const hostIn = (host, list) => list.some((d) => host === d || host.endsWith('.' + d))
 // Percent-encoding is undone, so /min%2Dside/ is /min-side/.
 const decoded = (s) => { try { return decodeURIComponent(s) } catch { return s } }
-const segments = (pathname) => pathname.toLowerCase().split('/').filter(Boolean).map((s) => decoded(s).replace(/\.[a-z0-9]{1,5}$/, ''))
+const segments = (pathname) => pathname.toLowerCase().split('/').filter(Boolean).map((s) => (s.includes('%') ? decoded(s) : s).replace(/\.[a-z0-9]{1,5}$/, ''))
 // WordPress (PHP) acts on the last value of a repeated parameter.
 const lastParam = (u, key) => { const all = u.searchParams.getAll(key); return (all[all.length - 1] ?? '').toLowerCase() }
 const shortPath = (u) => (u.pathname + u.search).slice(0, 100)
@@ -118,6 +118,36 @@ function isPostPasswordForm($, form, pageUrl) {
   if (!$(form).hasClass('post-password-form') && !$(form).find('[name="post_password"]').length) return false
   if ($(form).find('textarea, select').length) return false
   return $(form).find('input').toArray().every((i) => ['password', 'hidden', 'submit'].includes(String($(i).attr('type') ?? '').trim().toLowerCase()))
+}
+
+const NOT_TEXT = new Set(['script', 'style', 'noscript', 'template'])
+const BANNER = /cookie|consent/i
+/** Text counted only up to this; the one rule that uses it needs 200 characters. */
+const MAX_TEXT = 10_000
+
+/**
+ * The length of the text under a node, spaces collapsed, leaving out scripts, styles, templates
+ * and cookie or consent banners. Walked without recursion or copying, and stops at MAX_TEXT.
+ * @param {import('domhandler').AnyNode} root
+ */
+function visibleTextLength(root) {
+  const parts = []
+  let length = 0
+  const stack = [root]
+  while (stack.length && length < MAX_TEXT) {
+    const node = /** @type {any} */ (stack.pop())
+    if (node.type === 'text') {
+      parts.push(node.data)
+      length += node.data.length
+      continue
+    }
+    if (!node.children || NOT_TEXT.has(node.name) || node.type === 'script' || node.type === 'style') continue
+    // A banner inside the page is left out; a cookie class on <body> or <main> itself is not a banner.
+    if (node !== root && node.attribs && (BANNER.test(node.attribs.id ?? '') || BANNER.test(node.attribs.class ?? ''))) continue
+    for (let i = node.children.length - 1; i >= 0; i--) stack.push(node.children[i])
+  }
+  // Joined as cheerio's text() does, without spaces between nodes.
+  return Math.min(parts.join('').replace(/\s+/g, ' ').trim().length, MAX_TEXT)
 }
 
 /** True when a path has a segment that shop systems use for product pages. @param {string} pathname */
@@ -260,10 +290,15 @@ export function pageSignals(html, url, host) {
     if (IMAGE.test(u.pathname)) { s.images.add(n); continue }
     if (isCartUrl(u)) { add(s.shop, `link to ${shortPath(u)}`); continue }
     const label = $(el).text().replace(/\s+/g, ' ').trim().toLowerCase()
-    const cmsAdmin = isCmsAdminUrl(u)
+    // The CMS-login check is only needed for admin or member wording; most links have neither.
     const member = MEMBER_TEXT.test(label)
-    if (cmsAdmin && !member && ADMIN_TEXTS.has(label)) { add(s.cmsLogin, `link to ${shortPath(u)}`); continue }
-    if (isLoginUrl(u) || LOGIN_TEXTS.has(label) || ACCOUNT_TEXT.test(label) || MEMBER_LOGIN.test(label) || (cmsAdmin && member)) { add(s.login, `link to ${shortPath(u)}`); continue }
+    const adminText = ADMIN_TEXTS.has(label)
+    if ((adminText || member) && isCmsAdminUrl(u)) {
+      if (member) add(s.login, `link to ${shortPath(u)}`)
+      else add(s.cmsLogin, `link to ${shortPath(u)}`)
+      continue
+    }
+    if (isLoginUrl(u) || LOGIN_TEXTS.has(label) || ACCOUNT_TEXT.test(label) || MEMBER_LOGIN.test(label)) { add(s.login, `link to ${shortPath(u)}`); continue }
     if (!SKIP.test(u.pathname)) s.links.add(n)
   }
   for (const v of [$('html').attr('lang'), ...$('link[rel="alternate"][hreflang]').toArray().map((e) => $(e).attr('hreflang'))]) {
@@ -283,10 +318,8 @@ export function pageSignals(html, url, host) {
   const refresh = /url[ \t]*=[ \t]*['"]?([^'"]+)/i.exec(String($('meta[http-equiv="refresh" i]').first().attr('content') ?? '').slice(0, 2048))
   const target = refresh ? refresh[1].trim() : $('frameset frame[src]').first().attr('src')
   if (target) s.forward = normalize(String(target).slice(0, 2048), url)
-  // How much a visitor can read without JavaScript: the main content, or the body without one,
-  // leaving out scripts, styles and cookie or consent banners.
-  const content = ($('main').length ? $('main') : $('body')).first().clone()
-  content.find('script, style, noscript, template, [id*="cookie" i], [class*="cookie" i], [id*="consent" i], [class*="consent" i]').remove()
-  s.textLength = content.text().replace(/\s+/g, ' ').trim().length
+  // How much a visitor can read without JavaScript: the main content, or the body without one.
+  const content = ($('main').length ? $('main') : $('body')).get(0)
+  s.textLength = content ? visibleTextLength(content) : 0
   return s
 }
