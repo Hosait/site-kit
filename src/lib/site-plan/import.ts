@@ -27,6 +27,15 @@ export type ImportOptions = {
 }
 export type ImportResult = { media: number; pages: number; articles: number }
 
+/** The HTML converter writes upload ids as strings; the database wants numbers. */
+function numberUploadIds(node: unknown): void {
+  if (!node || typeof node !== 'object') return
+  const n = node as { type?: string; value?: unknown; children?: unknown[]; root?: unknown }
+  if (n.type === 'upload' && typeof n.value === 'string' && /^\d+$/.test(n.value)) n.value = Number(n.value)
+  if (n.root) numberUploadIds(n.root)
+  for (const c of n.children ?? []) numberUploadIds(c)
+}
+
 async function lexicalConverter(payload: Payload) {
   const { convertHTMLToLexical, editorConfigFactory } = await import('@payloadcms/richtext-lexical')
   const { JSDOM } = await import('jsdom')
@@ -75,7 +84,14 @@ export async function importPlan(payload: Payload, plan: SitePlan, opts: ImportO
     let toLexical = opts.toLexical
     const html = async (h: string) => {
       toLexical ??= await lexicalConverter(payload)
-      return toLexical(h)
+      // <img data-media-ref="ref"> becomes an upload of that plan media, so rich text can hold images.
+      const withUploads = h.replace(/<img\b[^>]*?\bdata-media-ref="([^"]+)"[^>]*>/g, (_m, ref: string) => {
+        const id = ids.media.get(ref)
+        return id ? `<img data-lexical-upload-id="${id}" data-lexical-upload-relation-to="media" alt="">` : ''
+      })
+      const state = await toLexical(withUploads)
+      numberUploadIds(state)
+      return state
     }
     const total =
       plan.media.length + (plan.people?.length ?? 0) + (plan.documents?.length ?? 0) + (plan.forms?.length ?? 0) + plan.pages.length * 2 + (plan.articles?.length ?? 0) + (plan.redirects?.length ?? 0) + 1
@@ -83,6 +99,8 @@ export async function importPlan(payload: Payload, plan: SitePlan, opts: ImportO
     const tick = () => opts.onProgress?.(++done, total)
     const ids = { media: new Map<string, number>(), pages: new Map<string, number>(), people: new Map<string, number>(), documents: new Map<string, number>(), forms: new Map<string, number>() }
 
+    // Each upload gets its own context object: the storage plugin leaves a skip flag on the context it
+    // is given, so one shared object made every upload after the first skip object storage.
     async function upload(collection: 'media' | 'documents', source: string, data: Record<string, unknown>) {
       // Anything that looks like a URL goes through fetchMedia, which refuses all but public https.
       if (/^[a-z][a-z0-9+.-]*:\/\//i.test(source)) {
@@ -94,10 +112,10 @@ export async function importPlan(payload: Payload, plan: SitePlan, opts: ImportO
           const message = e instanceof Error ? e.message : String(e)
           throw new Error(message.includes(source) ? message : `${source}: ${message}`)
         }
-        return wrote(collection, await payload.create({ collection, data: data as never, file: { ...file, size: file.data.length }, locale: DEFAULT_LOCALE, context: ctx }))
+        return wrote(collection, await payload.create({ collection, data: data as never, file: { ...file, size: file.data.length }, locale: DEFAULT_LOCALE, context: { ...ctx } }))
       }
       const filePath = localFiles.get(source) ?? (await resolveLocalFile(baseDir, source))
-      return wrote(collection, await payload.create({ collection, data: data as never, filePath, locale: DEFAULT_LOCALE, context: ctx }))
+      return wrote(collection, await payload.create({ collection, data: data as never, filePath, locale: DEFAULT_LOCALE, context: { ...ctx } }))
     }
 
     async function localized(collection: string, id: number, item: Record<string, unknown>, fields: string[], resolve = false) {
