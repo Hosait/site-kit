@@ -1,8 +1,13 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-/** Mest tekst vi tar med per dokument (store kataloger blir ellers tunge å søke i). */
-const MAX_CHARS = 200_000
+/** Mest tekst vi tar med per dokument. Søkeindeksens body-felt tillater 40 000 tegn; mer gjør at dokumentet ikke lagres. */
+const MAX_CHARS = 39_000
+
+/** PDF-teksten slik den lagres i søkeindeksen: mellomrom slått sammen, og kortet ned til MAX_CHARS. */
+export function clipPdfText(text: string): string {
+  return text.replace(/\s+/g, ' ').trim().slice(0, MAX_CHARS)
+}
 
 /**
  * Teksten i en PDF fra dokumentbanken. Fila leses fra disk (uploads/documents, volumet på Hosait)
@@ -28,7 +33,7 @@ export async function pdfText(file: { filename?: string | null; url?: string | n
     const pdf = await getDocumentProxy(data)
     try {
       const { text } = await extractText(pdf, { mergePages: true })
-      return text.replace(/\s+/g, ' ').trim().slice(0, MAX_CHARS)
+      return clipPdfText(text)
     } finally {
       await pdf.cleanup()
     }
