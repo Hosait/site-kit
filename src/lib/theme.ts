@@ -71,8 +71,17 @@ const SVG_UNSAFE: [RegExp, string][] = [
   [/[\s:]href\s*=\s*["']\s*(?:[a-z][a-z0-9+.-]*:|[\\/]{2}|\\)/i, 'a link to another site or another scheme'],
   [/url\(\s*["']?\s*(?:[a-z][a-z0-9+.-]*:|[\\/]{2}|\\)/i, 'a style that loads from elsewhere (url())'],
   [/@import/i, 'a style that loads from elsewhere (@import)'],
+  [/image-set\s*\(/i, 'a style that loads from elsewhere (image-set())'],
+  // A CSS escape can spell @import or url() (@\69mport, u\72 l(…)); an icon needs no backslash.
+  [/\\/, 'a backslash (a CSS escape)'],
+  // An animation can set a link after this check: <set attributeName="href" to="https://…"/>.
+  [/attributeName\s*=\s*["']\s*(?:[^\s"':]+:)?href/i, 'an animation that changes a link'],
   [/<!DOCTYPE|<!ENTITY/i, 'a DTD'],
 ]
+
+// The text of each <style> element (to the end when one is not closed). Inside it, a CDATA section
+// or a comment can split @import or url() so the checks above miss it.
+const STYLE_TEXT = /<(?:[^\s<>/:]+:)?style\b[^<>]*>([\s\S]*?)(?:<\/(?:[^\s<>/:]+:)?style\s*>|$)/gi
 
 // The only namespaces an icon needs; XHTML (an <h:iframe> without foreignObject) and the rest are refused.
 const SVG_NAMESPACES = new Set(['http://www.w3.org/2000/svg', 'http://www.w3.org/1999/xlink'])
@@ -90,6 +99,9 @@ export function checkIconFile(bytes: Buffer, ext: string): string[] {
   if (ext === 'svg') {
     const text = bytes.toString('utf8')
     for (const [re, what] of SVG_UNSAFE) if (re.test(text)) problems.push(`the SVG has ${what}`)
+    for (const m of text.matchAll(STYLE_TEXT)) {
+      if (/<!\[CDATA\[|<!--/.test(m[1])) { problems.push('the SVG has a CDATA section or a comment inside <style>'); break }
+    }
     for (const m of text.matchAll(/\sxmlns(?::[^\s=]+)?\s*=\s*["']([^"']*)["']/gi)) {
       if (!SVG_NAMESPACES.has(m[1].trim())) { problems.push(`the SVG has a namespace other than SVG and xlink (${m[1].slice(0, 60)})`); break }
     }
