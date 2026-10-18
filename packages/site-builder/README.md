@@ -29,7 +29,8 @@ In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-buil
     area; member wording on it («Logg inn for medlemmer»), a member folder, registration or
     password reset, and a redirect outside wp-admin stay red. Account wording («Min side», «My
     account», «Mein Konto», «Mon compte», «Mi cuenta» …) is a login wherever it links; member
-    wording alone («Bli medlem», «Våre medlemmer») is not. WordPress's own password form for a
+    wording alone («Bli medlem», «Våre medlemmer») is not, but with a login or area word («Medlemsinnlogging»,
+    «Members area», «Logg inn for medlemmer») it is. WordPress's own password form for a
     protected post is a note; more than three such pages read is yellow.
   - **yellow**, possible with the customer's OK on scope and storage: more than 200 pages in
     the largest language, more than 500 pages (largest language) and articles together, more

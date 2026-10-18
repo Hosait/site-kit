@@ -21,16 +21,23 @@ const CART_SEGMENTS = new Set(['cart', 'checkout', 'basket', 'handlekurv', 'hand
 const CART_KEYS = new Set(['add-to-cart', 'add_to_cart', 'addtocart'])
 const CART_ACTIONS = new Set(['add', 'addtocart', 'add-to-cart', 'add_to_cart', 'cart_add', 'addtobasket'])
 const LOGIN_SEGMENTS = new Set(['login', 'log-in', 'logg-inn', 'logginn', 'signin', 'sign-in', 'min-side', 'minside', 'mine-sider', 'my-account', 'myaccount', 'account', 'konto', 'min-konto', 'wp-login',
-  'mina-sidor', 'mitt-konto', 'mein-konto', 'anmelden', 'einloggen', 'mon-compte', 'connexion', 'espace-membres', 'espace-membre', 'mi-cuenta', 'iniciar-sesion'])
+  'mina-sidor', 'mitt-konto', 'mein-konto', 'einloggen', 'mon-compte', 'connexion', 'espace-membres', 'espace-membre', 'mi-cuenta', 'iniciar-sesion'])
 const LOGIN_TEXTS = new Set(['logg inn', 'logg på', 'log in', 'login', 'sign in', 'min side', 'mine sider', 'my account', 'min konto', 'my page', 'logga in', 'log ind',
-  'anmelden', 'einloggen', 'connexion', 'se connecter', 'iniciar sesión', 'acceder'])
+  'einloggen', 'connexion', 'se connecter', 'iniciar sesión', 'acceder'])
 // A link to the CMS's own login is a note only with plain admin wording (or none, an icon).
 const ADMIN_TEXTS = new Set(['', 'logg inn', 'log in', 'login', 'admin', 'meta'])
 // Account wording is a login area wherever the link goes: «Logg inn på Min side», «Mein Konto».
-const ACCOUNT_TEXT = /(^|[\s(])(min side|mine sider|my account|min konto|my page|mina sidor|mitt konto|min sida|mein konto|kundenkonto|mitgliederbereich|mon compte|espace membres?|espace client|mi cuenta|área de socios)/
+const ACCOUNT_TEXT = /(^|[\s(])(min side|mine sider|my account|min konto|my page|mina sidor|mitt konto|min sida|mein konto|kundenkonto|mitgliederbereich|mon compte|espace membres?|espace client|mi cuenta|área de socios)(?![\p{L}\p{N}])/u
 // Member wording alone is not: «Bli medlem» and «Våre medlemmer» are ordinary pages. It only
 // keeps a link to the CMS's own login from being a note: that is the members' login.
 const MEMBER_TEXT = /(^|[\s(])(medlem|member|mitglied|membre|socio)/
+// Member wording with a login or area word is the members' login: «Medlemsinnlogging», «Members'
+// area», «Logg inn for medlemmer», «Medlem? Logg inn». «Bli medlem» alone is not. Every pattern is
+// bounded, and link text is cut to 200 characters first, so a long text cannot stall the check.
+const MEMBER_COMPOUND = /(?<!\p{L})(?:medlem|mitglied)\p{L}{0,20}?(?:innlogg|inlogg|område|omrade|sider|sidor|bereich|login|portal)/u
+const MEMBER_WORD = /(?<!\p{L})(?:medlem|mitglied|member|membre|socios?(?!\p{L}))/u
+const LOGIN_PHRASE = /(?<!\p{L})(?:logge? inn|logga in|log in|login|sign[ -]?in|connexion|innlogging|inloggning|area|only|portal)(?!\p{L})/u
+const memberLogin = (label) => MEMBER_COMPOUND.test(label) || (MEMBER_WORD.test(label) && LOGIN_PHRASE.test(label))
 const MEMBER_SEGMENT = /^(min-?side|mine-sider|mina-sidor|my-?account|account|konto|min-konto|mitt-konto|mein-konto|mon-compte|mi-cuenta|profil|profile|medlem|member|mitglied|membre|espace-membre|socio)/
 // Path segments of product pages in common shop systems (WooCommerce, Shopify, Norwegian shops).
 const PRODUCT_SEGMENTS = new Set(['product', 'products', 'produkt', 'produkter', 'produkte', 'vare', 'varer', 'shop', 'butikk', 'nettbutikk', 'item', 'items', 'catalog', 'catalogue', 'katalog', 'sku'])
@@ -88,7 +95,9 @@ export function isCmsAdminUrl(u) {
   if (!s.length || s.some((x) => MEMBER_SEGMENT.test(x))) return false
   const action = lastParam(u, 'action')
   if (action && action !== 'login') return false
-  const redirect = u.searchParams.get('redirect_to')
+  // WordPress (PHP) reads the last of a repeated redirect_to, as with action.
+  const redirects = u.searchParams.getAll('redirect_to')
+  const redirect = redirects.length ? redirects[redirects.length - 1] : null
   if (redirect !== null) {
     let to = ''
     try { to = new URL(redirect, u).pathname } catch { return false }
@@ -284,7 +293,7 @@ export function pageSignals(html, url, host) {
     if (!sameSite(u.hostname, host)) continue
     if (IMAGE.test(u.pathname)) { s.images.add(n); continue }
     if (isCartUrl(u)) { add(s.shop, `link to ${shortPath(u)}`); continue }
-    const label = $(el).text().replace(/\s+/g, ' ').trim().toLowerCase()
+    const label = $(el).text().replace(/\s+/g, ' ').trim().toLowerCase().normalize('NFC').slice(0, 200)
     // The CMS-login check is only needed for admin or member wording; most links have neither.
     const member = MEMBER_TEXT.test(label)
     const adminText = ADMIN_TEXTS.has(label)
@@ -293,7 +302,7 @@ export function pageSignals(html, url, host) {
       else add(s.cmsLogin, `link to ${shortPath(u)}`)
       continue
     }
-    if (isLoginUrl(u) || LOGIN_TEXTS.has(label) || ACCOUNT_TEXT.test(label)) { add(s.login, `link to ${shortPath(u)}`); continue }
+    if (isLoginUrl(u) || LOGIN_TEXTS.has(label) || ACCOUNT_TEXT.test(label) || memberLogin(label)) { add(s.login, `link to ${shortPath(u)}`); continue }
     if (!SKIP.test(u.pathname)) s.links.add(n)
   }
   for (const v of [$('html').attr('lang'), ...$('link[rel="alternate"][hreflang]').toArray().map((e) => $(e).attr('hreflang'))]) {
