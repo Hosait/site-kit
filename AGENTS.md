@@ -106,10 +106,11 @@ After the preview is up, run
 documents, PDFs and the like) and `compare.html` in that folder. Then run the launch checks; fix
 every error they report before the site moves to its own domain:
 
-- `pnpm qa:launch <preview address>` fails on a sitemap page that does not answer, placeholder or
-  demo text (the seeded privacy page, «Nordlys Demo», example.com), a page without a title and a
-  broken internal link. Its warnings (no description, no share image, images without alt text) go
-  into the hand-off to the user.
+- `pnpm qa:launch <preview address>` fails on a home page or a sitemap page that does not answer,
+  an empty sitemap, placeholder or demo text (the seeded privacy page, «Nordlys Demo», example.com),
+  a page without a title, a broken internal link, and an image (every size) or a document in
+  storage that does not load. Its warnings (no description, no share image, images without alt
+  text) go into the hand-off to the user.
 - `pnpm qa:axe <preview address>` fails on serious accessibility errors on the site's own pages.
   It needs Playwright's Chromium (`pnpm exec playwright install chromium`).
 
