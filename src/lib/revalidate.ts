@@ -1,5 +1,7 @@
 import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from 'payload'
-import { revalidateTag } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
+
+import { SITE_KEYS } from './sites'
 
 /**
  * Sidene er statisk generert og merket med cache-tagger. Når et dokument publiseres
@@ -35,4 +37,24 @@ export const revalidateDoc: CollectionAfterChangeHook = ({ doc, previousDoc, col
 export const revalidateDocDelete: CollectionAfterDeleteHook = ({ doc, collection, req }) => {
   if (!req.context.disableRevalidate) revalidate(tagsFor(collection.slug, doc?.site))
   return doc
+}
+
+const CONTENT_TAGS = ['pages', 'articles', 'people', 'documents', 'media', 'site-settings', 'redirects']
+
+/**
+ * Tømmer all cache etter en import eller et skript som skriver direkte til databasen.
+ * Taggene utløper med en gang (expire: 0): med profilen 'max' får første besøkende den gamle siden
+ * (et 404 for en side som ikke fantes før importen) mens den nye bygges.
+ */
+export function flushAllCaches(
+  revalidate: (tag: string, profile: { expire: number }) => void = revalidateTag,
+  revalidateLayout: (path: string, type: 'layout') => void = revalidatePath,
+): void {
+  const now = { expire: 0 }
+  for (const c of CONTENT_TAGS) {
+    revalidate(c, now)
+    for (const s of SITE_KEYS) revalidate(`${c}:${s}`, now)
+  }
+  for (const s of SITE_KEYS) revalidate(`site:${s}`, now)
+  revalidateLayout('/', 'layout')
 }
