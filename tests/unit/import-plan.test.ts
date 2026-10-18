@@ -19,6 +19,7 @@ function fakePayload(existing = 0) {
   const payload = {
     calls,
     count: async () => ({ totalDocs: existing }),
+    find: async ({ where }: { where?: { id?: { in?: number[] } } }) => ({ docs: (where?.id?.in ?? []).map((id) => ({ id })) }),
     delete: async ({ collection, where }: { collection: string; where?: unknown }) => { calls.push({ op: 'delete', collection, data: where }); return { docs: [], errors: [] } },
     create: async (a: { collection: string; data: unknown; filePath?: string; file?: unknown; locale?: string }) => {
       const doc = { id: ++id, ...(a.collection === 'forms' ? withRowIds(a.data) : {}) }
@@ -106,6 +107,40 @@ test('a run refused because the site has content deletes nothing', async () => {
   const payload = fakePayload(3)
   await assert.rejects(importPlan(payload, plan(), { baseDir: 'tests/fixtures', toLexical }), /already has content/)
   assert.equal(payload.calls.filter((c) => c.op === 'delete').length, 0)
+})
+
+// A row can exist without its file (the upload was skipped or failed quietly); on the live site that
+// is a broken image that nothing reports. The import reads its media and documents back and checks
+// that every file is where visitors fetch it.
+const withFiles = (payload: Payload, urls: Record<number, { url: string; sizes?: Record<string, { url?: string | null }> }>) => {
+  ;(payload as any).find = async ({ collection, where }: any) => ({ docs: (where.id.in as number[]).map((id) => ({ id, collection, ...urls[id] })) })
+}
+
+test('an import checks the file of every media row and each of its image sizes, and finishes when all are there', async () => {
+  const payload = fakePayload()
+  withFiles(payload, { 1: { url: 'https://s3.example/b/public/media/hero.jpg', sizes: { card: { url: 'https://s3.example/b/public/media/hero-400.webp' }, thumb: { url: null } } } })
+  const checked: string[] = []
+  await importPlan(payload, plan(), { baseDir: 'tests/fixtures', toLexical, fileExists: async (u) => { checked.push(u); return true } })
+  assert.deepEqual(checked, ['https://s3.example/b/public/media/hero.jpg', 'https://s3.example/b/public/media/hero-400.webp'])
+})
+
+test('a row whose file is missing fails the import, naming the file, and removes what the run wrote', async () => {
+  const payload = fakePayload()
+  withFiles(payload, { 1: { url: 'https://s3.example/b/public/media/hero.jpg', sizes: { card: { url: 'https://s3.example/b/public/media/hero-400.webp' } } } })
+  const fileExists = async (u: string) => !u.endsWith('hero-400.webp')
+  await assert.rejects(
+    importPlan(payload, plan(), { baseDir: 'tests/fixtures', toLexical, fileExists }),
+    /1 of 2 stored files are missing from storage.*hero-400\.webp.*removed/s,
+  )
+  assert.ok(payload.calls.some((c) => c.op === 'delete' && c.collection === 'media'), 'the rows were removed, so the import can run again')
+})
+
+test('files that are served from local disk are not checked over the network', async () => {
+  const payload = fakePayload()
+  withFiles(payload, { 1: { url: '/api/media/file/hero.jpg', sizes: { card: { url: '/api/media/file/hero-400.webp' } } } })
+  const checked: string[] = []
+  await importPlan(payload, plan(), { baseDir: 'tests/fixtures', toLexical, fileExists: async (u) => { checked.push(u); return false } })
+  assert.deepEqual(checked, [])
 })
 
 test('a local SVG is refused as media before anything is written', async () => {

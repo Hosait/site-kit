@@ -12,6 +12,7 @@ import { fetchMedia as defaultFetchMedia } from './fetch-media'
 import { formData, hasLocale, type FormRow } from './forms'
 import { localFileProblem, resolveLocalFile } from './local-file'
 import { findMissingRefs, localeData, orderPages, resolveValue } from './refs'
+import { missingStoredFiles } from './stored-files'
 import type { SitePlan } from './types'
 
 export const CONTENT_COLLECTIONS = ['redirects', 'articles', 'pages', 'form-submissions', 'forms', 'people', 'documents', 'media', 'site-settings'] as const
@@ -24,6 +25,8 @@ export type ImportOptions = {
   fetchMedia?: (url: string) => Promise<{ data: Buffer; mimetype: string; name: string }>
   toLexical?: (html: string) => Promise<unknown>
   onProgress?: (done: number, total: number) => void
+  /** Whether a stored file answers; the default asks over HTTP. The import checks every file it stored. */
+  fileExists?: (url: string) => Promise<boolean>
 }
 export type ImportResult = { media: number; pages: number; articles: number }
 
@@ -78,7 +81,7 @@ export async function importPlan(payload: Payload, plan: SitePlan, opts: ImportO
       return toLexical(h)
     }
     const total =
-      plan.media.length + (plan.people?.length ?? 0) + (plan.documents?.length ?? 0) + (plan.forms?.length ?? 0) + plan.pages.length * 2 + (plan.articles?.length ?? 0) + (plan.redirects?.length ?? 0) + 1
+      plan.media.length + (plan.people?.length ?? 0) + (plan.documents?.length ?? 0) + (plan.forms?.length ?? 0) + plan.pages.length * 2 + (plan.articles?.length ?? 0) + (plan.redirects?.length ?? 0) + 2
     let done = 0
     const tick = () => opts.onProgress?.(++done, total)
     const ids = { media: new Map<string, number>(), pages: new Map<string, number>(), people: new Map<string, number>(), documents: new Map<string, number>(), forms: new Map<string, number>() }
@@ -212,6 +215,11 @@ export async function importPlan(payload: Payload, plan: SitePlan, opts: ImportO
       wrote('redirects', await payload.create({ collection: 'redirects', data: { from: r.from, to: link(r.toPage, r.toUrl), permanent: r.permanent ?? true } as never, context: ctx }))
       tick()
     }
+    // A row without its file is a broken image on the live site that nothing else reports, so the
+    // import is not done until every file it stored answers.
+    const { checked, missing } = await missingStoredFiles(payload, { media: written.media ?? [], documents: written.documents ?? [] }, opts.fileExists)
+    if (missing.length) throw new Error(`${missing.length} of ${checked} stored files are missing from storage, for example ${missing.slice(0, 5).join(', ')}`)
+    tick()
     return { media: plan.media.length, pages: plan.pages.length, articles: plan.articles?.length ?? 0 }
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
