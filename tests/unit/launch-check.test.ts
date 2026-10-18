@@ -38,7 +38,10 @@ test('the sitemap gives the paths of the pages, whatever host it names', () => {
 })
 
 type Route = { status?: number; body?: string; location?: string; headers?: Record<string, string> }
-function fakeFetch(routes: Record<string, Route>) {
+// What a healthy site answers besides its pages: the home address and the share image the test pages name.
+const healthy = (): Record<string, Route> => ({ [`${BASE}/`]: {}, [`${BASE}/media/a.webp`]: { body: 'img' }, [`${OWN}/`]: {}, [`${OWN}/media/a.webp`]: { body: 'img' } })
+function fakeFetch(given: Record<string, Route>) {
+  const routes = { ...healthy(), ...given }
   const seen: string[] = []
   const fetchImpl = async (url: string) => {
     seen.push(url)
@@ -86,7 +89,7 @@ test('a site without a sitemap fails at once, and the page and link caps are kep
   const r = await launchCheck(BASE, { fetch: fetchImpl, maxPages: 5, maxLinks: 3 })
   assert.equal(r.pages, 5)
   assert.equal(r.linksChecked, 3)
-  assert.ok(seen.length <= 1 + 5 + 3, `fetched ${seen.length}`)
+  assert.ok(seen.length <= 1 + 1 + 5 + 3 + 1, `fetched ${seen.length}`) // sitemap, home, pages, links, the share image
   assert.ok(r.notes.some((n) => /first 5 of 30 pages/.test(n)))
 })
 
@@ -177,7 +180,7 @@ test('a huge page is read only up to the cap, not loaded whole', async () => {
     start: (c) => c.enqueue(new TextEncoder().encode('<!doctype html><html><head><title>T</title></head><body>')),
     pull: (c) => (pulled++ < 64 ? c.enqueue(mb) : c.close()),
   })
-  const fetchImpl = async (url: string) => (url.endsWith('/sitemap.xml') ? new Response(sitemap(['/no'])) : new Response(huge))
+  const fetchImpl = async (url: string) => (url.endsWith('/sitemap.xml') ? new Response(sitemap(['/no'])) : url === `${BASE}/` ? new Response('x') : new Response(huge))
   const r = await launchCheck(BASE, { fetch: fetchImpl })
   assert.ok(pulled <= 8, `read ${pulled} MB of 64`)
   assert.equal(r.pages, 1)
@@ -217,4 +220,94 @@ test('qa:axe reads the sitemap through the capped reader; readBody stops at 5 MB
   const text = await readBody(new Response(huge))
   assert.equal(text.length, 5 * 1024 * 1024)
   assert.ok(pulled <= 8, `read ${pulled} MB of 64`)
+})
+
+// The check passed with every image broken: it read the pages and the links between them, never
+// the images, and PDFs on the storage host are on another origin.
+test('a sitemap that lists no pages is an error', async () => {
+  const r = await launchCheck(BASE, { fetch: fakeFetch({ [`${BASE}/sitemap.xml`]: { body: '<urlset></urlset>' } }).fetchImpl })
+  assert.deepEqual(r.errors.map((e) => e.text), ['the sitemap lists no pages'])
+})
+
+test('the home page must answer, even when every page in the sitemap does', async () => {
+  const routes = { [`${BASE}/sitemap.xml`]: { body: sitemap(['/no']) }, [`${BASE}/no`]: { body: doc('<p>Hei.</p>') } }
+  const broken = await launchCheck(BASE, { fetch: fakeFetch({ ...routes, [`${BASE}/`]: { status: 404 } }).fetchImpl })
+  assert.deepEqual(broken.errors.map((e) => [e.page, e.text]), [[`${BASE}/`, 'the home page answers 404']])
+  const redirected = await launchCheck(BASE, { fetch: fakeFetch({ ...routes, [`${BASE}/`]: { status: 308, location: '/no' } }).fetchImpl })
+  assert.deepEqual(redirected.errors, [])
+  const dead = await launchCheck(BASE, { fetch: fakeFetch({ ...routes, [`${BASE}/`]: { status: 308, location: '/borte' } }).fetchImpl })
+  assert.deepEqual(dead.errors.map((e) => e.text), ['the home page answers 404'])
+})
+
+test('the files to check are the page\'s images in every size, its share image and documents on other hosts, resolved and without duplicates', () => {
+  const f = pageFindings(doc('<img src="/a.jpg"><img src="/a.jpg"><img src="data:image/png;base64,AAAA"><img><img src="/b-800.jpg" srcset="/b-400.jpg 400w, /b-800.jpg 800w, /b-1600.jpg 1600w"><picture><source srcset="/c.avif 1x, /c@2x.avif 2x"></picture><a href="https://s3.example/x.pdf">x</a><a href="/local.pdf">l</a><a href="https://other.example/page">p</a>'), `${BASE}/no/`, BASE)
+  assert.deepEqual(f.files, [
+    { url: `${BASE}/a.jpg`, kind: 'image' },
+    { url: `${BASE}/b-800.jpg`, kind: 'image' },
+    { url: `${BASE}/b-400.jpg`, kind: 'image' },
+    { url: `${BASE}/b-1600.jpg`, kind: 'image' },
+    { url: `${BASE}/c.avif`, kind: 'image' },
+    { url: `${BASE}/c@2x.avif`, kind: 'image' },
+    { url: `${BASE}/media/a.webp`, kind: 'image' },
+    { url: 'https://s3.example/x.pdf', kind: 'document' },
+  ])
+})
+
+test('every image a page shows must load: a broken one is an error naming the page and the file, and each file is fetched once', async () => {
+  const optimized = '/_next/image?url=%2Fa.jpg&w=640&q=75'
+  const { fetchImpl, seen } = fakeFetch({
+    [`${BASE}/sitemap.xml`]: { body: sitemap(['/no', '/no/om-oss']) },
+    [`${BASE}/no`]: { body: doc(`<img src="${optimized}" alt="a"><img src="https://s3.example/b/public/media/c.jpg" alt="c">`) },
+    [`${BASE}/no/om-oss`]: { body: doc(`<img src="${optimized}" alt="a"><img src="/media/ok.jpg" alt="ok">`) },
+    [BASE + optimized]: { status: 500 },
+    [`${BASE}/media/ok.jpg`]: { body: 'img' },
+  })
+  const r = await launchCheck(BASE, { fetch: fetchImpl })
+  assert.deepEqual(r.errors.map((e) => [e.page, e.text]), [
+    [`${BASE}/no`, `an image does not load: ${optimized} (500)`],
+    [`${BASE}/no`, 'an image does not load: https://s3.example/b/public/media/c.jpg (404)'],
+  ])
+  assert.equal(seen.filter((u) => u.includes('/_next/image')).length, 1)
+  assert.equal(r.filesChecked, 4)
+})
+
+test('a store that refuses HEAD is asked for the first byte, and a file that then answers counts as loading', async () => {
+  const calls: string[] = []
+  const fetchImpl = async (url: string, init?: RequestInit) => {
+    const method = init?.method ?? 'GET'
+    if (url.endsWith('/sitemap.xml')) return new Response(sitemap(['/no']))
+    if (url === `${BASE}/no`) return new Response(doc('<img src="https://s3.example/b/c.jpg" alt="c">'))
+    if (url === `${BASE}/media/a.webp` || url === `${BASE}/`) return new Response('x')
+    if (url === 'https://s3.example/b/c.jpg') {
+      calls.push(`${method} ${new Headers(init?.headers).get('range') ?? ''}`.trim())
+      return method === 'HEAD' ? new Response('', { status: 403 }) : new Response('x', { status: 206 })
+    }
+    return new Response('', { status: 404 })
+  }
+  const r = await launchCheck(BASE, { fetch: fetchImpl })
+  assert.deepEqual(r.errors, [])
+  assert.deepEqual(calls, ['HEAD', 'GET bytes=0-0'])
+})
+
+test('a document on the storage host is checked; a link to another site, and an image with a data address, are not', async () => {
+  const page = doc('<img src="data:image/gif;base64,R0lGOD" alt="x"><a href="https://s3.example/b/public/documents/arsrapport.pdf">Årsrapport</a><a href="https://other.example/x.pdf">x</a><a href="/files/local.pdf">l</a>')
+  const { fetchImpl, seen } = fakeFetch({ [`${BASE}/sitemap.xml`]: { body: sitemap(['/no']) }, [`${BASE}/no`]: { body: page }, [`${BASE}/files/local.pdf`]: {} })
+  const r = await launchCheck(BASE, { fetch: fetchImpl, assetHosts: ['s3.example'] })
+  assert.deepEqual(r.errors.map((e) => [e.page, e.text]), [[`${BASE}/no`, 'a linked document does not load: https://s3.example/b/public/documents/arsrapport.pdf (404)']])
+  assert.ok(!seen.some((u) => u.startsWith('https://other.example') || u.startsWith('data:')))
+})
+
+test('the cap on files is kept, with a note', async () => {
+  const imgs = Array.from({ length: 6 }, (_, i) => `<img src="/media/i${i}.jpg" alt="x">`).join('')
+  const routes: Record<string, Route> = { [`${BASE}/sitemap.xml`]: { body: sitemap(['/no']) }, [`${BASE}/no`]: { body: doc(imgs) } }
+  for (let i = 0; i < 6; i++) routes[`${BASE}/media/i${i}.jpg`] = { body: 'img' }
+  const r = await launchCheck(BASE, { fetch: fakeFetch(routes).fetchImpl, maxFiles: 3 })
+  assert.equal(r.filesChecked, 3)
+  assert.ok(r.notes.some((n) => /first 3 of 7 images and documents/.test(n)), JSON.stringify(r.notes))
+})
+
+test('qa:launch names the storage host, so documents served from it are checked', () => {
+  const script = readFileSync('scripts/qa/launch-check.ts', 'utf8')
+  assert.match(script, /assetHosts/)
+  assert.match(script, /S3_ENDPOINT/)
 })

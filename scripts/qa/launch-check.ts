@@ -9,7 +9,9 @@ import { SITES } from '../../src/lib/sites'
 const base = (process.argv[2] || 'http://localhost:3100').replace(/\/$/, '')
 // The site's own domains from site/config.ts; on them it must be open to search engines.
 const ownHosts = Object.values(SITES).flatMap((s) => s.hosts).filter((h) => h !== 'localhost' && !h.endsWith('.localhost'))
-const r = await launchCheck(base, { ownHosts })
+// Documents are served from object storage on another host: they must load too.
+const assetHosts = [new URL(process.env.S3_ENDPOINT || 'https://s3.hosait.com').hostname]
+const r = await launchCheck(base, { ownHosts, assetHosts })
 
 function grouped(list: Finding[]): string[] {
   const by = new Map<string, string[]>()
@@ -20,7 +22,7 @@ function grouped(list: Finding[]): string[] {
 const lines = [
   `# Launch check: ${base}`,
   '',
-  `${r.pages} pages and ${r.linksChecked} internal links checked: ${r.errors.length} errors, ${r.warnings.length} warnings.`,
+  `${r.pages} pages, ${r.linksChecked} internal links and ${r.filesChecked} images and documents checked: ${r.errors.length} errors, ${r.warnings.length} warnings.`,
   '',
   ...(r.errors.length ? ['## Errors (fix them before the site moves to its own domain)', '', ...grouped(r.errors), ''] : []),
   ...(r.warnings.length ? ['## Warnings', '', ...grouped(r.warnings), ''] : []),
