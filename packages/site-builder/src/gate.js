@@ -5,6 +5,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { normalize, sameSite } from './crawl.js'
+import { makeScope } from './scope.js'
 
 /** How old a fit check may be before crawl asks for a new one. */
 export const MAX_AGE_DAYS = 7
@@ -38,4 +39,15 @@ export function crawlGate(out, target, acceptedScope) {
   if (a.class === 'yellow') return acceptedScope ? null : `The fit check is yellow (${codes('yellow')}): get the customer's yes on the scope and storage in assess.md, then run crawl with --accepted-scope.`
   if (a.class === 'green') return null
   return `${file} has no fit class. ${again}`
+}
+
+/**
+ * The customer's limits the fit check in `out` was made with (assess --exclude), so crawl
+ * leaves out the same. A check without them has none.
+ * Throws when they are not valid limits.
+ * @param {string} out
+ */
+export function assessedScope(out) {
+  const a = JSON.parse(fs.readFileSync(path.join(out, 'assess.json'), 'utf8'))
+  return makeScope(a.scope ?? {})
 }
