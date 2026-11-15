@@ -1,7 +1,10 @@
 import type { CollectionAfterChangeHook, CollectionBeforeChangeHook, CollectionConfig, Where } from 'payload'
 import { APIError } from 'payload'
 
-import { canCreateContent, editorOfSite, publishedOrLoggedIn } from '@/access/siteAccess'
+import { canCreateContent, deleteDraftContent, publishedOrLoggedIn, updateDraftContent } from '@/access/siteAccess'
+import { deleteComments, guardPublish, guardUnpublish, workflowOnChange } from '@/collections/editorial/hooks'
+import { editorialFields } from '@/collections/editorial/fields'
+import { workflowEndpoint } from '@/collections/editorial/endpoint'
 import { pageLayoutBlocks } from '@/blocks/layouts'
 import { seoTab } from '@/fields/seo'
 import { siteField } from '@/fields/site'
@@ -18,6 +21,8 @@ import { DEFAULT_LOCALE } from '@/lib/sites'
  * per språk. Forsiden har `isHome` og tom sti. Stien er unik per nettsted og språk.
  */
 const computePath: CollectionBeforeChangeHook<Page> = async ({ data, req, originalDoc }) => {
+  // The approval buttons save only the workflow state; the address stays as it is.
+  if (req.context.workflowTransition) return data
   const locale = req.locale && req.locale !== 'all' ? req.locale : DEFAULT_LOCALE
   const site = data.site ?? originalDoc?.site
   if (data.isHome) {
@@ -104,13 +109,13 @@ export const Pages: CollectionConfig<'pages'> = {
   labels: { singular: 'Side', plural: 'Sider' },
   access: {
     create: canCreateContent,
-    delete: editorOfSite,
+    delete: deleteDraftContent,
     read: publishedOrLoggedIn,
-    update: editorOfSite,
+    update: updateDraftContent,
   },
   defaultPopulate: { title: true, path: true, site: true },
   admin: {
-    defaultColumns: ['title', 'path', 'site', '_status', 'updatedAt'],
+    defaultColumns: ['title', 'path', 'site', '_status', 'workflow', 'updatedAt'],
     listSearchableFields: ['title', 'path'],
     useAsTitle: 'title',
     group: 'Innhold',
@@ -225,11 +230,13 @@ export const Pages: CollectionConfig<'pages'> = {
       label: 'Skjul i undermeny',
       admin: { position: 'sidebar' },
     },
+    ...editorialFields(),
   ],
+  endpoints: [workflowEndpoint('pages')],
   hooks: {
-    beforeChange: [startFromTemplate, expandPresets, computePath],
-    afterChange: [resaveChildren, revalidateDoc, indexDoc],
-    afterDelete: [revalidateDocDelete, unindexDoc],
+    beforeChange: [guardPublish, workflowOnChange, startFromTemplate, expandPresets, computePath],
+    afterChange: [guardUnpublish, resaveChildren, revalidateDoc, indexDoc],
+    afterDelete: [revalidateDocDelete, unindexDoc, deleteComments],
   },
   versions: {
     drafts: { autosave: { interval: 400 }, schedulePublish: true },

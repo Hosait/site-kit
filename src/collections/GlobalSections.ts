@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
-import { canCreateContent, editorOfSite, publishedOrLoggedIn } from '@/access/siteAccess'
+import { canCreateContent, deleteDraftContent, publishedOrLoggedIn, updateDraftContent } from '@/access/siteAccess'
+import { guardPublish, guardUnpublish } from '@/collections/editorial/hooks'
 import { reusableBlocks } from '@/blocks/layouts'
 import { siteField } from '@/fields/site'
 import { revalidateDoc, revalidateDocDelete } from '@/lib/revalidate'
@@ -17,9 +18,9 @@ export const GlobalSections: CollectionConfig<'globalSections'> = {
   labels: { singular: 'Felles seksjon', plural: 'Felles seksjoner' },
   access: {
     create: canCreateContent,
-    delete: editorOfSite,
+    delete: deleteDraftContent,
     read: publishedOrLoggedIn,
-    update: editorOfSite,
+    update: updateDraftContent,
   },
   admin: {
     defaultColumns: ['title', 'site', '_status', 'updatedAt'],
@@ -41,7 +42,9 @@ export const GlobalSections: CollectionConfig<'globalSections'> = {
     siteField(),
   ],
   hooks: {
-    afterChange: [revalidateDoc],
+    // Editors save drafts; publishing a shared section changes every page that uses it, so it is the publishers' (src/collections/editorial/hooks.ts).
+    beforeChange: [guardPublish],
+    afterChange: [guardUnpublish, revalidateDoc],
     afterDelete: [revalidateDocDelete],
   },
   versions: {

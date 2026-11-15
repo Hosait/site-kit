@@ -582,6 +582,31 @@
             "null"
           ]
         },
+        "workflow": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "draft",
+            "in-review",
+            "approved",
+            "changes-requested"
+          ]
+        },
+        "submittedBy": {
+          "oneOf": [
+            {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            {
+              "$ref": "#/definitions/users"
+            }
+          ]
+        },
         "updatedAt": {
           "type": "string"
         },
@@ -1023,6 +1048,12 @@
           "type": "boolean"
         },
         "hideFromNav": {
+          "type": "boolean"
+        },
+        "workflow": {
+          "type": "boolean"
+        },
+        "submittedBy": {
           "type": "boolean"
         },
         "updatedAt": {
@@ -2730,6 +2761,31 @@
             "null"
           ]
         },
+        "workflow": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "draft",
+            "in-review",
+            "approved",
+            "changes-requested"
+          ]
+        },
+        "submittedBy": {
+          "oneOf": [
+            {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            {
+              "$ref": "#/definitions/users"
+            }
+          ]
+        },
         "updatedAt": {
           "type": "string"
         },
@@ -2807,6 +2863,12 @@
           "type": "boolean"
         },
         "slug": {
+          "type": "boolean"
+        },
+        "workflow": {
+          "type": "boolean"
+        },
+        "submittedBy": {
           "type": "boolean"
         },
         "updatedAt": {
@@ -4772,10 +4834,13 @@
           ]
         },
         "role": {
+          "description": "Utgivere publiserer; redaktører lagrer utkast som en utgiver eller godkjenner publiserer; godkjennere godkjenner eller ber om endringer.",
           "type": "string",
           "enum": [
             "admin",
-            "editor"
+            "publisher",
+            "editor",
+            "reviewer"
           ]
         },
         "sites": {
@@ -4965,6 +5030,282 @@
               }
             }
           ]
+        }
+      }
+    },
+    "comments": {
+      "type": "object",
+      "additionalProperties": false,
+      "title": "Comment",
+      "properties": {
+        "id": {
+          "type": "number"
+        },
+        "doc": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "relationTo": {
+                  "const": "pages"
+                },
+                "value": {
+                  "oneOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "$ref": "#/definitions/pages"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "value",
+                "relationTo"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "relationTo": {
+                  "const": "articles"
+                },
+                "value": {
+                  "oneOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "$ref": "#/definitions/articles"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "value",
+                "relationTo"
+              ]
+            }
+          ]
+        },
+        "blockId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "author": {
+          "oneOf": [
+            {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            {
+              "$ref": "#/definitions/users"
+            }
+          ]
+        },
+        "text": {
+          "type": "string"
+        },
+        "parent": {
+          "oneOf": [
+            {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            {
+              "$ref": "#/definitions/comments"
+            }
+          ]
+        },
+        "resolved": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "site": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "main"
+          ]
+        },
+        "updatedAt": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "doc",
+        "text",
+        "updatedAt",
+        "createdAt"
+      ]
+    },
+    "comments_select": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "doc": {
+          "type": "boolean"
+        },
+        "blockId": {
+          "type": "boolean"
+        },
+        "author": {
+          "type": "boolean"
+        },
+        "text": {
+          "type": "boolean"
+        },
+        "parent": {
+          "type": "boolean"
+        },
+        "resolved": {
+          "type": "boolean"
+        },
+        "site": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "boolean"
+        }
+      }
+    },
+    "content-audit-log": {
+      "type": "object",
+      "additionalProperties": false,
+      "title": "ContentAuditLog",
+      "properties": {
+        "id": {
+          "type": "number"
+        },
+        "user": {
+          "oneOf": [
+            {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            {
+              "$ref": "#/definitions/users"
+            }
+          ]
+        },
+        "actor": {
+          "description": "E-post på tidspunktet, eller «system» for import og jobber.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "operation": {
+          "type": "string",
+          "enum": [
+            "create",
+            "update",
+            "publish",
+            "unpublish",
+            "delete"
+          ]
+        },
+        "collection": {
+          "type": "string"
+        },
+        "docId": {
+          "type": "string"
+        },
+        "docTitle": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "site": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "changedFields": {
+          "description": "Navn på feltene som ble endret.",
+          "type": [
+            "object",
+            "array",
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "updatedAt": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "operation",
+        "collection",
+        "docId",
+        "updatedAt",
+        "createdAt"
+      ],
+      "description": "Hvem som endret hva og når (bare navn på felt, ikke innholdet). Loggen kan ikke endres; rader eldre enn 730 dager slettes hver natt."
+    },
+    "content-audit-log_select": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "user": {
+          "type": "boolean"
+        },
+        "actor": {
+          "type": "boolean"
+        },
+        "operation": {
+          "type": "boolean"
+        },
+        "collection": {
+          "type": "boolean"
+        },
+        "docId": {
+          "type": "boolean"
+        },
+        "docTitle": {
+          "type": "boolean"
+        },
+        "site": {
+          "type": "boolean"
+        },
+        "changedFields": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "boolean"
         }
       }
     },
@@ -7190,6 +7531,7 @@
                 "enum": [
                   "inline",
                   "prune-form-submissions",
+                  "prune-audit-log",
                   "schedulePublish"
                 ]
               },
@@ -7257,6 +7599,7 @@
           "enum": [
             "inline",
             "prune-form-submissions",
+            "prune-audit-log",
             "schedulePublish"
           ]
         },
@@ -7810,6 +8153,58 @@
                     },
                     {
                       "$ref": "#/definitions/users"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "value",
+                "relationTo"
+              ]
+            },
+            {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "relationTo": {
+                  "const": "comments"
+                },
+                "value": {
+                  "oneOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "$ref": "#/definitions/comments"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "value",
+                "relationTo"
+              ]
+            },
+            {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "relationTo": {
+                  "const": "content-audit-log"
+                },
+                "value": {
+                  "oneOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "$ref": "#/definitions/content-audit-log"
                     }
                   ]
                 }
@@ -15057,6 +15452,29 @@
       }
     },
     "TaskPrune-form-submissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "input": {},
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "deleted": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": []
+        }
+      },
+      "required": [
+        "output"
+      ]
+    },
+    "TaskPrune-audit-log": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
