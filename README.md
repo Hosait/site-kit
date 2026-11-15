@@ -39,6 +39,14 @@ pnpm tsx scripts/dev-admin.ts # a local admin user; password saved in .env
 A site plan (`site-plan.json`, schema in `schema/site-plan.schema.json`) describes pages as blocks,
 articles, people, documents, media, menus and redirects. `examples/demo/` is a complete example.
 
+There are 32 blocks (the list is `blockTypes` in `schema/blocks.schema.json`). Layout: `columns` (2–4 columns,
+ratio presets, stacked on mobile; each column holds any block except columns, forms, `hero` and `newsletter`),
+`tabs`, `carousel`, `table`, `divider`. Content: `pricing`, `logoWall`, `testimonials`, `iconFeatures` (a fixed
+icon set), `banner`, `buttonGroup`, `contactCard`, `newsletter`. `seed/site-plan.json` has a page with every one
+of them (`/no/blokker`, `/en/blocks`). Maps and provider forms in `contactCard` and `newsletter` load only after
+a click; `carousel` never changes slide by itself unless `autoplay` is on, and never for visitors who prefer
+reduced motion.
+
 Images and PDFs sit in a folder next to the plan, or are public https URLs. Try a plan locally:
 
 ```bash

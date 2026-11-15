@@ -41,6 +41,7 @@
             "hero",
             "content",
             "textImage",
+            "columns",
             "fullImage",
             "imageGrid",
             "cards",
@@ -56,7 +57,19 @@
             "accordion",
             "video",
             "embed",
-            "formBlock"
+            "formBlock",
+            "tabs",
+            "pricing",
+            "logoWall",
+            "testimonials",
+            "carousel",
+            "table",
+            "contactCard",
+            "newsletter",
+            "iconFeatures",
+            "banner",
+            "buttonGroup",
+            "divider"
           ]
         }
       },

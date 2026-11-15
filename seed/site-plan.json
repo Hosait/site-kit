@@ -118,6 +118,34 @@
       }
     }
   ],
+  "forms": [
+    {
+      "ref": "newsletter",
+      "title": {
+        "no": "Nyhetsbrev",
+        "en": "Newsletter"
+      },
+      "fields": [
+        {
+          "type": "email",
+          "name": "email",
+          "label": {
+            "no": "E-postadresse",
+            "en": "Email address"
+          },
+          "required": true
+        }
+      ],
+      "submitLabel": {
+        "no": "Meld meg på",
+        "en": "Subscribe"
+      },
+      "confirmation": {
+        "no": "Takk! Du er meldt på.",
+        "en": "Thanks! You are subscribed."
+      }
+    }
+  ],
   "pages": [
     {
       "ref": "home",
@@ -868,6 +896,1020 @@
         "en": "contact"
       },
       "order": 4
+    },
+    {
+      "ref": "blocks",
+      "title": {
+        "no": "Blokker",
+        "en": "Blocks"
+      },
+      "slug": {
+        "no": "blokker",
+        "en": "blocks"
+      },
+      "order": 8,
+      "summary": {
+        "no": "Eksempel på kolonner og alle de nye blokkene.",
+        "en": "An example of columns and all the new blocks."
+      },
+      "layout": {
+        "no": [
+          {
+            "blockType": "hero",
+            "variant": "text",
+            "eyebrow": "Blokkgalleri",
+            "heading": "Alle blokkene i ett oppslag",
+            "text": "En demoside med kolonner og de tolv nyeste blokkene. Alt innhold er eksempler."
+          },
+          {
+            "blockType": "banner",
+            "variant": "info",
+            "title": "Dette er et varselfelt",
+            "text": "Bruk det til noe besøkende bør få med seg. Det finnes i tre typer."
+          },
+          {
+            "blockType": "columns",
+            "layout": "2-1",
+            "verticalAlign": "top",
+            "columns": [
+              {
+                "blocks": [
+                  {
+                    "blockType": "content",
+                    "richText": {
+                      "$html": "<h2>Kolonner</h2><p>Her ligger tekst og et trekkspill i den brede kolonnen. På mobil stables kolonnene under hverandre.</p>"
+                    },
+                    "width": "wide"
+                  },
+                  {
+                    "blockType": "accordion",
+                    "items": [
+                      {
+                        "title": "Hva er kolonner?",
+                        "content": {
+                          "$html": "<p>To til fire kolonner ved siden av hverandre, med blokker i hver.</p>"
+                        }
+                      },
+                      {
+                        "title": "Kan jeg legge kolonner i kolonner?",
+                        "content": {
+                          "$html": "<p>Nei, og skjema kan heller ikke ligge i en kolonne.</p>"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "blockType": "banner",
+                    "variant": "success",
+                    "title": "Smalt sidefelt",
+                    "text": "Et varselfelt i den smale kolonnen."
+                  },
+                  {
+                    "blockType": "buttonGroup",
+                    "justify": "left",
+                    "links": [
+                      {
+                        "link": {
+                          "type": "reference",
+                          "reference": {
+                            "$pageLink": "services"
+                          },
+                          "label": "Våre tjenester",
+                          "appearance": "primary"
+                        }
+                      },
+                      {
+                        "link": {
+                          "type": "reference",
+                          "reference": {
+                            "$pageLink": "contact"
+                          },
+                          "label": "Kontakt oss",
+                          "appearance": "secondary"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "blockType": "tabs",
+            "heading": "Faner",
+            "items": [
+              {
+                "label": "Oversikt",
+                "content": {
+                  "$html": "<p>Bruk piltastene for å bytte fane. Home og End hopper til første og siste.</p>"
+                }
+              },
+              {
+                "label": "Detaljer",
+                "content": {
+                  "$html": "<p>Hver fane har sitt eget innhold med riktige ARIA-roller.</p>"
+                }
+              },
+              {
+                "label": "Spørsmål",
+                "content": {
+                  "$html": "<p>Innholdet i inaktive faner ligger i siden, men er skjult.</p>"
+                }
+              }
+            ]
+          },
+          {
+            "blockType": "pricing",
+            "heading": "Prisplaner",
+            "intro": "Tre planer. Den midterste er fremhevet.",
+            "align": "center",
+            "plans": [
+              {
+                "name": "Start",
+                "price": "0 kr",
+                "period": "per måned",
+                "description": "For deg som vil prøve.",
+                "features": [
+                  {
+                    "text": "Én bruker"
+                  },
+                  {
+                    "text": "Grunnleggende maler"
+                  }
+                ],
+                "link": {
+                  "type": "reference",
+                  "reference": {
+                    "$pageLink": "contact"
+                  },
+                  "label": "Kom i gang",
+                  "appearance": "secondary"
+                }
+              },
+              {
+                "name": "Standard",
+                "highlighted": true,
+                "price": "299 kr",
+                "period": "per måned",
+                "description": "For små team.",
+                "features": [
+                  {
+                    "text": "Fem brukere"
+                  },
+                  {
+                    "text": "Alle maler"
+                  },
+                  {
+                    "text": "E-poststøtte"
+                  }
+                ],
+                "link": {
+                  "type": "reference",
+                  "reference": {
+                    "$pageLink": "contact"
+                  },
+                  "label": "Velg Standard",
+                  "appearance": "primary"
+                }
+              },
+              {
+                "name": "Pro",
+                "price": "Etter avtale",
+                "description": "For store virksomheter.",
+                "features": [
+                  {
+                    "text": "Ubegrenset antall brukere"
+                  },
+                  {
+                    "text": "Egen kontaktperson"
+                  }
+                ],
+                "link": {
+                  "type": "reference",
+                  "reference": {
+                    "$pageLink": "contact"
+                  },
+                  "label": "Snakk med oss",
+                  "appearance": "secondary"
+                }
+              }
+            ]
+          },
+          {
+            "blockType": "logoWall",
+            "heading": "Kunder og partnere",
+            "align": "center",
+            "logos": [
+              {
+                "image": {
+                  "$media": "office"
+                },
+                "name": "Lyst Kontor AS"
+              },
+              {
+                "image": {
+                  "$media": "workshop"
+                },
+                "name": "Verksted Nord",
+                "link": {
+                  "type": "custom",
+                  "url": "https://www.hosait.com",
+                  "label": "Verksted Nord"
+                }
+              },
+              {
+                "image": {
+                  "$media": "fjord"
+                },
+                "name": "Fjordtech"
+              },
+              {
+                "image": {
+                  "$media": "coast"
+                },
+                "name": "Kystlinjen"
+              }
+            ]
+          },
+          {
+            "blockType": "testimonials",
+            "heading": "Hva kundene sier",
+            "columns": "2",
+            "background": "muted",
+            "items": [
+              {
+                "quote": "Siden var oppe på noen dager, og vi har endret alt innhold selv.",
+                "author": "Kari Nordmann",
+                "role": "Daglig leder, Nordlys Demo",
+                "image": {
+                  "$media": "kari"
+                }
+              },
+              {
+                "quote": "Enkelt å bruke, og nettstedet er raskt også på mobil.",
+                "author": "Ola Nordmann",
+                "role": "Rådgiver",
+                "image": {
+                  "$media": "ola"
+                }
+              }
+            ]
+          },
+          {
+            "blockType": "carousel",
+            "heading": "Bilder fra Nord",
+            "autoplay": false,
+            "slides": [
+              {
+                "image": {
+                  "$media": "hero"
+                },
+                "heading": "Nordlys",
+                "text": "Første lysbilde. Bruk knappene eller piltastene."
+              },
+              {
+                "image": {
+                  "$media": "fjord"
+                },
+                "heading": "Fjorden",
+                "text": "Andre lysbilde."
+              },
+              {
+                "image": {
+                  "$media": "coast"
+                },
+                "heading": "Kysten",
+                "text": "Tredje lysbilde.",
+                "link": {
+                  "type": "reference",
+                  "reference": {
+                    "$pageLink": "about"
+                  },
+                  "label": "Les mer"
+                }
+              }
+            ]
+          },
+          {
+            "blockType": "iconFeatures",
+            "heading": "Hvorfor velge oss",
+            "columns": "3",
+            "align": "center",
+            "items": [
+              {
+                "icon": "shield",
+                "title": "Trygt",
+                "text": "Data lagres i Norge."
+              },
+              {
+                "icon": "zap",
+                "title": "Raskt",
+                "text": "Sider laster på et øyeblikk."
+              },
+              {
+                "icon": "users",
+                "title": "Personlig",
+                "text": "Du får en kontaktperson."
+              }
+            ]
+          },
+          {
+            "blockType": "table",
+            "caption": "Sammenligning av planene",
+            "rowHeaders": true,
+            "header": [
+              {
+                "text": "Funksjon"
+              },
+              {
+                "text": "Start"
+              },
+              {
+                "text": "Standard"
+              },
+              {
+                "text": "Pro"
+              }
+            ],
+            "rows": [
+              {
+                "cells": [
+                  {
+                    "text": "Brukere"
+                  },
+                  {
+                    "text": "1"
+                  },
+                  {
+                    "text": "5"
+                  },
+                  {
+                    "text": "Ubegrenset"
+                  }
+                ]
+              },
+              {
+                "cells": [
+                  {
+                    "text": "Maler"
+                  },
+                  {
+                    "text": "Grunnleggende"
+                  },
+                  {
+                    "text": "Alle"
+                  },
+                  {
+                    "text": "Alle og egne"
+                  }
+                ]
+              },
+              {
+                "cells": [
+                  {
+                    "text": "Støtte"
+                  },
+                  {
+                    "text": "Nettsted"
+                  },
+                  {
+                    "text": "E-post"
+                  },
+                  {
+                    "text": "Telefon"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "blockType": "contactCard",
+            "heading": "Kontakt oss",
+            "name": "Nordlys Demo AS",
+            "address": "Storgata 1\n9008 Tromsø",
+            "phone": "+47 000 00 000",
+            "email": "nettsted@example.com",
+            "hours": [
+              {
+                "days": "Mandag–fredag",
+                "time": "08:00–16:00"
+              },
+              {
+                "days": "Lørdag og søndag",
+                "time": "Stengt"
+              }
+            ],
+            "mapUrl": "https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d2000!2d18.95!3d69.65!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sno!2sno",
+            "mapTitle": "Kart over Tromsø",
+            "mapHeight": 320,
+            "background": "tint"
+          },
+          {
+            "blockType": "newsletter",
+            "heading": "Få nyheter på e-post",
+            "text": "Meld deg på nyhetsbrevet vårt.",
+            "mode": "form",
+            "form": {
+              "$form": "newsletter"
+            },
+            "align": "center"
+          },
+          {
+            "blockType": "newsletter",
+            "heading": "Nyhetsbrev (innebygd skjema)",
+            "mode": "embed",
+            "embedUrl": "https://www.example.com/newsletter-form",
+            "embedTitle": "Påmeldingsskjema for nyhetsbrev",
+            "embedHeight": 320,
+            "background": "muted",
+            "align": "center"
+          },
+          {
+            "blockType": "columns",
+            "layout": "1-1-1",
+            "verticalAlign": "center",
+            "columns": [
+              {
+                "blocks": [
+                  {
+                    "blockType": "stats",
+                    "items": [
+                      {
+                        "value": "98%",
+                        "label": "fornøyde kunder"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "blockType": "quote",
+                    "quote": "Tre kolonner med like stor bredde.",
+                    "author": "Nordlys Demo"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "blockType": "facts",
+                    "items": [
+                      {
+                        "label": "Oppsett",
+                        "value": "1:1:1"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "blockType": "banner",
+            "variant": "warning",
+            "title": "Advarsel",
+            "text": "Gule varselfelt er for ting som kan gå galt."
+          },
+          {
+            "blockType": "divider",
+            "kind": "line",
+            "size": "m"
+          },
+          {
+            "blockType": "buttonGroup",
+            "justify": "center",
+            "links": [
+              {
+                "link": {
+                  "type": "reference",
+                  "reference": {
+                    "$pageLink": "home"
+                  },
+                  "label": "Til forsiden",
+                  "appearance": "primary"
+                }
+              },
+              {
+                "link": {
+                  "type": "custom",
+                  "url": "https://www.hosait.com",
+                  "label": "Hosait",
+                  "appearance": "text"
+                }
+              }
+            ]
+          },
+          {
+            "blockType": "divider",
+            "kind": "space",
+            "size": "l"
+          }
+        ],
+        "en": [
+          {
+            "blockType": "hero",
+            "variant": "text",
+            "eyebrow": "Block gallery",
+            "heading": "Every block on one page",
+            "text": "A demo page with columns and the twelve newest blocks. All content is sample content."
+          },
+          {
+            "blockType": "banner",
+            "variant": "info",
+            "title": "This is a banner",
+            "text": "Use it for something visitors should notice. It comes in three types."
+          },
+          {
+            "blockType": "columns",
+            "layout": "2-1",
+            "verticalAlign": "top",
+            "columns": [
+              {
+                "blocks": [
+                  {
+                    "blockType": "content",
+                    "richText": {
+                      "$html": "<h2>Columns</h2><p>Text and an accordion sit in the wide column. On mobile the columns stack.</p>"
+                    },
+                    "width": "wide"
+                  },
+                  {
+                    "blockType": "accordion",
+                    "items": [
+                      {
+                        "title": "What are columns?",
+                        "content": {
+                          "$html": "<p>Two to four columns side by side, each holding blocks.</p>"
+                        }
+                      },
+                      {
+                        "title": "Can I nest columns?",
+                        "content": {
+                          "$html": "<p>No, and forms cannot sit in a column either.</p>"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "blockType": "banner",
+                    "variant": "success",
+                    "title": "Narrow sidebar",
+                    "text": "A banner in the narrow column."
+                  },
+                  {
+                    "blockType": "buttonGroup",
+                    "justify": "left",
+                    "links": [
+                      {
+                        "link": {
+                          "type": "reference",
+                          "reference": {
+                            "$pageLink": "services"
+                          },
+                          "label": "Our services",
+                          "appearance": "primary"
+                        }
+                      },
+                      {
+                        "link": {
+                          "type": "reference",
+                          "reference": {
+                            "$pageLink": "contact"
+                          },
+                          "label": "Contact us",
+                          "appearance": "secondary"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "blockType": "tabs",
+            "heading": "Tabs",
+            "items": [
+              {
+                "label": "Overview",
+                "content": {
+                  "$html": "<p>Use the arrow keys to switch tabs. Home and End jump to the first and last.</p>"
+                }
+              },
+              {
+                "label": "Details",
+                "content": {
+                  "$html": "<p>Each tab has its own content with the right ARIA roles.</p>"
+                }
+              },
+              {
+                "label": "Questions",
+                "content": {
+                  "$html": "<p>The content of inactive tabs is in the page, but hidden.</p>"
+                }
+              }
+            ]
+          },
+          {
+            "blockType": "pricing",
+            "heading": "Pricing",
+            "intro": "Three plans. The middle one is highlighted.",
+            "align": "center",
+            "plans": [
+              {
+                "name": "Start",
+                "price": "$0",
+                "period": "per month",
+                "description": "For trying it out.",
+                "features": [
+                  {
+                    "text": "One user"
+                  },
+                  {
+                    "text": "Basic templates"
+                  }
+                ],
+                "link": {
+                  "type": "reference",
+                  "reference": {
+                    "$pageLink": "contact"
+                  },
+                  "label": "Get started",
+                  "appearance": "secondary"
+                }
+              },
+              {
+                "name": "Standard",
+                "highlighted": true,
+                "price": "$29",
+                "period": "per month",
+                "description": "For small teams.",
+                "features": [
+                  {
+                    "text": "Five users"
+                  },
+                  {
+                    "text": "All templates"
+                  },
+                  {
+                    "text": "Email support"
+                  }
+                ],
+                "link": {
+                  "type": "reference",
+                  "reference": {
+                    "$pageLink": "contact"
+                  },
+                  "label": "Choose Standard",
+                  "appearance": "primary"
+                }
+              },
+              {
+                "name": "Pro",
+                "price": "Custom",
+                "description": "For large organisations.",
+                "features": [
+                  {
+                    "text": "Unlimited users"
+                  },
+                  {
+                    "text": "A dedicated contact"
+                  }
+                ],
+                "link": {
+                  "type": "reference",
+                  "reference": {
+                    "$pageLink": "contact"
+                  },
+                  "label": "Talk to us",
+                  "appearance": "secondary"
+                }
+              }
+            ]
+          },
+          {
+            "blockType": "logoWall",
+            "heading": "Customers and partners",
+            "align": "center",
+            "logos": [
+              {
+                "image": {
+                  "$media": "office"
+                },
+                "name": "Bright Office Ltd"
+              },
+              {
+                "image": {
+                  "$media": "workshop"
+                },
+                "name": "Workshop North",
+                "link": {
+                  "type": "custom",
+                  "url": "https://www.hosait.com",
+                  "label": "Workshop North"
+                }
+              },
+              {
+                "image": {
+                  "$media": "fjord"
+                },
+                "name": "Fjordtech"
+              },
+              {
+                "image": {
+                  "$media": "coast"
+                },
+                "name": "The Coastline"
+              }
+            ]
+          },
+          {
+            "blockType": "testimonials",
+            "heading": "What customers say",
+            "columns": "2",
+            "background": "muted",
+            "items": [
+              {
+                "quote": "The site was up in a few days, and we changed all the content ourselves.",
+                "author": "Kari Nordmann",
+                "role": "Managing director, Nordlys Demo",
+                "image": {
+                  "$media": "kari"
+                }
+              },
+              {
+                "quote": "Easy to use, and the site is fast on mobile too.",
+                "author": "Ola Nordmann",
+                "role": "Advisor",
+                "image": {
+                  "$media": "ola"
+                }
+              }
+            ]
+          },
+          {
+            "blockType": "carousel",
+            "heading": "Pictures from the north",
+            "autoplay": false,
+            "slides": [
+              {
+                "image": {
+                  "$media": "hero"
+                },
+                "heading": "Northern lights",
+                "text": "First slide. Use the buttons or the arrow keys."
+              },
+              {
+                "image": {
+                  "$media": "fjord"
+                },
+                "heading": "The fjord",
+                "text": "Second slide."
+              },
+              {
+                "image": {
+                  "$media": "coast"
+                },
+                "heading": "The coast",
+                "text": "Third slide.",
+                "link": {
+                  "type": "reference",
+                  "reference": {
+                    "$pageLink": "about"
+                  },
+                  "label": "Read more"
+                }
+              }
+            ]
+          },
+          {
+            "blockType": "iconFeatures",
+            "heading": "Why choose us",
+            "columns": "3",
+            "align": "center",
+            "items": [
+              {
+                "icon": "shield",
+                "title": "Secure",
+                "text": "Data is stored in Norway."
+              },
+              {
+                "icon": "zap",
+                "title": "Fast",
+                "text": "Pages load in an instant."
+              },
+              {
+                "icon": "users",
+                "title": "Personal",
+                "text": "You get a contact person."
+              }
+            ]
+          },
+          {
+            "blockType": "table",
+            "caption": "Plan comparison",
+            "rowHeaders": true,
+            "header": [
+              {
+                "text": "Feature"
+              },
+              {
+                "text": "Start"
+              },
+              {
+                "text": "Standard"
+              },
+              {
+                "text": "Pro"
+              }
+            ],
+            "rows": [
+              {
+                "cells": [
+                  {
+                    "text": "Users"
+                  },
+                  {
+                    "text": "1"
+                  },
+                  {
+                    "text": "5"
+                  },
+                  {
+                    "text": "Unlimited"
+                  }
+                ]
+              },
+              {
+                "cells": [
+                  {
+                    "text": "Templates"
+                  },
+                  {
+                    "text": "Basic"
+                  },
+                  {
+                    "text": "All"
+                  },
+                  {
+                    "text": "All and custom"
+                  }
+                ]
+              },
+              {
+                "cells": [
+                  {
+                    "text": "Support"
+                  },
+                  {
+                    "text": "Website"
+                  },
+                  {
+                    "text": "Email"
+                  },
+                  {
+                    "text": "Phone"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "blockType": "contactCard",
+            "heading": "Contact us",
+            "name": "Nordlys Demo AS",
+            "address": "Storgata 1\n9008 Tromsø",
+            "phone": "+47 000 00 000",
+            "email": "nettsted@example.com",
+            "hours": [
+              {
+                "days": "Monday–Friday",
+                "time": "08:00–16:00"
+              },
+              {
+                "days": "Saturday and Sunday",
+                "time": "Closed"
+              }
+            ],
+            "mapUrl": "https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d2000!2d18.95!3d69.65!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sno!2sno",
+            "mapTitle": "Map of Tromsø",
+            "mapHeight": 320,
+            "background": "tint"
+          },
+          {
+            "blockType": "newsletter",
+            "heading": "Get news by email",
+            "text": "Sign up for our newsletter.",
+            "mode": "form",
+            "form": {
+              "$form": "newsletter"
+            },
+            "align": "center"
+          },
+          {
+            "blockType": "newsletter",
+            "heading": "Newsletter (embedded form)",
+            "mode": "embed",
+            "embedUrl": "https://www.example.com/newsletter-form",
+            "embedTitle": "Newsletter sign-up form",
+            "embedHeight": 320,
+            "background": "muted",
+            "align": "center"
+          },
+          {
+            "blockType": "columns",
+            "layout": "1-1-1",
+            "verticalAlign": "center",
+            "columns": [
+              {
+                "blocks": [
+                  {
+                    "blockType": "stats",
+                    "items": [
+                      {
+                        "value": "98%",
+                        "label": "happy customers"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "blockType": "quote",
+                    "quote": "Three columns of equal width.",
+                    "author": "Nordlys Demo"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "blockType": "facts",
+                    "items": [
+                      {
+                        "label": "Layout",
+                        "value": "1:1:1"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "blockType": "banner",
+            "variant": "warning",
+            "title": "Warning",
+            "text": "Yellow banners are for things that can go wrong."
+          },
+          {
+            "blockType": "divider",
+            "kind": "line",
+            "size": "m"
+          },
+          {
+            "blockType": "buttonGroup",
+            "justify": "center",
+            "links": [
+              {
+                "link": {
+                  "type": "reference",
+                  "reference": {
+                    "$pageLink": "home"
+                  },
+                  "label": "To the front page",
+                  "appearance": "primary"
+                }
+              },
+              {
+                "link": {
+                  "type": "custom",
+                  "url": "https://www.hosait.com",
+                  "label": "Hosait",
+                  "appearance": "text"
+                }
+              }
+            ]
+          },
+          {
+            "blockType": "divider",
+            "kind": "space",
+            "size": "l"
+          }
+        ]
+      }
     },
     {
       "ref": "privacy",

@@ -285,6 +285,12 @@
 .sec-frame[data-width='content'] :is(.wrap, .wrap-wide, .wrap-text) { max-width: var(--container-content); }
 .sec-frame[data-width='wide'] :is(.wrap, .wrap-wide, .wrap-text) { max-width: var(--container-wide); }
 .sec-frame[data-width='full'] :is(.wrap, .wrap-wide, .wrap-text) { max-width: none; }
+/* Blocks inside a «Kolonner» column: the column carries the padding and the width. */
+.col-cell > section,
+.col-cell > .sec-frame > section { padding-block: 0; }
+.col-cell > section[class*='bg-section-'],
+.col-cell > .sec-frame > section[class*='bg-section-'] { padding: 1.5rem 1.25rem; border-radius: var(--radius-card); }
+.col-cell :is(.wrap, .wrap-wide, .wrap-text) { max-width: none; padding-inline: 0; }
 .sec-has-media { position: relative; isolation: isolate; }
 .sec-has-media > :not(.sec-media) { background-color: transparent; }
 .sec-media { position: absolute; inset: 0; z-index: -1; overflow: hidden; }

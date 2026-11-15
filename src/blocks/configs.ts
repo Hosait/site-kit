@@ -8,6 +8,10 @@ import { customBlocks } from '@site/blocks/custom/configs'
 import { FormBlock } from './Form/config'
 import themeJson from '@site/theme.json'
 
+import { COLUMN_EXCLUDED } from './columnLayouts'
+import { columnsBlock } from './columnsConfig'
+import { background, heading } from './fields'
+import { moreBlocks } from './moreBlocks'
 import { align, assertUniqueSlugs, withSection } from './variants'
 
 /**
@@ -15,22 +19,6 @@ import { align, assertUniqueSlugs, withSection } from './variants'
  * med samme navn i src/blocks/components/ og registreres i RenderBlocks.tsx.
  */
 
-/** Bakgrunnsfarge for en seksjon; fargene kommer fra site/theme.json. */
-const background: Field = {
-  name: 'background',
-  type: 'select',
-  label: 'Bakgrunn',
-  defaultValue: 'none',
-  options: [
-    { label: 'Ingen', value: 'none' },
-    { label: 'Lys grå', value: 'muted' },
-    { label: 'Lys merkefarge', value: 'tint' },
-    { label: 'Mørk', value: 'dark' },
-    { label: 'Merkefarge', value: 'brand' },
-  ],
-}
-
-const heading: Field = { name: 'heading', type: 'text', label: 'Overskrift' }
 const eyebrow: Field = { name: 'eyebrow', type: 'text', label: 'Liten tekst over overskriften' }
 const eyebrowHighlight: Field = {
   name: 'eyebrowHighlight',
@@ -468,7 +456,8 @@ export const Facts: Block = {
   ],
 }
 
-const kitBlocks: Block[] = [
+/** Kit blocks before «Kolonner». */
+const baseBlocks: Block[] = [
   Hero,
   Content,
   TextImage,
@@ -488,9 +477,19 @@ const kitBlocks: Block[] = [
   Video,
   Embed,
   FormBlock,
+  ...moreBlocks,
 ]
 
 /** Every block (kit and site) gets «Seksjonsoppsett»; style names come from site/theme.json. */
 const styleClasses = (themeJson as { styleClasses?: { name: string; label: string }[] }).styleClasses ?? []
+
+/**
+ * Payload keeps one table per block slug for all `blocks` fields of a collection, so a block inside a
+ * column must be the very same definition as on the page, section settings included. A column may
+ * hold every kit block except the ones in COLUMN_EXCLUDED (columns itself, forms, the page header).
+ */
+const kitSectioned = withSection(baseBlocks, styleClasses)
+const columnLeafBlocks = kitSectioned.filter((b) => !(COLUMN_EXCLUDED as readonly string[]).includes(b.slug))
+const kitBlocks: Block[] = [...kitSectioned.slice(0, 3), columnsBlock(columnLeafBlocks), ...kitSectioned.slice(3)]
 
 export const pageBlocks = withSection(assertUniqueSlugs([...kitBlocks, ...customBlocks]), styleClasses)
