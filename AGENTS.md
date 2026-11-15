@@ -125,8 +125,17 @@ gap). Check it until it passes, then try it locally:
 After the preview is up, run
 `pnpm site-builder compare --out .site-builder/<host> --new <preview address>` (add
 `--allow-private` for a local preview) and look at `compare.md` (old pages and the old site's
-documents, PDFs and the like) and `compare.html` in that folder. Then run the launch checks; fix
-every error they report before the site moves to its own domain:
+documents, PDFs and the like) and `compare.html` in that folder. Then run the parity check:
+
+    pnpm site-builder qc --out .site-builder/<host> --new <preview address>
+
+It scores every old page on the new site (text, headings, images, links, title and meta), the
+menu, footer and counts, and old and new screenshots pixel by pixel, desktop and mobile. Fix the
+worst pages first (`qc.html` shows old, new and the difference), and run it again until it
+passes. A difference the customer agrees to keep goes in `.site-builder/<host>/qc.accept.json`
+with the reason; never accept one on the customer's behalf. Then run the launch checks; fix every
+error they report before the site moves to its own domain (`qa:launch` refuses a rebuild whose qc
+has not passed against the address it checks):
 
 - `pnpm qa:launch <preview address>` fails on a home page or a sitemap page that does not answer,
   an empty sitemap, placeholder or demo text (the seeded privacy page, «Nordlys Demo», example.com),

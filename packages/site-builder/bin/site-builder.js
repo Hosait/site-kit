@@ -8,6 +8,7 @@ import { crawl } from '../src/crawl.js'
 import { assessedScope, crawlGate } from '../src/gate.js'
 import { extract } from '../src/extract.js'
 import { report } from '../src/report.js'
+import { qc } from '../src/qc.js'
 import { makeScope } from '../src/scope.js'
 import { theme } from '../src/theme.js'
 
@@ -22,6 +23,9 @@ const HELP = `site-builder <command> [options]
   theme         Draft site/theme.json colours, fonts and logo from the site's CSS
   report        Write report.md: technology, tracking, templates, quick checks, enhancements
   compare       Check every old URL and document on the new site and take old/new screenshots side by side
+  qc            The parity gate: every old page's text, headings, images, links and meta on the new
+                site, the menu, footer and counts, and old/new screenshots scored pixel by pixel
+                (writes qc.json, qc.md, qc.html; exits 1 unless it passes)
 
 Exit codes: 0 done (assess: green or yellow), 3 do not build (assess found the site red, or
 crawl refused to start), 2 usage error, 1 other error.
@@ -30,12 +34,14 @@ Options:
   --out <dir>        Working folder (default .site-builder/<host> for assess and crawl, required otherwise)
   --max <n>          Page cap for crawl (default 500)
   --max-pages <n>    Page cap for assess (default 40)
-  --budget <min>     Time budget in minutes (crawl 15, assess 3, compare 10 by default); then it writes what it has
+  --budget <min>     Time budget in minutes (crawl 15, assess 3, compare 10, qc 20 by default); then it writes what it has
   --accepted-scope   For crawl after a yellow assess, once the customer has accepted its scope
   --exclude <path>   For assess: leave this content part out of the move, such as /intranett (repeat
                      for more); crawl leaves out the same, from assess.json
-  --new <url>        The new site's address, for compare
-  --allow-private    Allow private and local addresses (for testing and intranet sites; compare: the new site only)
+  --new <url>        The new site's address, for compare and qc
+  --all-pages        For qc: screenshot every page, not the home page and 3 per template
+  --max-shots <n>    For qc: at most this many pages screenshotted (default 40)
+  --allow-private    Allow private and local addresses (for testing and intranet sites; compare and qc: the new site only)
 `
 
 const args = process.argv.slice(2)
@@ -98,6 +104,16 @@ ${r.class.toUpperCase()}: ${r.counts.pagesRead} pages read → ${path.join(out, 
     for (const n of r.notes) console.log('note: ' + n)
     console.log(`→ ${path.join(out, 'compare.md')}`)
     if (fail || docFail) process.exit(1)
+  } else if (cmd === 'qc') {
+    const out = flag('--out')
+    const newBase = flag('--new')
+    if (!out || !fs.existsSync(path.join(out, 'extract.json'))) usage('qc needs --out <dir> pointing at a crawl folder after extract')
+    if (!isHttp(newBase)) usage('qc needs --new <http(s) address of the new site>')
+    const r = await qc(out, { newBase, allowPrivate: has('--allow-private'), allPages: has('--all-pages'), maxShots: positive('--max-shots', 40, true), budgetMs: positive('--budget', 20) * 60_000, log: (s) => console.log(s) })
+    console.log(`\n${r.pass ? 'PASSED' : 'NOT PASSED'}: ${r.summary.passing} of ${r.summary.pages} pages pass; ${r.summary.screenshotted} compared pixel by pixel.`)
+    for (const n of r.notes) console.log('note: ' + n)
+    console.log(`→ ${path.join(out, 'qc.md')}`)
+    if (!r.pass) process.exit(1)
   } else usage(cmd && cmd !== '--help' ? `unknown command: ${cmd}` : undefined)
 } catch (e) {
   console.error(e.code === 'EPRIVATE' ? `${e.message}. Use --allow-private only for your own local or intranet sites.` : e.message)

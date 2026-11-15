@@ -4,6 +4,7 @@
  * Prints errors and warnings, grouped by what was found, and exits 1 when there are errors.
  */
 import { launchCheck, type Finding } from '../../src/lib/launch-check'
+import { qcGate } from '../../src/lib/qc-gate'
 import { SITES } from '../../src/lib/sites'
 
 const base = (process.argv[2] || 'http://localhost:3100').replace(/\/$/, '')
@@ -12,6 +13,8 @@ const ownHosts = Object.values(SITES).flatMap((s) => s.hosts).filter((h) => h !=
 // Documents are served from object storage on another host: they must load too.
 const assetHosts = [new URL(process.env.S3_ENDPOINT || 'https://s3.hosait.com').hostname]
 const r = await launchCheck(base, { ownHosts, assetHosts })
+// A rebuild of an old site must also have passed site-builder qc against this address.
+for (const text of qcGate(process.cwd(), base)) r.errors.push({ page: base, text })
 
 function grouped(list: Finding[]): string[] {
   const by = new Map<string, string[]>()
