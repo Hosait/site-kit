@@ -280,6 +280,7 @@
 
 .field {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.25rem;
 }
 
@@ -290,6 +291,9 @@
 .field input,
 .field select,
 .field textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   min-height: 44px;
   padding: 0.375rem 0.5rem;
   border: 1px solid var(--theme-elevation-400);

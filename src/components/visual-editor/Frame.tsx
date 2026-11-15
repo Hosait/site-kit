@@ -186,7 +186,7 @@ export function Frame(props: Props) {
     const frame = frameRef.current
     const doc = frame?.contentDocument
     const win = frame?.contentWindow
-    if (!doc || !win) return
+    if (!doc || !win || doc === docRef.current || doc.location.href === 'about:blank') return
     docRef.current = doc
     setDoc(doc)
     editing.current = null
@@ -307,6 +307,18 @@ export function Frame(props: Props) {
       window.removeEventListener('pointerdown', onPointer, true)
     }
   })
+
+  // The page may finish loading before the editor hydrates; React then never sees its load event.
+  // Boxes are redrawn when the preview changes width (desktop/mobile), after its animation too.
+  useEffect(() => {
+    if (frameRef.current?.contentDocument?.readyState === 'complete') onLoad()
+    const frame = frameRef.current
+    if (!frame) return
+    const observer = new ResizeObserver(() => repaint())
+    observer.observe(frame)
+    return () => observer.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // A save the preview must show: refresh the route (fast), or reload after text edits on the page.
   useEffect(() => {

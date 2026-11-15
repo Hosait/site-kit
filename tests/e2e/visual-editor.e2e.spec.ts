@@ -7,9 +7,7 @@ import { DEFAULT_LOCALE, DEFAULT_SITE } from '../../src/lib/sites'
 
 const IMAGE = path.resolve('tests/fixtures/media/hero.jpg')
 
-async function signIn(page: Page) {
-  const email = process.env.DEV_ADMIN_EMAIL!
-  const password = process.env.DEV_ADMIN_PASSWORD!
+async function signIn(page: Page, email = process.env.DEV_ADMIN_EMAIL!, password = process.env.DEV_ADMIN_PASSWORD!) {
   test.skip(!email || !password, 'run pnpm tsx scripts/dev-admin.ts first')
   await page.goto('/admin/login')
   await page.getByLabel(/e-post|email/i).fill(email)
@@ -124,23 +122,30 @@ test('the visual editor adds, moves and edits sections, replaces an image, saves
   }
 })
 
-test('«Enkel modus» opens pages in the visual editor, and the form is one click away', async ({ page }, info) => {
+test('«Enkel modus» opens pages in the visual editor, and the form is one click away', async ({ page, browser }, info) => {
   test.skip(info.project.name !== 'desktop', 'the editor is checked on desktop')
   test.setTimeout(180_000)
   await signIn(page)
-  const me = ((await (await page.request.get('/api/users/me')).json()) as { user: { id: number } }).user
   const id = await draftPage(page, `enkel-${Date.now()}`)
+  // A user of its own: changing the admin other tests sign in as would end their sessions.
+  const email = `enkel-${Date.now()}@site.localhost`
+  const password = `Enkel-${Date.now()}-modus`
+  const res = await page.request.post('/api/users', { data: { email, password, name: 'Enkel modus', role: 'editor', simpleMode: true } })
+  expect(res.ok(), await res.text()).toBeTruthy()
+  const userId = ((await res.json()) as { doc: { id: number } }).doc.id
+  const simple = await (await browser.newContext()).newPage()
   try {
-    await page.request.patch(`/api/users/${me.id}`, { data: { simpleMode: true } })
-    await page.goto(`/admin/collections/pages/${id}`)
-    await page.waitForURL(new RegExp(`/admin/visual/pages/${id}$`), { timeout: 90_000 })
-    await page.getByRole('link', { name: 'Avansert redigering' }).click()
-    await page.waitForURL(new RegExp(`/admin/collections/pages/${id}\\?form=1$`))
-    await expect(page.getByRole('link', { name: 'Visuell redigering' })).toBeVisible({ timeout: 60_000 })
-    await page.waitForTimeout(1500)
-    expect(page.url()).toContain('form=1')
+    await signIn(simple, email, password)
+    await simple.goto(`/admin/collections/pages/${id}`)
+    await simple.waitForURL(new RegExp(`/admin/visual/pages/${id}$`), { timeout: 90_000 })
+    await simple.getByRole('link', { name: 'Avansert redigering' }).click()
+    await simple.waitForURL(new RegExp(`/admin/collections/pages/${id}\\?form=1$`))
+    await expect(simple.getByRole('link', { name: 'Visuell redigering' })).toBeVisible({ timeout: 60_000 })
+    await simple.waitForTimeout(1500)
+    expect(simple.url()).toContain('form=1')
   } finally {
-    await page.request.patch(`/api/users/${me.id}`, { data: { simpleMode: false } })
+    await simple.context().close()
+    await page.request.delete(`/api/users/${userId}`)
     await page.request.delete(`/api/pages/${id}`)
   }
 })
