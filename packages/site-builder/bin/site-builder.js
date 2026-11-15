@@ -10,6 +10,7 @@ import { extract } from '../src/extract.js'
 import { report } from '../src/report.js'
 import { qc } from '../src/qc.js'
 import { makeScope } from '../src/scope.js'
+import { style } from '../src/style.js'
 import { theme } from '../src/theme.js'
 
 const HELP = `site-builder <command> [options]
@@ -21,6 +22,8 @@ const HELP = `site-builder <command> [options]
                 with --accepted-scope
   extract       Pull pages, navigation, footer, images and templates out of the cached pages
   theme         Draft site/theme.json colours, fonts and logo from the site's CSS
+  style         Measure the site's look in a browser (type, containers, spacing, buttons, cards,
+                links) and add Site Kit theme tokens to theme.draft.json; writes style.json
   report        Write report.md: technology, tracking, templates, quick checks, enhancements
   compare       Check every old URL and document on the new site and take old/new screenshots side by side
   qc            The parity gate: every old page's text, headings, images, links and meta on the new
@@ -34,14 +37,14 @@ Options:
   --out <dir>        Working folder (default .site-builder/<host> for assess and crawl, required otherwise)
   --max <n>          Page cap for crawl (default 500)
   --max-pages <n>    Page cap for assess (default 40)
-  --budget <min>     Time budget in minutes (crawl 15, assess 3, compare 10, qc 20 by default); then it writes what it has
+  --budget <min>     Time budget in minutes (crawl 15, assess 3, compare 10, qc 20, style 5 by default); then it writes what it has
   --accepted-scope   For crawl after a yellow assess, once the customer has accepted its scope
   --exclude <path>   For assess: leave this content part out of the move, such as /intranett (repeat
                      for more); crawl leaves out the same, from assess.json
   --new <url>        The new site's address, for compare and qc
   --all-pages        For qc: screenshot every page, not the home page and 3 per template
   --max-shots <n>    For qc: at most this many pages screenshotted (default 40)
-  --allow-private    Allow private and local addresses (for testing and intranet sites; compare and qc: the new site only)
+  --allow-private    Allow private and local addresses (for testing and intranet sites; compare and qc: the new site only; style: the site it reads)
 `
 
 const args = process.argv.slice(2)
@@ -91,6 +94,13 @@ ${r.class.toUpperCase()}: ${r.counts.pagesRead} pages read → ${path.join(out, 
     if (cmd === 'extract') { const m = extract(out); console.log(`${m.pages.length} pages, ${m.templates.length} templates → ${path.join(out, 'extract.json')}`) }
     if (cmd === 'theme') { const t = await theme(out, { allowPrivate: has('--allow-private') }); console.log(JSON.stringify(t.theme.colors)); for (const n of t.notes) console.log('note: ' + n) }
     if (cmd === 'report') { report(out); console.log(`→ ${path.join(out, 'report.md')}`) }
+  } else if (cmd === 'style') {
+    const out = flag('--out')
+    if (!out || !fs.existsSync(path.join(out, 'inventory.json'))) usage('style needs --out <dir> pointing at a crawl folder')
+    const r = await style(out, { allowPrivate: has('--allow-private'), budgetMs: positive('--budget', 5) * 60_000, log: (s) => console.log(s) })
+    console.log(JSON.stringify(r.tokens))
+    for (const n of r.notes) console.log('note: ' + n)
+    console.log(`→ ${path.join(out, 'theme.draft.json')} and style.json`)
   } else if (cmd === 'compare') {
     const out = flag('--out')
     const newBase = flag('--new')

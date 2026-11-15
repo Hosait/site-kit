@@ -97,7 +97,8 @@ export function themeFromCss(css, html, baseUrl) {
     add(counts.any, hex)
     add(m[1] === 'color' ? counts.text : counts.bg, hex)
   }
-  for (const m of css.matchAll(/border-radius\s*:\s*([\d.]+(px|rem|em))/g)) { radius ??= m[1] }
+  // A leading digit and px/rem only: kit:theme-check refuses «.3125rem» and em.
+  for (const m of css.matchAll(/border-radius\s*:\s*([\d.]+(px|rem|em))/g)) { radius ??= m[1].replace(/^\./, '0.').replace(/(?<!r)em$/, 'rem') }
   const top = (map, pred) => [...map].filter(([h]) => pred(h)).sort((a, b) => b[1] - a[1])[0]?.[0]
   const sat = (h) => saturation(parseColor(h)) > 0.35 && luminance(h) > 0.02 && luminance(h) < 0.9
   const background = top(counts.bg, (h) => luminance(h) > 0.85) ?? DEFAULTS.background

@@ -6,6 +6,7 @@ Reads an existing website so it can be rebuilt on Hosait Site Kit. The steps tha
     site-builder crawl https://www.example.com     # → .site-builder/www.example.com/
     site-builder extract --out .site-builder/www.example.com
     site-builder theme   --out .site-builder/www.example.com
+    site-builder style   --out .site-builder/www.example.com
     site-builder report  --out .site-builder/www.example.com
     site-builder compare --out .site-builder/www.example.com --new https://preview.example.com
     site-builder qc      --out .site-builder/www.example.com --new https://preview.example.com
@@ -79,6 +80,18 @@ In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-buil
 - **theme** writes `theme.draft.json`. Copy `theme` into `site/theme.json`, use `fonts` in
   `site/fonts.ts`, and save the logo under `public/brand/`. Colours are already darkened where
   Site Kit's 4.5:1 contrast check needs it; `notes` lists each change.
+- **style** measures the site's look in a real browser (sandboxed, through the filtering proxy, as
+  for compare) on the home page and the first page of each template, at 1440 and 390 px. It reads:
+  - heading and body text: size, line height, weight, letter spacing, case;
+  - container and text-column widths;
+  - section padding;
+  - buttons, cards and link underline.
+
+  It adds them as Site Kit theme tokens (`typography`, `containers`, `spacing`, `button`, `card`,
+  `link`, and the button radius) to `theme.draft.json`, keeping the colours from `theme`. It
+  writes `style.json` with the measurements and, per template, each section's box (padding,
+  background, width, first heading), which the map step uses. Lengths are written the way
+  `kit:theme-check` accepts them (`0.3125rem`, never `.3125rem`). Run it after `theme`.
 - **report** writes `report.md` for the customer.
 - **compare** checks every old address that answered 200 on the new site: it must answer 200,
   or 301/308 to a page on the new site that does (at most 3 redirects). Four requests at a time.
