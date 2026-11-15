@@ -24,7 +24,22 @@ import {
 import { customComponents } from '@site/blocks/custom/components'
 
 import { FormBlock } from './Form/Component'
+import { CarouselComponent } from './CarouselComponent'
+import { ColumnsComponent } from './ColumnsComponent'
+import { ContactCardComponent } from './ContactCardComponent'
 import { EmbedComponent } from './EmbedComponent'
+import {
+  BannerComponent,
+  ButtonGroupComponent,
+  DividerComponent,
+  IconFeaturesComponent,
+  LogoWallComponent,
+  PricingComponent,
+  TestimonialsComponent,
+} from './MoreComponents'
+import { NewsletterComponent } from './NewsletterComponent'
+import { TableComponent } from './TableComponent'
+import { TabsComponent } from './TabsComponent'
 import { VideoComponent } from './VideoComponent'
 import { SectionFrame } from './SectionFrame'
 import type { SectionValues } from './variants'
@@ -50,18 +65,15 @@ export function RenderBlocks({
   pageId?: number
 }) {
   if (!blocks?.length) return null
+  return <>{blocks.map((block, index) => renderFramed(block, { site, locale, isFirst: index === 0 }, pageId, index))}</>
+}
+
+/** A block inside its «Seksjonsoppsett» frame. Blocks in a column use the same frame. */
+function renderFramed(block: AnyBlock, props: { site: SiteKey; locale: Locale; isFirst: boolean }, pageId: number | undefined, index: number) {
   return (
-    <>
-      {blocks.map((block, index) => (
-        <SectionFrame
-          key={block.id ?? index}
-          section={(block as { section?: SectionValues | null }).section}
-          styleClasses={STYLE_CLASSES}
-        >
-          {renderBlock(block, { site, locale, isFirst: index === 0 }, pageId)}
-        </SectionFrame>
-      ))}
-    </>
+    <SectionFrame key={block.id ?? index} section={(block as { section?: SectionValues | null }).section} styleClasses={STYLE_CLASSES}>
+      {renderBlock(block, props, pageId)}
+    </SectionFrame>
   )
 }
 
@@ -109,6 +121,38 @@ function renderBlock(
       return <VideoComponent key={key} block={block as never} strings={t(locale)} />
     case 'embed':
       return <EmbedComponent key={key} block={block as never} locale={locale} />
+    case 'columns':
+      return (
+        <ColumnsComponent
+          key={key}
+          block={block as never}
+          renderNested={(nested, i) => renderFramed(nested as unknown as AnyBlock, { ...props, isFirst: false }, pageId, i)}
+        />
+      )
+    case 'tabs':
+      return <TabsComponent key={key} block={block as never} {...props} />
+    case 'pricing':
+      return <PricingComponent key={key} block={block as never} {...props} />
+    case 'logoWall':
+      return <LogoWallComponent key={key} block={block as never} {...props} />
+    case 'testimonials':
+      return <TestimonialsComponent key={key} block={block as never} {...props} />
+    case 'carousel':
+      return <CarouselComponent key={key} block={block as never} {...props} />
+    case 'table':
+      return <TableComponent key={key} block={block as never} />
+    case 'contactCard':
+      return <ContactCardComponent key={key} block={block as never} {...props} />
+    case 'newsletter':
+      return <NewsletterComponent key={key} block={block as never} {...props} />
+    case 'iconFeatures':
+      return <IconFeaturesComponent key={key} block={block as never} {...props} />
+    case 'banner':
+      return <BannerComponent key={key} block={block as never} {...props} />
+    case 'buttonGroup':
+      return <ButtonGroupComponent key={key} block={block as never} {...props} />
+    case 'divider':
+      return <DividerComponent key={key} block={block as never} />
     case 'formBlock': {
       const b = block as unknown as {
         form: Form

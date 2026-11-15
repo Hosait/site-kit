@@ -106,7 +106,15 @@ SVG graphics are a gap. Every file is checked by its first bytes, not its name. 
 takes an optional `section`: `spaceTop` and `spaceBottom` (`auto|none|s|m|l|xl`), `width`
 (`auto|text|content|wide|full`), `backgroundMedia` (`{ "$media": "<ref>" }`) with `overlay`
 (`none|light|dark`), `anchor` (a slug, unique on the page), `hide` (`none|mobile|desktop`) and
-`styleClass` (one of `styleClasses`). Leave it out where the block's own look fits. Forms go in
+`styleClass` (one of `styleClasses`). Leave it out where the block's own look fits. Besides the
+first 19 blocks there are `columns` (`layout`: `1-1`, `2-1`, `1-2`, `1-1-1` or `1-1-1-1`, and exactly
+that many `columns`, each `{ "blocks": [ … ] }` holding any block except `columns`, `formBlock`, `hero`
+and `newsletter`), `tabs`, `pricing`, `logoWall`, `testimonials`, `carousel`, `table`, `contactCard`,
+`newsletter` (`mode` `form` with `{ "$form": … }` for a form that has an e-mail field, or `embed` with an
+https `embedUrl`), `iconFeatures` (`icon` is one of a fixed list in `schema/blocks.schema.json`), `banner`,
+`buttonGroup` and `divider`; `seed/site-plan.json` has an example of each. Use `table` where the old
+site has a real data table (`caption`, `header`, `rows[].cells`), and `contactCard` for address, phone, e-mail and
+opening hours (its `mapUrl` is an https embed address). Forms go in
 `forms`: their fields, the button text, the message shown after sending, and `retention` (days,
 or `"keep"`) from the intake answer; left out, the site default in `site/config.ts` applies. A
 `formBlock` points at one with `{ "$form": "<ref>" }`. Submissions are read in the admin and

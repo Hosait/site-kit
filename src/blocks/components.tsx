@@ -29,27 +29,10 @@ import type {
 } from '@/payload-types'
 import { cn } from '@/utilities/ui'
 import { formatDate } from '@/lib/locales'
-import { alignClass, hasSectionBg, sectionBg, type Background } from './variants'
+import { Section } from './Section'
+import { alignClass } from './variants'
 
 export type BlockProps<T> = { block: T; site: SiteKey; locale: Locale; isFirst?: boolean }
-
-const bg = sectionBg
-const hasBg = hasSectionBg
-
-/** Seksjonsramme med luft som i dag: mer luft når seksjonen har bakgrunnsfarge. */
-function Section({
-  background,
-  className,
-  children,
-  as: Tag = 'section',
-}: {
-  background?: Background
-  className?: string
-  children: React.ReactNode
-  as?: 'section' | 'div'
-}) {
-  return <Tag className={cn(hasBg(background) ? 'py-16 md:py-24' : 'py-10 md:py-16', bg(background), className)}>{children}</Tag>
-}
 
 function Eyebrow({
   text,
