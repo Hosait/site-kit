@@ -6436,6 +6436,103 @@
         "width"
       ]
     },
+    "SectionSettings": {
+      "description": "Luft, bredde, bakgrunnsbilde, anker og visning. «Automatisk» er blokkens eget oppsett.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "spaceTop": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "auto",
+            "none",
+            "s",
+            "m",
+            "l",
+            "xl"
+          ]
+        },
+        "spaceBottom": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "auto",
+            "none",
+            "s",
+            "m",
+            "l",
+            "xl"
+          ]
+        },
+        "width": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "auto",
+            "text",
+            "content",
+            "wide",
+            "full"
+          ]
+        },
+        "backgroundMedia": {
+          "oneOf": [
+            {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            {
+              "$ref": "#/definitions/media"
+            }
+          ]
+        },
+        "overlay": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "none",
+            "light",
+            "dark"
+          ]
+        },
+        "anchor": {
+          "description": "Lenk hit med #anker, f.eks. «kontakt-oss».",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "hide": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "none",
+            "mobile",
+            "desktop"
+          ]
+        },
+        "styleClass": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": []
+    },
     "HeroBlock": {
       "type": "object",
       "additionalProperties": false,
@@ -6620,6 +6717,9 @@
             "center"
           ]
         },
+        "section": {
+          "$ref": "#/definitions/SectionSettings"
+        },
         "id": {
           "type": [
             "string",
@@ -6755,6 +6855,9 @@
           "required": [
             "root"
           ]
+        },
+        "section": {
+          "$ref": "#/definitions/SectionSettings"
         },
         "id": {
           "type": [
@@ -7035,6 +7138,9 @@
             "required": []
           }
         },
+        "section": {
+          "$ref": "#/definitions/SectionSettings"
+        },
         "id": {
           "type": [
             "string",
@@ -7086,6 +7192,9 @@
             "wide",
             "full"
           ]
+        },
+        "section": {
+          "$ref": "#/definitions/SectionSettings"
         },
         "id": {
           "type": [
@@ -7178,6 +7287,9 @@
             "dark",
             "brand"
           ]
+        },
+        "section": {
+          "$ref": "#/definitions/SectionSettings"
         },
         "id": {
           "type": [
@@ -7383,6 +7495,9 @@
             "center"
           ]
         },
+        "section": {
+          "$ref": "#/definitions/SectionSettings"
+        },
         "id": {
           "type": [
             "string",
@@ -7466,6 +7581,9 @@
             "dark",
             "brand"
           ]
+        },
+        "section": {
+          "$ref": "#/definitions/SectionSettings"
         },
         "id": {
           "type": [
@@ -7647,6 +7765,9 @@
             "center"
           ]
         },
+        "section": {
+          "$ref": "#/definitions/SectionSettings"
+        },
         "id": {
           "type": [
             "string",
@@ -7721,6 +7842,9 @@
             "left",
             "center"
           ]
+        },
+        "section": {
+          "$ref": "#/definitions/SectionSettings"
         },
         "id": {
           "type": [
@@ -7839,6 +7963,9 @@
             "center"
           ]
         },
+        "section": {
+          "$ref": "#/definitions/SectionSettings"
+        },
         "id": {
           "type": [
             "string",
@@ -7909,6 +8036,9 @@
             "dark",
             "brand"
           ]
+        },
+        "section": {
+          "$ref": "#/definitions/SectionSettings"
         },
         "id": {
           "type": [
@@ -7989,6 +8119,9 @@
             "brand"
           ]
         },
+        "section": {
+          "$ref": "#/definitions/SectionSettings"
+        },
         "id": {
           "type": [
             "string",
@@ -8058,6 +8191,9 @@
             "brand"
           ]
         },
+        "section": {
+          "$ref": "#/definitions/SectionSettings"
+        },
         "id": {
           "type": [
             "string",
@@ -8116,6 +8252,9 @@
             "dark",
             "brand"
           ]
+        },
+        "section": {
+          "$ref": "#/definitions/SectionSettings"
         },
         "id": {
           "type": [
@@ -8208,6 +8347,9 @@
             "dark",
             "brand"
           ]
+        },
+        "section": {
+          "$ref": "#/definitions/SectionSettings"
         },
         "id": {
           "type": [
@@ -8355,6 +8497,9 @@
             "brand"
           ]
         },
+        "section": {
+          "$ref": "#/definitions/SectionSettings"
+        },
         "id": {
           "type": [
             "string",
@@ -8431,6 +8576,9 @@
             "brand"
           ]
         },
+        "section": {
+          "$ref": "#/definitions/SectionSettings"
+        },
         "id": {
           "type": [
             "string",
@@ -8482,6 +8630,9 @@
             "number",
             "null"
           ]
+        },
+        "section": {
+          "$ref": "#/definitions/SectionSettings"
         },
         "id": {
           "type": [
@@ -8604,6 +8755,9 @@
             "root"
           ]
         },
+        "section": {
+          "$ref": "#/definitions/SectionSettings"
+        },
         "id": {
           "type": [
             "string",
@@ -8624,6 +8778,36 @@
         "blockType",
         "form"
       ]
+    },
+    "SectionSettings_select": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "spaceTop": {
+          "type": "boolean"
+        },
+        "spaceBottom": {
+          "type": "boolean"
+        },
+        "width": {
+          "type": "boolean"
+        },
+        "backgroundMedia": {
+          "type": "boolean"
+        },
+        "overlay": {
+          "type": "boolean"
+        },
+        "anchor": {
+          "type": "boolean"
+        },
+        "hide": {
+          "type": "boolean"
+        },
+        "styleClass": {
+          "type": "boolean"
+        }
+      }
     },
     "HeroBlock_select": {
       "type": "object",
@@ -8697,6 +8881,16 @@
         "align": {
           "type": "boolean"
         },
+        "section": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/SectionSettings_select"
+            }
+          ]
+        },
         "id": {
           "type": "boolean"
         },
@@ -8720,6 +8914,16 @@
         },
         "richText": {
           "type": "boolean"
+        },
+        "section": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/SectionSettings_select"
+            }
+          ]
         },
         "id": {
           "type": "boolean"
@@ -8801,6 +9005,16 @@
             }
           ]
         },
+        "section": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/SectionSettings_select"
+            }
+          ]
+        },
         "id": {
           "type": "boolean"
         },
@@ -8821,6 +9035,16 @@
         },
         "size": {
           "type": "boolean"
+        },
+        "section": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/SectionSettings_select"
+            }
+          ]
         },
         "id": {
           "type": "boolean"
@@ -8864,6 +9088,16 @@
         },
         "background": {
           "type": "boolean"
+        },
+        "section": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/SectionSettings_select"
+            }
+          ]
         },
         "id": {
           "type": "boolean"
@@ -8945,6 +9179,16 @@
         "align": {
           "type": "boolean"
         },
+        "section": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/SectionSettings_select"
+            }
+          ]
+        },
         "id": {
           "type": "boolean"
         },
@@ -8974,6 +9218,16 @@
         },
         "background": {
           "type": "boolean"
+        },
+        "section": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/SectionSettings_select"
+            }
+          ]
         },
         "id": {
           "type": "boolean"
@@ -9046,6 +9300,16 @@
         "align": {
           "type": "boolean"
         },
+        "section": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/SectionSettings_select"
+            }
+          ]
+        },
         "id": {
           "type": "boolean"
         },
@@ -9075,6 +9339,16 @@
         },
         "align": {
           "type": "boolean"
+        },
+        "section": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/SectionSettings_select"
+            }
+          ]
         },
         "id": {
           "type": "boolean"
@@ -9144,6 +9418,16 @@
         "align": {
           "type": "boolean"
         },
+        "section": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/SectionSettings_select"
+            }
+          ]
+        },
         "id": {
           "type": "boolean"
         },
@@ -9184,6 +9468,16 @@
         "background": {
           "type": "boolean"
         },
+        "section": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/SectionSettings_select"
+            }
+          ]
+        },
         "id": {
           "type": "boolean"
         },
@@ -9214,6 +9508,16 @@
         "background": {
           "type": "boolean"
         },
+        "section": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/SectionSettings_select"
+            }
+          ]
+        },
         "id": {
           "type": "boolean"
         },
@@ -9238,6 +9542,16 @@
         "background": {
           "type": "boolean"
         },
+        "section": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/SectionSettings_select"
+            }
+          ]
+        },
         "id": {
           "type": "boolean"
         },
@@ -9258,6 +9572,16 @@
         },
         "background": {
           "type": "boolean"
+        },
+        "section": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/SectionSettings_select"
+            }
+          ]
         },
         "id": {
           "type": "boolean"
@@ -9305,6 +9629,16 @@
         "background": {
           "type": "boolean"
         },
+        "section": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/SectionSettings_select"
+            }
+          ]
+        },
         "id": {
           "type": "boolean"
         },
@@ -9345,6 +9679,16 @@
         "background": {
           "type": "boolean"
         },
+        "section": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/SectionSettings_select"
+            }
+          ]
+        },
         "id": {
           "type": "boolean"
         },
@@ -9371,6 +9715,16 @@
         },
         "background": {
           "type": "boolean"
+        },
+        "section": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/SectionSettings_select"
+            }
+          ]
         },
         "id": {
           "type": "boolean"
@@ -9399,6 +9753,16 @@
         "height": {
           "type": "boolean"
         },
+        "section": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/SectionSettings_select"
+            }
+          ]
+        },
         "id": {
           "type": "boolean"
         },
@@ -9419,6 +9783,16 @@
         },
         "introContent": {
           "type": "boolean"
+        },
+        "section": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/SectionSettings_select"
+            }
+          ]
         },
         "id": {
           "type": "boolean"

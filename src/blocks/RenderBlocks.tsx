@@ -26,6 +26,14 @@ import { customComponents } from '@site/blocks/custom/components'
 import { FormBlock } from './Form/Component'
 import { EmbedComponent } from './EmbedComponent'
 import { VideoComponent } from './VideoComponent'
+import { SectionFrame } from './SectionFrame'
+import type { SectionValues } from './variants'
+import themeJson from '@site/theme.json'
+
+/** Style classes editors may pick per section (site/theme.json styleClasses). */
+const STYLE_CLASSES = ((themeJson as { styleClasses?: { name: string }[] }).styleClasses ?? []).map(
+  (c) => c.name,
+)
 
 type AnyBlock = NonNullable<Page['layout']>[number]
 
@@ -44,58 +52,84 @@ export function RenderBlocks({
   if (!blocks?.length) return null
   return (
     <>
-      {blocks.map((block, index) => {
-        const props = { site, locale, isFirst: index === 0 }
-        const key = block.id ?? index
-        switch ((block as AnyBlock).blockType) {
-          case 'hero':
-            return <HeroComponent key={key} block={block as never} {...props} />
-          case 'childPages':
-            return <ChildPagesComponent key={key} block={block as never} {...props} pageId={pageId} />
-          case 'content':
-            return <ContentComponent key={key} block={block as never} {...props} />
-          case 'textImage':
-            return <TextImageComponent key={key} block={block as never} {...props} />
-          case 'fullImage':
-            return <FullImageComponent key={key} block={block as never} {...props} />
-          case 'imageGrid':
-            return <ImageGridComponent key={key} block={block as never} {...props} />
-          case 'cards':
-            return <CardsComponent key={key} block={block as never} {...props} />
-          case 'cta':
-            return <CallToActionComponent key={key} block={block as never} {...props} />
-          case 'quote':
-            return <QuoteComponent key={key} block={block as never} {...props} />
-          case 'stats':
-            return <StatsComponent key={key} block={block as never} {...props} />
-          case 'articleFeed':
-            return <ArticleFeedComponent key={key} block={block as never} {...props} />
-          case 'people':
-            return <PeopleComponent key={key} block={block as never} {...props} />
-          case 'facts':
-            return <FactsComponent key={key} block={block as never} {...props} />
-          case 'documents':
-            return <DocumentsComponent key={key} block={block as never} {...props} />
-          case 'timeline':
-            return <TimelineComponent key={key} block={block as never} {...props} />
-          case 'accordion':
-            return <AccordionComponent key={key} block={block as never} {...props} />
-          case 'video':
-            return <VideoComponent key={key} block={block as never} strings={t(locale)} />
-          case 'embed':
-            return <EmbedComponent key={key} block={block as never} locale={locale} />
-          case 'formBlock': {
-            const b = block as unknown as { form: Form; enableIntro?: boolean | null; introContent?: unknown }
-            if (typeof b.form !== 'object') return null
-            return <FormBlock key={key} form={b.form} locale={locale} enableIntro={Boolean(b.enableIntro)} introContent={b.introContent as never} />
-          }
-          default: {
-            // Blocks only this site has (site/blocks/custom).
-            const Custom = customComponents[(block as AnyBlock).blockType]
-            return Custom ? <Custom key={key} block={block} {...props} /> : null
-          }
-        }
-      })}
+      {blocks.map((block, index) => (
+        <SectionFrame
+          key={block.id ?? index}
+          section={(block as { section?: SectionValues | null }).section}
+          styleClasses={STYLE_CLASSES}
+        >
+          {renderBlock(block, { site, locale, isFirst: index === 0 }, pageId)}
+        </SectionFrame>
+      ))}
     </>
   )
+}
+
+function renderBlock(
+  block: AnyBlock,
+  props: { site: SiteKey; locale: Locale; isFirst: boolean },
+  pageId?: number,
+) {
+  const { locale } = props
+  const key = block.id ?? undefined
+  switch ((block as AnyBlock).blockType) {
+    case 'hero':
+      return <HeroComponent key={key} block={block as never} {...props} />
+    case 'childPages':
+      return <ChildPagesComponent key={key} block={block as never} {...props} pageId={pageId} />
+    case 'content':
+      return <ContentComponent key={key} block={block as never} {...props} />
+    case 'textImage':
+      return <TextImageComponent key={key} block={block as never} {...props} />
+    case 'fullImage':
+      return <FullImageComponent key={key} block={block as never} {...props} />
+    case 'imageGrid':
+      return <ImageGridComponent key={key} block={block as never} {...props} />
+    case 'cards':
+      return <CardsComponent key={key} block={block as never} {...props} />
+    case 'cta':
+      return <CallToActionComponent key={key} block={block as never} {...props} />
+    case 'quote':
+      return <QuoteComponent key={key} block={block as never} {...props} />
+    case 'stats':
+      return <StatsComponent key={key} block={block as never} {...props} />
+    case 'articleFeed':
+      return <ArticleFeedComponent key={key} block={block as never} {...props} />
+    case 'people':
+      return <PeopleComponent key={key} block={block as never} {...props} />
+    case 'facts':
+      return <FactsComponent key={key} block={block as never} {...props} />
+    case 'documents':
+      return <DocumentsComponent key={key} block={block as never} {...props} />
+    case 'timeline':
+      return <TimelineComponent key={key} block={block as never} {...props} />
+    case 'accordion':
+      return <AccordionComponent key={key} block={block as never} {...props} />
+    case 'video':
+      return <VideoComponent key={key} block={block as never} strings={t(locale)} />
+    case 'embed':
+      return <EmbedComponent key={key} block={block as never} locale={locale} />
+    case 'formBlock': {
+      const b = block as unknown as {
+        form: Form
+        enableIntro?: boolean | null
+        introContent?: unknown
+      }
+      if (typeof b.form !== 'object') return null
+      return (
+        <FormBlock
+          key={key}
+          form={b.form}
+          locale={locale}
+          enableIntro={Boolean(b.enableIntro)}
+          introContent={b.introContent as never}
+        />
+      )
+    }
+    default: {
+      // Blocks only this site has (site/blocks/custom).
+      const Custom = customComponents[(block as AnyBlock).blockType]
+      return Custom ? <Custom key={key} block={block} {...props} /> : null
+    }
+  }
 }

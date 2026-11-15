@@ -80,6 +80,17 @@ old site's icon (`icon.src` in the draft, a PNG or ICO when the old site has one
 not match its extension, and an SVG with script, event handlers or outside links. If it cannot be
 downloaded or does not pass, leave `icon` out: the kit's own icon is used.
 
+To get closer to the old site's look, `site/theme.json` also takes optional tokens: `typography`
+(`body`, `display`, `h2`, `h3`, `h4`, `lead`, `eyebrow`, `small`: `size`, `sizeMobile`,
+`lineHeight`, `weight`, `letterSpacing`, `transform`), `containers` (`text`, `content`, `wide`),
+`spacing` (`s`, `m`, `l`, `xl` for the section spacing choices), `button` (`paddingX`, `paddingY`,
+`weight`, `transform`, `borderWidth`), `card` (`radius`, `shadow`: `none|sm|md|lg`, `borderWidth`)
+and `link` (`underline`). Lengths are px or rem. Leave a token out and the kit's own value applies.
+What the tokens cannot say goes in `site/styles.css`, loaded after the kit's CSS. Classes editors
+may pick per section are listed in `styleClasses` (`[{ "name": "site-…", "label": "…" }]`) and
+defined there. `kit:theme-check` refuses a styles file that imports other style files, loads from
+another site, uses a backslash or is over 50 KB, and a listed class that the file does not define.
+
 ## 5. Write the site plan
 
 Write `seed/site-plan.json` against `schema/site-plan.schema.json`; the blocks and their fields
@@ -88,7 +99,11 @@ images and PDFs in `seed/media/` (or use public https URLs). Office files (Word,
 PowerPoint), zip and DWG cannot be imported from a URL: download them into `seed/media/` and list
 them under `documents`. SVG is not imported: the logo goes in `public/brand/` (step 4), and other
 SVG graphics are a gap. Every file is checked by its first bytes, not its name. Link with
-`$media`, `$page`, `$pageLink`, `$person`, `$document`, `$form`; rich text is `$html`. Forms go in
+`$media`, `$page`, `$pageLink`, `$person`, `$document`, `$form`; rich text is `$html`. Every block
+takes an optional `section`: `spaceTop` and `spaceBottom` (`auto|none|s|m|l|xl`), `width`
+(`auto|text|content|wide|full`), `backgroundMedia` (`{ "$media": "<ref>" }`) with `overlay`
+(`none|light|dark`), `anchor` (a slug, unique on the page), `hide` (`none|mobile|desktop`) and
+`styleClass` (one of `styleClasses`). Leave it out where the block's own look fits. Forms go in
 `forms`: their fields, the button text, the message shown after sending, and `retention` (days,
 or `"keep"`) from the intake answer; left out, the site default in `site/config.ts` applies. A
 `formBlock` points at one with `{ "$form": "<ref>" }`. Submissions are read in the admin and

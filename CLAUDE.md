@@ -14,9 +14,11 @@ Each customer site is generated from it.
 
 ## Architecture
 - Kit code is in `src/`. A customer's own files are only `site/config.ts`, `site/theme.json`,
-  `site/fonts.ts`, `site/blocks/custom/` and `public/brand/`. Don't put customer specifics in `src/`.
+  `site/fonts.ts`, `site/styles.css`, `site/blocks/custom/` and `public/brand/`. Don't put customer specifics in `src/`.
 - `src/lib/sites.ts` derives sites and locales from `site/config.ts`; `src/proxy.ts` maps Host → `/{site}/{locale}/...`.
 - Blocks: config in `src/blocks/configs.ts`, rendering in `src/blocks/components.tsx`, registered in `RenderBlocks.tsx`.
+  Every block gets the `section` group («Seksjonsoppsett», `src/blocks/variants.ts`), applied by `SectionFrame.tsx`;
+  with default settings it adds nothing. Theme tokens: `src/lib/theme-tokens.ts`.
 - Site plans: schema in `schema/`, validator and refs in `src/lib/site-plan/`, importer `scripts/kit/import-plan.ts`.
 - After changing collections or blocks: `pnpm generate:types`, `pnpm generate:importmap`, `pnpm kit:schema`,
   and a migration (`pnpm payload migrate:create <name>`).

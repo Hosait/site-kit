@@ -223,7 +223,7 @@ export function CardsComponent({ block, site, locale }: BlockProps<CardsBlock>) 
           {(block.items ?? []).map((item, i) => {
             const linked = item.link?.type === 'custom' ? item.link.url : item.link?.reference
             return (
-              <li key={item.id ?? i} className="group relative flex flex-col overflow-hidden rounded-sm bg-white text-ink shadow-sm ring-1 ring-ink/5">
+              <li key={item.id ?? i} className="kit-card group relative flex flex-col overflow-hidden rounded-sm bg-white text-ink shadow-sm ring-1 ring-ink/5">
                 {item.image && (
                   <div className="aspect-[16/9] overflow-hidden bg-muted">
                     <Img media={item.image as Media} cover sizes="(min-width: 64rem) 28rem, 100vw" className="transition-transform duration-500 group-hover:scale-105" />
@@ -521,7 +521,7 @@ export function AccordionComponent({ block, site, locale }: BlockProps<Accordion
 
 function ChildCard({ page, locale }: { page: ChildPage; locale: Locale }) {
   return (
-    <li className="group relative flex flex-col overflow-hidden rounded-sm bg-white ring-1 ring-ink/10 transition-shadow hover:shadow-lg">
+    <li className="kit-card group relative flex flex-col overflow-hidden rounded-sm bg-white ring-1 ring-ink/10 transition-shadow hover:shadow-lg">
       <div className="aspect-[4/3] overflow-hidden bg-muted">
         {page.image ? (
           <Img

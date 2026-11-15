@@ -14,6 +14,8 @@ import { siteFont } from '@site/fonts'
 import { siteIcon, themeToCss, validateTheme } from '@/lib/theme'
 
 import '../../globals.css'
+// The site's own CSS, after the kit's (checked by kit:theme-check: nothing loads from elsewhere).
+import '@site/styles.css'
 
 const THEME = validateTheme(themeJson)
 const THEME_CSS = themeToCss(THEME)
@@ -47,7 +49,7 @@ export default async function SiteLayout({ children, params }: { children: React
   return (
     <html lang={HREFLANG[loc]} className={siteFont.variable} data-site={key}>
       <head>
-        {/* Colours and radius from site/theme.json (validated: hex and px/rem only). */}
+        {/* Colours, radius and design tokens from site/theme.json (each value validated in src/lib/theme). */}
         <style dangerouslySetInnerHTML={{ __html: THEME_CSS }} />
       </head>
       <body>

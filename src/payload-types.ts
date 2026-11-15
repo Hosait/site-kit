@@ -267,6 +267,7 @@ export interface HeroBlock {
       }[]
     | null;
   align?: ('left' | 'center') | null;
+  section?: SectionSettings;
   id?: string | null;
   blockName?: string | null;
   blockType: 'hero';
@@ -448,6 +449,25 @@ export interface Article {
   _status?: ('draft' | 'published') | null;
 }
 /**
+ * Luft, bredde, bakgrunnsbilde, anker og visning. «Automatisk» er blokkens eget oppsett.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "SectionSettings".
+ */
+export interface SectionSettings {
+  spaceTop?: ('auto' | 'none' | 's' | 'm' | 'l' | 'xl') | null;
+  spaceBottom?: ('auto' | 'none' | 's' | 'm' | 'l' | 'xl') | null;
+  width?: ('auto' | 'text' | 'content' | 'wide' | 'full') | null;
+  backgroundMedia?: (number | null) | Media;
+  overlay?: ('none' | 'light' | 'dark') | null;
+  /**
+   * Lenk hit med #anker, f.eks. «kontakt-oss».
+   */
+  anchor?: string | null;
+  hide?: ('none' | 'mobile' | 'desktop') | null;
+  styleClass?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "ContentBlock".
  */
@@ -470,6 +490,7 @@ export interface ContentBlock {
     };
     [k: string]: unknown;
   } | null;
+  section?: SectionSettings;
   id?: string | null;
   blockName?: string | null;
   blockType: 'content';
@@ -521,6 +542,7 @@ export interface TextImageBlock {
         id?: string | null;
       }[]
     | null;
+  section?: SectionSettings;
   id?: string | null;
   blockName?: string | null;
   blockType: 'textImage';
@@ -533,6 +555,7 @@ export interface FullImageBlock {
   image: number | Media;
   caption?: string | null;
   size?: ('text' | 'wide' | 'full') | null;
+  section?: SectionSettings;
   id?: string | null;
   blockName?: string | null;
   blockType: 'fullImage';
@@ -552,6 +575,7 @@ export interface ImageGridBlock {
       }[]
     | null;
   background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
+  section?: SectionSettings;
   id?: string | null;
   blockName?: string | null;
   blockType: 'imageGrid';
@@ -589,6 +613,7 @@ export interface CardsBlock {
     | null;
   background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   align?: ('left' | 'center') | null;
+  section?: SectionSettings;
   id?: string | null;
   blockName?: string | null;
   blockType: 'cards';
@@ -607,6 +632,7 @@ export interface ChildPagesBlock {
   depth?: ('1' | '2') | null;
   columns?: ('2' | '3' | '4') | null;
   background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
+  section?: SectionSettings;
   id?: string | null;
   blockName?: string | null;
   blockType: 'childPages';
@@ -641,6 +667,7 @@ export interface CallToActionBlock {
     | null;
   background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   align?: ('left' | 'center') | null;
+  section?: SectionSettings;
   id?: string | null;
   blockName?: string | null;
   blockType: 'cta';
@@ -656,6 +683,7 @@ export interface QuoteBlock {
   image?: (number | null) | Media;
   background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   align?: ('left' | 'center') | null;
+  section?: SectionSettings;
   id?: string | null;
   blockName?: string | null;
   blockType: 'quote';
@@ -686,6 +714,7 @@ export interface StatsBlock {
     | null;
   background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
   align?: ('left' | 'center') | null;
+  section?: SectionSettings;
   id?: string | null;
   blockName?: string | null;
   blockType: 'stats';
@@ -704,6 +733,7 @@ export interface FactsBlock {
       }[]
     | null;
   background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
+  section?: SectionSettings;
   id?: string | null;
   blockName?: string | null;
   blockType: 'facts';
@@ -722,6 +752,7 @@ export interface ArticleFeedBlock {
   limit?: number | null;
   paginate?: boolean | null;
   background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
+  section?: SectionSettings;
   id?: string | null;
   blockName?: string | null;
   blockType: 'articleFeed';
@@ -735,6 +766,7 @@ export interface PeopleBlock {
   people?: (number | Person)[] | null;
   layout?: ('grid' | 'list') | null;
   background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
+  section?: SectionSettings;
   id?: string | null;
   blockName?: string | null;
   blockType: 'people';
@@ -767,6 +799,7 @@ export interface DocumentsBlock {
   heading?: string | null;
   documents?: (number | Document)[] | null;
   background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
+  section?: SectionSettings;
   id?: string | null;
   blockName?: string | null;
   blockType: 'documents';
@@ -787,6 +820,7 @@ export interface TimelineBlock {
       }[]
     | null;
   background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
+  section?: SectionSettings;
   id?: string | null;
   blockName?: string | null;
   blockType: 'timeline';
@@ -819,6 +853,7 @@ export interface AccordionBlock {
       }[]
     | null;
   background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
+  section?: SectionSettings;
   id?: string | null;
   blockName?: string | null;
   blockType: 'accordion';
@@ -836,6 +871,7 @@ export interface VideoBlock {
   file?: (number | null) | Media;
   poster?: (number | null) | Media;
   background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
+  section?: SectionSettings;
   id?: string | null;
   blockName?: string | null;
   blockType: 'video';
@@ -850,6 +886,7 @@ export interface EmbedBlock {
   url: string;
   title: string;
   height?: number | null;
+  section?: SectionSettings;
   id?: string | null;
   blockName?: string | null;
   blockType: 'embed';
@@ -876,6 +913,7 @@ export interface FormBlock {
     };
     [k: string]: unknown;
   } | null;
+  section?: SectionSettings;
   id?: string | null;
   blockName?: string | null;
   blockType: 'formBlock';
@@ -1695,8 +1733,23 @@ export interface HeroBlockSelect<T extends boolean = true> {
         id?: T;
       };
   align?: T;
+  section?: T | SectionSettingsSelect<T>;
   id?: T;
   blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "SectionSettings_select".
+ */
+export interface SectionSettingsSelect<T extends boolean = true> {
+  spaceTop?: T;
+  spaceBottom?: T;
+  width?: T;
+  backgroundMedia?: T;
+  overlay?: T;
+  anchor?: T;
+  hide?: T;
+  styleClass?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1707,6 +1760,7 @@ export interface ContentBlockSelect<T extends boolean = true> {
   align?: T;
   background?: T;
   richText?: T;
+  section?: T | SectionSettingsSelect<T>;
   id?: T;
   blockName?: T;
 }
@@ -1737,6 +1791,7 @@ export interface TextImageBlockSelect<T extends boolean = true> {
             };
         id?: T;
       };
+  section?: T | SectionSettingsSelect<T>;
   id?: T;
   blockName?: T;
 }
@@ -1748,6 +1803,7 @@ export interface FullImageBlockSelect<T extends boolean = true> {
   image?: T;
   caption?: T;
   size?: T;
+  section?: T | SectionSettingsSelect<T>;
   id?: T;
   blockName?: T;
 }
@@ -1766,6 +1822,7 @@ export interface ImageGridBlockSelect<T extends boolean = true> {
         id?: T;
       };
   background?: T;
+  section?: T | SectionSettingsSelect<T>;
   id?: T;
   blockName?: T;
 }
@@ -1796,6 +1853,7 @@ export interface CardsBlockSelect<T extends boolean = true> {
       };
   background?: T;
   align?: T;
+  section?: T | SectionSettingsSelect<T>;
   id?: T;
   blockName?: T;
 }
@@ -1810,6 +1868,7 @@ export interface ChildPagesBlockSelect<T extends boolean = true> {
   depth?: T;
   columns?: T;
   background?: T;
+  section?: T | SectionSettingsSelect<T>;
   id?: T;
   blockName?: T;
 }
@@ -1837,6 +1896,7 @@ export interface CallToActionBlockSelect<T extends boolean = true> {
       };
   background?: T;
   align?: T;
+  section?: T | SectionSettingsSelect<T>;
   id?: T;
   blockName?: T;
 }
@@ -1851,6 +1911,7 @@ export interface QuoteBlockSelect<T extends boolean = true> {
   image?: T;
   background?: T;
   align?: T;
+  section?: T | SectionSettingsSelect<T>;
   id?: T;
   blockName?: T;
 }
@@ -1877,6 +1938,7 @@ export interface StatsBlockSelect<T extends boolean = true> {
       };
   background?: T;
   align?: T;
+  section?: T | SectionSettingsSelect<T>;
   id?: T;
   blockName?: T;
 }
@@ -1894,6 +1956,7 @@ export interface FactsBlockSelect<T extends boolean = true> {
         id?: T;
       };
   background?: T;
+  section?: T | SectionSettingsSelect<T>;
   id?: T;
   blockName?: T;
 }
@@ -1908,6 +1971,7 @@ export interface ArticleFeedBlockSelect<T extends boolean = true> {
   limit?: T;
   paginate?: T;
   background?: T;
+  section?: T | SectionSettingsSelect<T>;
   id?: T;
   blockName?: T;
 }
@@ -1920,6 +1984,7 @@ export interface PeopleBlockSelect<T extends boolean = true> {
   people?: T;
   layout?: T;
   background?: T;
+  section?: T | SectionSettingsSelect<T>;
   id?: T;
   blockName?: T;
 }
@@ -1931,6 +1996,7 @@ export interface DocumentsBlockSelect<T extends boolean = true> {
   heading?: T;
   documents?: T;
   background?: T;
+  section?: T | SectionSettingsSelect<T>;
   id?: T;
   blockName?: T;
 }
@@ -1950,6 +2016,7 @@ export interface TimelineBlockSelect<T extends boolean = true> {
         id?: T;
       };
   background?: T;
+  section?: T | SectionSettingsSelect<T>;
   id?: T;
   blockName?: T;
 }
@@ -1967,6 +2034,7 @@ export interface AccordionBlockSelect<T extends boolean = true> {
         id?: T;
       };
   background?: T;
+  section?: T | SectionSettingsSelect<T>;
   id?: T;
   blockName?: T;
 }
@@ -1980,6 +2048,7 @@ export interface VideoBlockSelect<T extends boolean = true> {
   file?: T;
   poster?: T;
   background?: T;
+  section?: T | SectionSettingsSelect<T>;
   id?: T;
   blockName?: T;
 }
@@ -1993,6 +2062,7 @@ export interface EmbedBlockSelect<T extends boolean = true> {
   url?: T;
   title?: T;
   height?: T;
+  section?: T | SectionSettingsSelect<T>;
   id?: T;
   blockName?: T;
 }
@@ -2004,6 +2074,7 @@ export interface FormBlockSelect<T extends boolean = true> {
   form?: T;
   enableIntro?: T;
   introContent?: T;
+  section?: T | SectionSettingsSelect<T>;
   id?: T;
   blockName?: T;
 }

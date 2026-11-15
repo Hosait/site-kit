@@ -1,0 +1,10 @@
+/*
+ * This site's own CSS, loaded after the kit's. Use it for what the theme tokens in
+ * site/theme.json cannot say, and for the style classes listed there under styleClasses
+ * (names start with «site-»), e.g.
+ *
+ *   .site-quiet { background: #faf7f2; }
+ *
+ * kit:theme-check refuses imports of other style files, files from other sites,
+ * backslashes, and files over 50 KB.
+ */

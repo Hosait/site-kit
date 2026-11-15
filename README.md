@@ -10,7 +10,8 @@ Kit code lives in `src/`. A site is made its own in these places only, so kit up
 | File | What it sets |
 |---|---|
 | `site/config.ts` | Sites, languages (one or two), brand, e-mail sender, cookie prefix, time zone, document types, article kinds, feature switches |
-| `site/theme.json` | Colours, radius, logo (checked for WCAG AA contrast) |
+| `site/theme.json` | Colours, radius, logo (checked for WCAG AA contrast), and optional tokens: type, containers, spacing, buttons, cards, links, style classes |
+| `site/styles.css` | The site's own CSS after the kit's (checked: nothing loads from elsewhere) |
 | `site/fonts.ts` | The typeface (self-hosted with `next/font/local`) |
 | `site/blocks/custom/` | Blocks only this site uses |
 | `public/brand/` | Logo file |

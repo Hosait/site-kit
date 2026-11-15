@@ -6,7 +6,9 @@ import { DEFAULT_LOCALE, SINGLE_SITE, SITE_CONFIG, SITE_OPTIONS } from '@/lib/si
 import { customBlocks } from '@site/blocks/custom/configs'
 
 import { FormBlock } from './Form/config'
-import { align, assertUniqueSlugs } from './variants'
+import themeJson from '@site/theme.json'
+
+import { align, assertUniqueSlugs, withSection } from './variants'
 
 /**
  * Alle blokker redaktører kan bygge sider med. Hver blokk har en React-komponent
@@ -488,4 +490,7 @@ const kitBlocks: Block[] = [
   FormBlock,
 ]
 
-export const pageBlocks = assertUniqueSlugs([...kitBlocks, ...customBlocks])
+/** Every block (kit and site) gets «Seksjonsoppsett»; style names come from site/theme.json. */
+const styleClasses = (themeJson as { styleClasses?: { name: string; label: string }[] }).styleClasses ?? []
+
+export const pageBlocks = withSection(assertUniqueSlugs([...kitBlocks, ...customBlocks]), styleClasses)
