@@ -120,6 +120,29 @@ test('checkIconFile: another encoding, control characters, another namespace, sr
   assert.deepEqual(checkIconFile(Buffer.from(fine), 'svg'), [])
 })
 
+// Review of #32, round 3 (found in a browser): a split or escaped @import or url(), image-set(), and
+// an animation that sets a link after the check.
+test('checkIconFile: a split or escaped style, image-set() and an animated link are refused', () => {
+  const svg = (inner: string) => `<svg xmlns="http://www.w3.org/2000/svg">${inner}</svg>`
+  for (const bad of [
+    svg('<style>@imp<![CDATA[]]>ort "https://evil.example/x.css";</style>'),
+    svg('<style>@imp<!---->ort "https://evil.example/x.css";</style>'),
+    svg('<style>@\\69mport "https://evil.example/x.css";</style>'),
+    svg('<style>circle{fill:u\\72 l(https://evil.example/x)}</style>'),
+    svg('<circle r="4" style="fill:u\\72 l(https://evil.example/x)"/>'),
+    svg('<style>circle{fill:ur<![CDATA[]]>l(https://evil.example/x)}</style>'),
+    svg('<style>circle{fill:image-set("https://evil.example/x.png" 1x)}</style>'),
+    svg('<circle r="4" style="fill:-webkit-image-set(\'https://evil.example/x.png\' 1x)"/>'),
+    svg('<a><set attributeName="href" to="https://evil.example/"/><circle r="4"/></a>'),
+    svg('<a><animate attributeName="xlink:href" values="https://evil.example/"/><circle r="4"/></a>'),
+  ]) assert.ok(checkIconFile(Buffer.from(bad), 'svg').length > 0, bad)
+  const fine = svg('<!-- Generator: a drawing program --><style>.a{fill:#2a6fdb}</style><circle class="a" r="4"><animate attributeName="opacity" values="1;0.5;1" dur="2s"/></circle><!-- end -->')
+  assert.deepEqual(checkIconFile(Buffer.from(fine), 'svg'), [])
+  const at = Date.now()
+  checkIconFile(Buffer.from(svg('<style'.repeat(14_000))), 'svg')
+  assert.ok(Date.now() - at < 1000, 'many unclosed <style tags are checked in linear time')
+})
+
 test('kit:theme-check checks the icon file that theme.json names', () => {
   const script = readFileSync('scripts/kit/theme-check.ts', 'utf8')
   assert.match(script, /checkIconFile/)
