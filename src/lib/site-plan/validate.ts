@@ -25,7 +25,7 @@ const fmt = (e: ErrorObject) => {
  */
 function crossCheck(plan: SitePlan): string[] {
   const errors: string[] = []
-  const kinds = [['media', plan.media], ['people', plan.people], ['documents', plan.documents], ['pages', plan.pages], ['articles', plan.articles]] as const
+  const kinds = [['media', plan.media], ['people', plan.people], ['documents', plan.documents], ['globalSections', plan.globalSections], ['pages', plan.pages], ['articles', plan.articles]] as const
   for (const [kind, list] of kinds) {
     const seen = new Set<string>()
     ;(list ?? []).forEach((item, i) => {
@@ -38,6 +38,13 @@ function crossCheck(plan: SitePlan): string[] {
   } catch (e) {
     errors.push(`/pages ${e instanceof Error ? e.message : String(e)}`)
   }
+  // A reference inside a global section would nest sections; the admin does not allow it, so neither does the plan.
+  ;(plan.globalSections ?? []).forEach((g, i) => {
+    for (const [locale, blocks] of Object.entries(g.layout))
+      blocks.forEach((b, j) => {
+        if (b.blockType === 'globalSection') errors.push(`/globalSections/${i}/layout/${locale}/${j} a global section cannot contain another ("${g.ref}")`)
+      })
+  })
   const from = new Set<string>()
   ;(plan.redirects ?? []).forEach((r, i) => {
     if (from.has(r.from)) errors.push(`/redirects/${i}/from duplicate redirect from "${r.from}"`)

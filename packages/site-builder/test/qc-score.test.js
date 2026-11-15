@@ -11,6 +11,10 @@ test('words come from text or HTML, lower case, letters and digits only', () => 
   assert.deepEqual(words('Blåbær og øl'), ['blåbær', 'og', 'øl'])
 })
 
+test('words of HTML are separated at every tag', () => {
+  assert.deepEqual(words('<h3>Team</h3><p>Our people</p>'), ['team', 'our', 'people'])
+})
+
 test('text similarity counts shared words, order aside', () => {
   const hundred = Array.from({ length: 100 }, (_, i) => `w${i}`).join(' ')
   assert.equal(textSimilarity(hundred, hundred), 1)

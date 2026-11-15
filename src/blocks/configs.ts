@@ -12,6 +12,7 @@ import { COLUMN_EXCLUDED } from './columnLayouts'
 import { columnsBlock } from './columnsConfig'
 import { background, heading } from './fields'
 import { moreBlocks } from './moreBlocks'
+import { GlobalSection } from './reusable'
 import { align, assertUniqueSlugs, withSection } from './variants'
 
 /**
@@ -478,6 +479,7 @@ const baseBlocks: Block[] = [
   Embed,
   FormBlock,
   ...moreBlocks,
+  GlobalSection,
 ]
 
 /** Every block (kit and site) gets «Seksjonsoppsett»; style names come from site/theme.json. */

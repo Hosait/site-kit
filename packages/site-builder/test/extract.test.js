@@ -186,3 +186,14 @@ test('</br> and void tags keep to the element limits, and what follows stays in 
   extractPage('<html><body>' + '</br>'.repeat(40_000) + '</body></html>', 'https://acme.no/br')
   assert.ok(Date.now() - start < 1500, `took ${Date.now() - start} ms`)
 })
+
+test('extract keeps hreflang alternates and marks articles with their date', () => {
+  const html = '<html lang="no"><head><link rel="alternate" hreflang="en" href="/en/x"><link rel="alternate" hreflang="x-default" href="/x"><script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"NewsArticle","datePublished":"2024-05-01T09:00:00Z"}]}</script></head><body><main><h1>X</h1><p>Text</p></main></body></html>'
+  const p = extractPage(html, 'https://old.example/x')
+  assert.deepEqual(p.alternates, [{ lang: 'en', href: 'https://old.example/en/x' }])
+  assert.equal(p.article, true)
+  assert.equal(p.published, '2024-05-01')
+  const plain = extractPage('<html><body><main><time datetime="2023-02-03">3 Feb</time><p>x</p></main></body></html>', 'https://old.example/y')
+  assert.equal(plain.article, undefined)
+  assert.equal(plain.published, '2023-02-03')
+})

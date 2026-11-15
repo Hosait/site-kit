@@ -15,7 +15,7 @@ import { findMissingRefs, localeData, orderPages, resolveValue } from './refs'
 import { missingStoredFiles } from './stored-files'
 import type { SitePlan } from './types'
 
-export const CONTENT_COLLECTIONS = ['redirects', 'articles', 'pages', 'form-submissions', 'forms', 'people', 'documents', 'media', 'site-settings'] as const
+export const CONTENT_COLLECTIONS = ['redirects', 'articles', 'pages', 'globalSections', 'form-submissions', 'forms', 'people', 'documents', 'media', 'site-settings'] as const
 
 export type ImportOptions = {
   /** Folder that relative media and document paths are resolved against. */
@@ -97,10 +97,10 @@ export async function importPlan(payload: Payload, plan: SitePlan, opts: ImportO
       return state
     }
     const total =
-      plan.media.length + (plan.people?.length ?? 0) + (plan.documents?.length ?? 0) + (plan.forms?.length ?? 0) + plan.pages.length * 2 + (plan.articles?.length ?? 0) + (plan.redirects?.length ?? 0) + 2
+      plan.media.length + (plan.people?.length ?? 0) + (plan.documents?.length ?? 0) + (plan.forms?.length ?? 0) + (plan.globalSections?.length ?? 0) * 2 + plan.pages.length * 2 + (plan.articles?.length ?? 0) + (plan.redirects?.length ?? 0) + 2
     let done = 0
     const tick = () => opts.onProgress?.(++done, total)
-    const ids = { media: new Map<string, number>(), pages: new Map<string, number>(), people: new Map<string, number>(), documents: new Map<string, number>(), forms: new Map<string, number>() }
+    const ids = { media: new Map<string, number>(), pages: new Map<string, number>(), people: new Map<string, number>(), documents: new Map<string, number>(), forms: new Map<string, number>(), globalSections: new Map<string, number>() }
 
     // Each upload gets its own context object: the storage plugin leaves a skip flag on the context it
     // is given, so one shared object made every upload after the first skip object storage.
@@ -170,6 +170,13 @@ export async function importPlan(payload: Payload, plan: SitePlan, opts: ImportO
       }
       tick()
     }
+    // Global sections come before pages, which point at them. Their layouts may link to pages, so those
+    // are filled in once the pages exist (below).
+    for (const g of plan.globalSections ?? []) {
+      const doc = wrote('globalSections', await payload.create({ collection: 'globalSections', data: { title: g.title, site, _status: 'published' } as never, locale: DEFAULT_LOCALE, context: ctx }))
+      ids.globalSections.set(g.ref, doc.id as number)
+      tick()
+    }
     // Pages link to each other (and may link both ways), so create them all first, then fill in layouts.
     const ordered = orderPages(plan.pages)
     for (const p of ordered) {
@@ -185,6 +192,13 @@ export async function importPlan(payload: Payload, plan: SitePlan, opts: ImportO
       const doc = wrote('pages', await payload.create({ collection: 'pages', data: { ...base, ...localeData(p, DEFAULT_LOCALE, ['title', 'slug', 'summary']) } as never, locale: DEFAULT_LOCALE, context: ctx }))
       ids.pages.set(p.ref, doc.id as number)
       await localized('pages', doc.id as number, p, ['title', 'slug', 'summary'])
+      tick()
+    }
+    for (const g of plan.globalSections ?? []) {
+      const id = ids.globalSections.get(g.ref)!
+      const data = await resolveValue(localeData(g, DEFAULT_LOCALE, ['layout']), ids, html)
+      await payload.update({ collection: 'globalSections', id, locale: DEFAULT_LOCALE, data: { ...(data as object), _status: 'published' } as never, context: ctx })
+      await localized('globalSections', id, g, ['layout'], true)
       tick()
     }
     for (const p of ordered) {

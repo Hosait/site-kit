@@ -33,7 +33,8 @@
     "iconFeatures",
     "banner",
     "buttonGroup",
-    "divider"
+    "divider",
+    "globalSection"
   ],
   "block": {
     "oneOf": [
@@ -132,6 +133,12 @@
       },
       {
         "$ref": "#/definitions/DividerBlock"
+      },
+      {
+        "$ref": "#/definitions/GlobalSectionBlock"
+      },
+      {
+        "$ref": "#/definitions/PresetBlock"
       }
     ]
   },
@@ -434,6 +441,12 @@
               },
               {
                 "$ref": "#/definitions/DividerBlock"
+              },
+              {
+                "$ref": "#/definitions/GlobalSectionBlock"
+              },
+              {
+                "$ref": "#/definitions/PresetBlock"
               }
             ]
           }
@@ -481,6 +494,20 @@
           "type": "string",
           "enum": [
             "main"
+          ]
+        },
+        "template": {
+          "description": "Bare for en side uten seksjoner: siden får en kopi av malens seksjoner. Etterpå er den uavhengig av malen.",
+          "oneOf": [
+            {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            {
+              "$ref": "#/definitions/pageTemplates"
+            }
           ]
         },
         "isHome": {
@@ -915,6 +942,26 @@
                       "$ref": "#/definitions/DividerBlock_select"
                     }
                   ]
+                },
+                "globalSection": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/GlobalSectionBlock_select"
+                    }
+                  ]
+                },
+                "preset": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/PresetBlock_select"
+                    }
+                  ]
                 }
               }
             }
@@ -946,6 +993,9 @@
           ]
         },
         "site": {
+          "type": "boolean"
+        },
+        "template": {
           "type": "boolean"
         },
         "isHome": {
@@ -982,6 +1032,1526 @@
           "type": "boolean"
         },
         "_status": {
+          "type": "boolean"
+        }
+      }
+    },
+    "globalSections": {
+      "type": "object",
+      "additionalProperties": false,
+      "title": "GlobalSection",
+      "properties": {
+        "id": {
+          "type": "number"
+        },
+        "title": {
+          "description": "Bare synlig i administrasjonen.",
+          "type": "string"
+        },
+        "layout": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/definitions/HeroBlock"
+              },
+              {
+                "$ref": "#/definitions/ContentBlock"
+              },
+              {
+                "$ref": "#/definitions/TextImageBlock"
+              },
+              {
+                "$ref": "#/definitions/ColumnsBlock"
+              },
+              {
+                "$ref": "#/definitions/FullImageBlock"
+              },
+              {
+                "$ref": "#/definitions/ImageGridBlock"
+              },
+              {
+                "$ref": "#/definitions/CardsBlock"
+              },
+              {
+                "$ref": "#/definitions/ChildPagesBlock"
+              },
+              {
+                "$ref": "#/definitions/CallToActionBlock"
+              },
+              {
+                "$ref": "#/definitions/QuoteBlock"
+              },
+              {
+                "$ref": "#/definitions/StatsBlock"
+              },
+              {
+                "$ref": "#/definitions/FactsBlock"
+              },
+              {
+                "$ref": "#/definitions/ArticleFeedBlock"
+              },
+              {
+                "$ref": "#/definitions/PeopleBlock"
+              },
+              {
+                "$ref": "#/definitions/DocumentsBlock"
+              },
+              {
+                "$ref": "#/definitions/TimelineBlock"
+              },
+              {
+                "$ref": "#/definitions/AccordionBlock"
+              },
+              {
+                "$ref": "#/definitions/VideoBlock"
+              },
+              {
+                "$ref": "#/definitions/EmbedBlock"
+              },
+              {
+                "$ref": "#/definitions/FormBlock"
+              },
+              {
+                "$ref": "#/definitions/TabsBlock"
+              },
+              {
+                "$ref": "#/definitions/PricingBlock"
+              },
+              {
+                "$ref": "#/definitions/LogoWallBlock"
+              },
+              {
+                "$ref": "#/definitions/TestimonialsBlock"
+              },
+              {
+                "$ref": "#/definitions/CarouselBlock"
+              },
+              {
+                "$ref": "#/definitions/TableBlock"
+              },
+              {
+                "$ref": "#/definitions/ContactCardBlock"
+              },
+              {
+                "$ref": "#/definitions/NewsletterBlock"
+              },
+              {
+                "$ref": "#/definitions/IconFeaturesBlock"
+              },
+              {
+                "$ref": "#/definitions/BannerBlock"
+              },
+              {
+                "$ref": "#/definitions/ButtonGroupBlock"
+              },
+              {
+                "$ref": "#/definitions/DividerBlock"
+              }
+            ]
+          }
+        },
+        "site": {
+          "type": "string",
+          "enum": [
+            "main"
+          ]
+        },
+        "updatedAt": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "_status": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "draft",
+            "published"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "site",
+        "updatedAt",
+        "createdAt"
+      ],
+      "description": "Seksjoner som vises på flere sider, for eksempel en kontaktseksjon. Endre dem her, så endres alle sidene som bruker dem."
+    },
+    "globalSections_select": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": "boolean"
+        },
+        "layout": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "hero": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/HeroBlock_select"
+                    }
+                  ]
+                },
+                "content": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/ContentBlock_select"
+                    }
+                  ]
+                },
+                "textImage": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/TextImageBlock_select"
+                    }
+                  ]
+                },
+                "columns": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/ColumnsBlock_select"
+                    }
+                  ]
+                },
+                "fullImage": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/FullImageBlock_select"
+                    }
+                  ]
+                },
+                "imageGrid": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/ImageGridBlock_select"
+                    }
+                  ]
+                },
+                "cards": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/CardsBlock_select"
+                    }
+                  ]
+                },
+                "childPages": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/ChildPagesBlock_select"
+                    }
+                  ]
+                },
+                "cta": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/CallToActionBlock_select"
+                    }
+                  ]
+                },
+                "quote": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/QuoteBlock_select"
+                    }
+                  ]
+                },
+                "stats": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/StatsBlock_select"
+                    }
+                  ]
+                },
+                "facts": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/FactsBlock_select"
+                    }
+                  ]
+                },
+                "articleFeed": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/ArticleFeedBlock_select"
+                    }
+                  ]
+                },
+                "people": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/PeopleBlock_select"
+                    }
+                  ]
+                },
+                "documents": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/DocumentsBlock_select"
+                    }
+                  ]
+                },
+                "timeline": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/TimelineBlock_select"
+                    }
+                  ]
+                },
+                "accordion": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/AccordionBlock_select"
+                    }
+                  ]
+                },
+                "video": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/VideoBlock_select"
+                    }
+                  ]
+                },
+                "embed": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/EmbedBlock_select"
+                    }
+                  ]
+                },
+                "formBlock": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/FormBlock_select"
+                    }
+                  ]
+                },
+                "tabs": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/TabsBlock_select"
+                    }
+                  ]
+                },
+                "pricing": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/PricingBlock_select"
+                    }
+                  ]
+                },
+                "logoWall": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/LogoWallBlock_select"
+                    }
+                  ]
+                },
+                "testimonials": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/TestimonialsBlock_select"
+                    }
+                  ]
+                },
+                "carousel": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/CarouselBlock_select"
+                    }
+                  ]
+                },
+                "table": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/TableBlock_select"
+                    }
+                  ]
+                },
+                "contactCard": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/ContactCardBlock_select"
+                    }
+                  ]
+                },
+                "newsletter": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/NewsletterBlock_select"
+                    }
+                  ]
+                },
+                "iconFeatures": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/IconFeaturesBlock_select"
+                    }
+                  ]
+                },
+                "banner": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/BannerBlock_select"
+                    }
+                  ]
+                },
+                "buttonGroup": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/ButtonGroupBlock_select"
+                    }
+                  ]
+                },
+                "divider": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/DividerBlock_select"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "site": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "boolean"
+        },
+        "_status": {
+          "type": "boolean"
+        }
+      }
+    },
+    "pageTemplates": {
+      "type": "object",
+      "additionalProperties": false,
+      "title": "PageTemplate",
+      "properties": {
+        "id": {
+          "type": "number"
+        },
+        "name": {
+          "type": "string"
+        },
+        "layout": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/definitions/HeroBlock"
+              },
+              {
+                "$ref": "#/definitions/ContentBlock"
+              },
+              {
+                "$ref": "#/definitions/TextImageBlock"
+              },
+              {
+                "$ref": "#/definitions/ColumnsBlock"
+              },
+              {
+                "$ref": "#/definitions/FullImageBlock"
+              },
+              {
+                "$ref": "#/definitions/ImageGridBlock"
+              },
+              {
+                "$ref": "#/definitions/CardsBlock"
+              },
+              {
+                "$ref": "#/definitions/ChildPagesBlock"
+              },
+              {
+                "$ref": "#/definitions/CallToActionBlock"
+              },
+              {
+                "$ref": "#/definitions/QuoteBlock"
+              },
+              {
+                "$ref": "#/definitions/StatsBlock"
+              },
+              {
+                "$ref": "#/definitions/FactsBlock"
+              },
+              {
+                "$ref": "#/definitions/ArticleFeedBlock"
+              },
+              {
+                "$ref": "#/definitions/PeopleBlock"
+              },
+              {
+                "$ref": "#/definitions/DocumentsBlock"
+              },
+              {
+                "$ref": "#/definitions/TimelineBlock"
+              },
+              {
+                "$ref": "#/definitions/AccordionBlock"
+              },
+              {
+                "$ref": "#/definitions/VideoBlock"
+              },
+              {
+                "$ref": "#/definitions/EmbedBlock"
+              },
+              {
+                "$ref": "#/definitions/FormBlock"
+              },
+              {
+                "$ref": "#/definitions/TabsBlock"
+              },
+              {
+                "$ref": "#/definitions/PricingBlock"
+              },
+              {
+                "$ref": "#/definitions/LogoWallBlock"
+              },
+              {
+                "$ref": "#/definitions/TestimonialsBlock"
+              },
+              {
+                "$ref": "#/definitions/CarouselBlock"
+              },
+              {
+                "$ref": "#/definitions/TableBlock"
+              },
+              {
+                "$ref": "#/definitions/ContactCardBlock"
+              },
+              {
+                "$ref": "#/definitions/NewsletterBlock"
+              },
+              {
+                "$ref": "#/definitions/IconFeaturesBlock"
+              },
+              {
+                "$ref": "#/definitions/BannerBlock"
+              },
+              {
+                "$ref": "#/definitions/ButtonGroupBlock"
+              },
+              {
+                "$ref": "#/definitions/DividerBlock"
+              },
+              {
+                "$ref": "#/definitions/GlobalSectionBlock"
+              }
+            ]
+          }
+        },
+        "site": {
+          "type": "string",
+          "enum": [
+            "main"
+          ]
+        },
+        "updatedAt": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "site",
+        "updatedAt",
+        "createdAt"
+      ],
+      "description": "Ferdige sideoppsett. Velg en mal når du lager en ny side, så får siden en kopi av seksjonene."
+    },
+    "pageTemplates_select": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "boolean"
+        },
+        "layout": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "hero": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/HeroBlock_select"
+                    }
+                  ]
+                },
+                "content": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/ContentBlock_select"
+                    }
+                  ]
+                },
+                "textImage": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/TextImageBlock_select"
+                    }
+                  ]
+                },
+                "columns": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/ColumnsBlock_select"
+                    }
+                  ]
+                },
+                "fullImage": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/FullImageBlock_select"
+                    }
+                  ]
+                },
+                "imageGrid": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/ImageGridBlock_select"
+                    }
+                  ]
+                },
+                "cards": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/CardsBlock_select"
+                    }
+                  ]
+                },
+                "childPages": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/ChildPagesBlock_select"
+                    }
+                  ]
+                },
+                "cta": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/CallToActionBlock_select"
+                    }
+                  ]
+                },
+                "quote": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/QuoteBlock_select"
+                    }
+                  ]
+                },
+                "stats": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/StatsBlock_select"
+                    }
+                  ]
+                },
+                "facts": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/FactsBlock_select"
+                    }
+                  ]
+                },
+                "articleFeed": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/ArticleFeedBlock_select"
+                    }
+                  ]
+                },
+                "people": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/PeopleBlock_select"
+                    }
+                  ]
+                },
+                "documents": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/DocumentsBlock_select"
+                    }
+                  ]
+                },
+                "timeline": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/TimelineBlock_select"
+                    }
+                  ]
+                },
+                "accordion": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/AccordionBlock_select"
+                    }
+                  ]
+                },
+                "video": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/VideoBlock_select"
+                    }
+                  ]
+                },
+                "embed": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/EmbedBlock_select"
+                    }
+                  ]
+                },
+                "formBlock": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/FormBlock_select"
+                    }
+                  ]
+                },
+                "tabs": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/TabsBlock_select"
+                    }
+                  ]
+                },
+                "pricing": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/PricingBlock_select"
+                    }
+                  ]
+                },
+                "logoWall": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/LogoWallBlock_select"
+                    }
+                  ]
+                },
+                "testimonials": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/TestimonialsBlock_select"
+                    }
+                  ]
+                },
+                "carousel": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/CarouselBlock_select"
+                    }
+                  ]
+                },
+                "table": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/TableBlock_select"
+                    }
+                  ]
+                },
+                "contactCard": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/ContactCardBlock_select"
+                    }
+                  ]
+                },
+                "newsletter": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/NewsletterBlock_select"
+                    }
+                  ]
+                },
+                "iconFeatures": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/IconFeaturesBlock_select"
+                    }
+                  ]
+                },
+                "banner": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/BannerBlock_select"
+                    }
+                  ]
+                },
+                "buttonGroup": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/ButtonGroupBlock_select"
+                    }
+                  ]
+                },
+                "divider": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/DividerBlock_select"
+                    }
+                  ]
+                },
+                "globalSection": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/GlobalSectionBlock_select"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "site": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "boolean"
+        }
+      }
+    },
+    "sectionPresets": {
+      "type": "object",
+      "additionalProperties": false,
+      "title": "SectionPreset",
+      "properties": {
+        "id": {
+          "type": "number"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "description": "Hva seksjonen er til for. Bare synlig i administrasjonen.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "block": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/definitions/HeroBlock"
+              },
+              {
+                "$ref": "#/definitions/ContentBlock"
+              },
+              {
+                "$ref": "#/definitions/TextImageBlock"
+              },
+              {
+                "$ref": "#/definitions/ColumnsBlock"
+              },
+              {
+                "$ref": "#/definitions/FullImageBlock"
+              },
+              {
+                "$ref": "#/definitions/ImageGridBlock"
+              },
+              {
+                "$ref": "#/definitions/CardsBlock"
+              },
+              {
+                "$ref": "#/definitions/ChildPagesBlock"
+              },
+              {
+                "$ref": "#/definitions/CallToActionBlock"
+              },
+              {
+                "$ref": "#/definitions/QuoteBlock"
+              },
+              {
+                "$ref": "#/definitions/StatsBlock"
+              },
+              {
+                "$ref": "#/definitions/FactsBlock"
+              },
+              {
+                "$ref": "#/definitions/ArticleFeedBlock"
+              },
+              {
+                "$ref": "#/definitions/PeopleBlock"
+              },
+              {
+                "$ref": "#/definitions/DocumentsBlock"
+              },
+              {
+                "$ref": "#/definitions/TimelineBlock"
+              },
+              {
+                "$ref": "#/definitions/AccordionBlock"
+              },
+              {
+                "$ref": "#/definitions/VideoBlock"
+              },
+              {
+                "$ref": "#/definitions/EmbedBlock"
+              },
+              {
+                "$ref": "#/definitions/FormBlock"
+              },
+              {
+                "$ref": "#/definitions/TabsBlock"
+              },
+              {
+                "$ref": "#/definitions/PricingBlock"
+              },
+              {
+                "$ref": "#/definitions/LogoWallBlock"
+              },
+              {
+                "$ref": "#/definitions/TestimonialsBlock"
+              },
+              {
+                "$ref": "#/definitions/CarouselBlock"
+              },
+              {
+                "$ref": "#/definitions/TableBlock"
+              },
+              {
+                "$ref": "#/definitions/ContactCardBlock"
+              },
+              {
+                "$ref": "#/definitions/NewsletterBlock"
+              },
+              {
+                "$ref": "#/definitions/IconFeaturesBlock"
+              },
+              {
+                "$ref": "#/definitions/BannerBlock"
+              },
+              {
+                "$ref": "#/definitions/ButtonGroupBlock"
+              },
+              {
+                "$ref": "#/definitions/DividerBlock"
+              },
+              {
+                "$ref": "#/definitions/GlobalSectionBlock"
+              }
+            ]
+          }
+        },
+        "site": {
+          "type": "string",
+          "enum": [
+            "main"
+          ]
+        },
+        "updatedAt": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "site",
+        "updatedAt",
+        "createdAt"
+      ],
+      "description": "En seksjon du bruker ofte. Sett den inn på en side med «Sett inn lagret seksjon»."
+    },
+    "sectionPresets_select": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "boolean"
+        },
+        "block": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "hero": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/HeroBlock_select"
+                    }
+                  ]
+                },
+                "content": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/ContentBlock_select"
+                    }
+                  ]
+                },
+                "textImage": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/TextImageBlock_select"
+                    }
+                  ]
+                },
+                "columns": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/ColumnsBlock_select"
+                    }
+                  ]
+                },
+                "fullImage": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/FullImageBlock_select"
+                    }
+                  ]
+                },
+                "imageGrid": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/ImageGridBlock_select"
+                    }
+                  ]
+                },
+                "cards": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/CardsBlock_select"
+                    }
+                  ]
+                },
+                "childPages": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/ChildPagesBlock_select"
+                    }
+                  ]
+                },
+                "cta": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/CallToActionBlock_select"
+                    }
+                  ]
+                },
+                "quote": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/QuoteBlock_select"
+                    }
+                  ]
+                },
+                "stats": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/StatsBlock_select"
+                    }
+                  ]
+                },
+                "facts": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/FactsBlock_select"
+                    }
+                  ]
+                },
+                "articleFeed": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/ArticleFeedBlock_select"
+                    }
+                  ]
+                },
+                "people": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/PeopleBlock_select"
+                    }
+                  ]
+                },
+                "documents": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/DocumentsBlock_select"
+                    }
+                  ]
+                },
+                "timeline": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/TimelineBlock_select"
+                    }
+                  ]
+                },
+                "accordion": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/AccordionBlock_select"
+                    }
+                  ]
+                },
+                "video": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/VideoBlock_select"
+                    }
+                  ]
+                },
+                "embed": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/EmbedBlock_select"
+                    }
+                  ]
+                },
+                "formBlock": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/FormBlock_select"
+                    }
+                  ]
+                },
+                "tabs": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/TabsBlock_select"
+                    }
+                  ]
+                },
+                "pricing": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/PricingBlock_select"
+                    }
+                  ]
+                },
+                "logoWall": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/LogoWallBlock_select"
+                    }
+                  ]
+                },
+                "testimonials": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/TestimonialsBlock_select"
+                    }
+                  ]
+                },
+                "carousel": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/CarouselBlock_select"
+                    }
+                  ]
+                },
+                "table": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/TableBlock_select"
+                    }
+                  ]
+                },
+                "contactCard": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/ContactCardBlock_select"
+                    }
+                  ]
+                },
+                "newsletter": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/NewsletterBlock_select"
+                    }
+                  ]
+                },
+                "iconFeatures": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/IconFeaturesBlock_select"
+                    }
+                  ]
+                },
+                "banner": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/BannerBlock_select"
+                    }
+                  ]
+                },
+                "buttonGroup": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/ButtonGroupBlock_select"
+                    }
+                  ]
+                },
+                "divider": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/DividerBlock_select"
+                    }
+                  ]
+                },
+                "globalSection": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/GlobalSectionBlock_select"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "site": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "boolean"
+        },
+        "createdAt": {
           "type": "boolean"
         }
       }
@@ -6033,6 +7603,84 @@
               "additionalProperties": false,
               "properties": {
                 "relationTo": {
+                  "const": "globalSections"
+                },
+                "value": {
+                  "oneOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "$ref": "#/definitions/globalSections"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "value",
+                "relationTo"
+              ]
+            },
+            {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "relationTo": {
+                  "const": "pageTemplates"
+                },
+                "value": {
+                  "oneOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "$ref": "#/definitions/pageTemplates"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "value",
+                "relationTo"
+              ]
+            },
+            {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "relationTo": {
+                  "const": "sectionPresets"
+                },
+                "value": {
+                  "oneOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "$ref": "#/definitions/sectionPresets"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "value",
+                "relationTo"
+              ]
+            },
+            {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "relationTo": {
                   "const": "articles"
                 },
                 "value": {
@@ -11002,6 +12650,81 @@
         "blockType"
       ]
     },
+    "GlobalSectionBlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "globalSection": {
+          "description": "Endres den felles seksjonen, endres alle sidene som bruker den.",
+          "oneOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/definitions/globalSections"
+            }
+          ]
+        },
+        "section": {
+          "$ref": "#/definitions/SectionSettings"
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "blockName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "blockType": {
+          "const": "globalSection"
+        }
+      },
+      "required": [
+        "blockType",
+        "globalSection"
+      ]
+    },
+    "PresetBlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "preset": {
+          "description": "Når siden lagres, byttes denne ut med en kopi av seksjonen. Kopien kan du redigere fritt.",
+          "oneOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/definitions/sectionPresets"
+            }
+          ]
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "blockName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "blockType": {
+          "const": "preset"
+        }
+      },
+      "required": [
+        "blockType",
+        "preset"
+      ]
+    },
     "SectionSettings_select": {
       "type": "object",
       "additionalProperties": false,
@@ -13220,6 +14943,46 @@
         }
       }
     },
+    "GlobalSectionBlock_select": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "globalSection": {
+          "type": "boolean"
+        },
+        "section": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/SectionSettings_select"
+            }
+          ]
+        },
+        "id": {
+          "type": "boolean"
+        },
+        "blockName": {
+          "type": "boolean"
+        }
+      }
+    },
+    "PresetBlock_select": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "preset": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "boolean"
+        },
+        "blockName": {
+          "type": "boolean"
+        }
+      }
+    },
     "auth": {
       "users": {
         "type": "object",
@@ -13369,6 +15132,32 @@
                         },
                         {
                           "$ref": "#/definitions/pages"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "value",
+                    "relationTo"
+                  ]
+                },
+                {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "relationTo": {
+                      "const": "globalSections"
+                    },
+                    "value": {
+                      "oneOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "$ref": "#/definitions/globalSections"
                         }
                       ]
                     }

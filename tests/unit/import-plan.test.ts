@@ -354,3 +354,32 @@ test('an article image whose ref is not in the plan is left out of the text', as
   })
   assert.equal(seen[0], '<p>Tekst</p>')
 })
+
+test('global sections are created before the pages that use them, and filled in once the pages exist', async () => {
+  const p = plan()
+  p.globalSections = [{ ref: 'contact', title: 'Kontakt', layout: { no: [{ blockType: 'cta', heading: 'Ta kontakt', links: [{ link: { reference: { $pageLink: 'home' } } }] }], en: [{ blockType: 'cta', heading: 'Contact us' }] } }]
+  p.pages[0].layout.no.push({ blockType: 'globalSection', globalSection: { $globalSection: 'contact' } })
+  const payload = fakePayload()
+  await importPlan(payload, p, { baseDir: 'tests/fixtures', toLexical })
+  const at = (op: string, collection: string, i = 0) => payload.calls.findIndex((c, n) => c.op === op && c.collection === collection && payload.calls.filter((d, m) => m < n && d.op === op && d.collection === collection).length === i)
+  const section = payload.calls[at('create', 'globalSections')]
+  assert.deepEqual({ ...(section.data as object) }, { title: 'Kontakt', site: 'main', _status: 'published' })
+  assert.ok(at('create', 'globalSections') < at('create', 'pages'), 'created before the pages')
+  const fill = payload.calls[at('update', 'globalSections')]
+  assert.ok(at('update', 'globalSections') > at('create', 'pages'), 'filled after the pages exist, so it can link to them')
+  const pageId = payload.calls.find((c) => c.op === 'create' && c.collection === 'pages')!.id
+  assert.equal(((fill.data as any).layout[0].links[0].link.reference as any).value, pageId)
+  assert.equal(fill.locale, 'no')
+  const english = payload.calls.find((c) => c.op === 'update' && c.collection === 'globalSections' && c.locale === 'en')
+  assert.equal((english!.data as any).layout[0].heading, 'Contact us')
+  const pageUpdate = payload.calls.find((c) => c.op === 'update' && c.collection === 'pages' && c.locale === 'no' && (c.data as any).layout)
+  assert.equal((pageUpdate!.data as any).layout.at(-1).globalSection, section.id ?? payload.calls[at('create', 'globalSections')].id)
+})
+
+test('a failed import removes the global sections it created, and reset deletes them after pages', async () => {
+  assert.ok(CONTENT_COLLECTIONS.indexOf('globalSections') > CONTENT_COLLECTIONS.indexOf('pages'))
+  const p = plan()
+  p.globalSections = [{ ref: 'contact', title: 'Kontakt', layout: { no: [] } }]
+  p.pages[0].layout.no.push({ blockType: 'globalSection', globalSection: { $globalSection: 'nope' } })
+  await assert.rejects(importPlan(fakePayload(), p, { baseDir: 'tests/fixtures', toLexical }), /globalSection "nope"/)
+})
