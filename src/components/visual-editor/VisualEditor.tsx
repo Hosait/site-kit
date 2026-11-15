@@ -57,6 +57,10 @@ export function VisualEditor({ id, locale, config, previewSrc, formHref, listHre
   const [focusImage, setFocusImage] = useState<Path | null>(null)
   const titleId = useId()
 
+  // Nothing may change or save before the page's own data has loaded, or an early change would
+  // save a layout without the sections the page already has.
+  const loaded = useRef(false)
+  const [ready, setReady] = useState(false)
   const timer = useRef<number | undefined>(undefined)
   const inflight = useRef<Promise<void> | null>(null)
   const queued = useRef(false)
@@ -72,6 +76,8 @@ export function VisualEditor({ id, locale, config, previewSrc, formHref, listHre
     loadPage(id, locale)
       .then((doc) => {
         setHistory(historyOf(doc.layout ?? []))
+        loaded.current = true
+        setReady(true)
         titleRef.current = doc.title ?? ''
         setTitle(titleRef.current)
         setIsPublished(doc._status === 'published')
@@ -115,6 +121,7 @@ export function VisualEditor({ id, locale, config, previewSrc, formHref, listHre
 
   /** Text typed on the page is already shown, so it saves without refreshing the preview. */
   function schedule(opts: { refresh: boolean; delay?: number }) {
+    if (!loaded.current) return
     if (opts.refresh) {
       needsRefresh.current = true
       setStale(true)
@@ -128,6 +135,7 @@ export function VisualEditor({ id, locale, config, previewSrc, formHref, listHre
   const lastTyping = useRef(0)
   type ChangeOpts = { refresh?: boolean; delay?: number; typing?: boolean }
   const change = (next: Block[], opts: ChangeOpts = {}) => {
+    if (!loaded.current) return
     // Typing in the settings panel is one undo step per pause, not one per key.
     const coalesce = opts.typing && Date.now() - lastTyping.current < 1500 && histRef.current.past.length > 0
     lastTyping.current = opts.typing ? Date.now() : 0
@@ -180,6 +188,7 @@ export function VisualEditor({ id, locale, config, previewSrc, formHref, listHre
   }
 
   const doPublish = async () => {
+    if (!loaded.current) return
     window.clearTimeout(timer.current)
     if (inflight.current) await inflight.current
     setStatus('publishing')
@@ -260,13 +269,14 @@ export function VisualEditor({ id, locale, config, previewSrc, formHref, listHre
         <a href={formHref} className={s.btn}>
           Avansert redigering
         </a>
-        <button type="button" className={s.primary} onClick={doPublish} disabled={status === 'loading' || status === 'publishing'}>
+        <button type="button" className={s.primary} onClick={doPublish} disabled={!ready || status === 'publishing'}>
           Publiser
         </button>
       </header>
 
       <aside className={s.left} aria-label="Seksjoner">
-        <Sidebar
+        {!ready && <p className={s.hint}>Henter siden …</p>}
+        {ready && <Sidebar
           config={config}
           layout={layout}
           selected={sel}
@@ -275,7 +285,7 @@ export function VisualEditor({ id, locale, config, previewSrc, formHref, listHre
           onMove={moveTo}
           onDragStart={startDrag}
           onDragEnd={() => setDrag(null)}
-        />
+        />}
       </aside>
 
       <main className={s.stage} aria-label="Forhåndsvisning">

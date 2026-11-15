@@ -45,9 +45,13 @@ test('the visual editor adds, moves and edits sections, replaces an image, saves
     const frame = page.frameLocator('iframe[title="Forhåndsvisning av siden"]')
     await expect(frame.getByRole('heading', { name: 'Første overskrift' })).toBeVisible({ timeout: 120_000 })
 
+    // The editor has the page's sections before anything is added.
+    await expect(page.getByRole('region', { name: 'Seksjoner på siden' }).getByRole('listitem')).toHaveCount(1)
+
     // Add: drag «Sitat» from the library onto the page, below the hero.
     const iframe = page.locator('iframe[title="Forhåndsvisning av siden"]')
     const box = (await iframe.boundingBox())!
+    await page.locator('[data-block="quote"]').scrollIntoViewIfNeeded()
     const card = (await page.locator('[data-block="quote"]').boundingBox())!
     await page.mouse.move(card.x + card.width / 2, card.y + card.height / 2)
     await page.mouse.down()
