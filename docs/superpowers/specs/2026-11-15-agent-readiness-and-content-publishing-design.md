@@ -1,9 +1,8 @@
 # Agent readiness before a move, and publishing articles from a document
 
-Date: 2026-11-15. Status: design proposal for review (Steinar, Bjørn, Henriette).
-**Website moves and Site Kit are on hold (Bjørn, 2026-10-18).** This spec only writes the ideas
-down. Nothing here is built until Bjørn lifts the hold. The team has agreed that both ideas matter
-after launch.
+Date: 2026-11-15. Status: design proposal. Owner: Steinar, who owns Site Kit and decides its
+parts. Both ideas are meant for after launch. The Hosait parts (1b, and Hosait pointing to the
+site's MCP) are Hosait changes and go through Bjørn as usual.
 
 ## Why
 
@@ -160,6 +159,8 @@ Pages, global sections and publishing directly are not in phase 1.
 
 ## Open questions
 
+Steinar decides 1, 2 and 4 (Site Kit). 3 and 5 change Hosait and go to Bjørn.
+
 1. Should the MCP ever publish without approval, for example for an owner who already may publish
    in the admin? (This spec says no in phase 1.)
 2. Personal keys first, OAuth later: is that right, or is OAuth needed from the start for ChatGPT
@@ -172,7 +173,6 @@ Pages, global sections and publishing directly are not in phase 1.
 
 - Parsing .docx or .pptx on the server.
 - Moves of sites that are not Site Kit sites.
-- Any change while the hold is on.
 
 ## Testing (when built)
 
