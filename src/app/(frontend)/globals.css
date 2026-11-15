@@ -260,7 +260,44 @@
   }
 }
 
+/*
+ * Section settings («Seksjonsoppsett», src/blocks/SectionFrame.tsx). Outside any layer on purpose,
+ * so they win over the blocks' own padding and width utilities. Spacing tokens can be set in
+ * site/theme.json (spacing.s|m|l|xl).
+ */
+:root {
+  --space-s: 1.5rem;
+  --space-m: 3rem;
+  --space-l: 5rem;
+  --space-xl: 7rem;
+}
+.sec-frame[data-pt='none'] > :not(.sec-media) { padding-top: 0; }
+.sec-frame[data-pt='s'] > :not(.sec-media) { padding-top: var(--space-s); }
+.sec-frame[data-pt='m'] > :not(.sec-media) { padding-top: var(--space-m); }
+.sec-frame[data-pt='l'] > :not(.sec-media) { padding-top: var(--space-l); }
+.sec-frame[data-pt='xl'] > :not(.sec-media) { padding-top: var(--space-xl); }
+.sec-frame[data-pb='none'] > :not(.sec-media) { padding-bottom: 0; }
+.sec-frame[data-pb='s'] > :not(.sec-media) { padding-bottom: var(--space-s); }
+.sec-frame[data-pb='m'] > :not(.sec-media) { padding-bottom: var(--space-m); }
+.sec-frame[data-pb='l'] > :not(.sec-media) { padding-bottom: var(--space-l); }
+.sec-frame[data-pb='xl'] > :not(.sec-media) { padding-bottom: var(--space-xl); }
+.sec-frame[data-width='text'] :is(.wrap, .wrap-wide, .wrap-text) { max-width: calc(var(--container-text) + 4rem); }
+.sec-frame[data-width='content'] :is(.wrap, .wrap-wide, .wrap-text) { max-width: var(--container-content); }
+.sec-frame[data-width='wide'] :is(.wrap, .wrap-wide, .wrap-text) { max-width: var(--container-wide); }
+.sec-frame[data-width='full'] :is(.wrap, .wrap-wide, .wrap-text) { max-width: none; }
+.sec-has-media { position: relative; isolation: isolate; }
+.sec-has-media > :not(.sec-media) { background-color: transparent; }
+.sec-media { position: absolute; inset: 0; z-index: -1; overflow: hidden; }
+.sec-media > img,
+.sec-media > video { width: 100%; height: 100%; object-fit: cover; }
+.sec-overlay-dark .sec-media::after,
+.sec-overlay-light .sec-media::after { content: ''; position: absolute; inset: 0; }
+.sec-overlay-dark .sec-media::after { background: color-mix(in srgb, var(--color-ink) 70%, transparent); }
+.sec-overlay-light .sec-media::after { background: color-mix(in srgb, #fff 80%, transparent); }
+.sec-overlay-dark { color: #fff; }
+
 @media (prefers-reduced-motion: reduce) {
+  .sec-media > video { display: none; }
   *,
   *::before,
   *::after {

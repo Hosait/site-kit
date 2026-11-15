@@ -1,9 +1,11 @@
+import { tokenProblems, tokensToCss, type ThemeTokens } from './theme-tokens'
+
 /**
  * site/theme.json → CSS custom properties. The values go into a <style> tag, so only
  * plain hex colours and px/rem lengths are accepted.
  */
 export type ColorKey = 'ink' | 'brand' | 'brandText' | 'brandDark' | 'tint' | 'muted' | 'highlight' | 'background'
-export type Theme = {
+export type Theme = ThemeTokens & {
   colors: Record<ColorKey, string>
   radius: { button: string; card: string }
   logo: { src: string; width: number; height: number }
@@ -41,6 +43,7 @@ export function validateTheme(input: unknown): Theme {
   if (typeof t?.logo?.src !== 'string' || !LOGO.test(t.logo.src)) problems.push('logo.src must be /brand/<file>.svg|png|webp')
   if (!(Number(t?.logo?.width) > 0) || !(Number(t?.logo?.height) > 0)) problems.push('logo.width and logo.height must be positive')
   if (t?.icon !== undefined && (typeof t.icon?.src !== 'string' || !ICON.test(t.icon.src) || t.icon.src.includes('..'))) problems.push('icon.src must be /brand/<file>.svg|png|webp|ico')
+  problems.push(...tokenProblems(t))
   if (problems.length) throw new Error(`site/theme.json: ${problems.join('; ')}`)
   return t as Theme
 }
@@ -115,7 +118,7 @@ export const siteIcon = (theme: Theme): string => theme.icon?.src ?? '/favicon.i
 export function themeToCss(theme: Theme): string {
   const vars = (Object.keys(COLOR_VARS) as ColorKey[]).map((k) => `${COLOR_VARS[k]}:${theme.colors[k]};`)
   vars.push(`--radius-button:${theme.radius.button};`, `--radius-card:${theme.radius.card};`)
-  return `:root{${vars.join('')}}`
+  return `:root{${vars.join('')}}${tokensToCss(theme)}`
 }
 
 function luminance(hex: string): number {
