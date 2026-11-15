@@ -1,19 +1,25 @@
 /**
  * The launch check (pnpm qa:launch <address>): before a site moves to its own domain, every page
  * in its sitemap must answer, carry no placeholder or demo text, have a title, and link only to
- * pages that exist. Missing descriptions, share images and alt texts are warnings. Reads the
- * running site over HTTP, so it works on a local install and on the hosait.com preview alike.
+ * pages that exist; the home page must answer, the sitemap must list pages, and every image a page
+ * shows and every document it links to on the storage host must load. Missing descriptions, share
+ * images and alt texts are warnings. Reads the running site over HTTP, so it works on a local
+ * install and on the hosait.com preview alike.
  */
 import { JSDOM } from 'jsdom'
 
 export type Finding = { page: string; text: string }
-export type LaunchResult = { errors: Finding[]; warnings: Finding[]; notes: string[]; pages: number; linksChecked: number }
+export type LaunchResult = { errors: Finding[]; warnings: Finding[]; notes: string[]; pages: number; linksChecked: number; filesChecked: number }
+/** A file a page needs: an image it shows, or a document it links to on another host. */
+export type PageFile = { url: string; kind: 'image' | 'document' }
 type Fetch = (url: string, init?: RequestInit) => Promise<Response>
 
 // Text that only the demo or an unfilled template puts on a page.
 const PLACEHOLDERS = [/Eksempeltekst/, /Example text/, /Lorem ipsum/i, /Nordlys Demo/, /\bexample\.com\b/i]
 // Paths that are not pages a visitor follows.
 const NOT_PAGES = /^\/(?:admin|api|next|_next)(?:\/|$)/
+// Files a visitor downloads rather than reads as a page.
+const DOCUMENT = /\.(?:pdf|docx?|xlsx?|pptx?|odt|ods|odp|csv|zip|rtf)$/i
 const MAX_BODY = 5 * 1024 * 1024
 const CONCURRENCY = 4
 
@@ -24,7 +30,7 @@ const NOINDEX = 'search engines are told not to index the page (noindex)'
  * With `ownHosts` (the page is on the site's own domain), a noindex and a canonical address on
  * another host are errors too.
  */
-export function pageFindings(html: string, pageUrl: string, base: string, ownHosts?: string[]): { errors: string[]; warnings: string[]; links: string[] } {
+export function pageFindings(html: string, pageUrl: string, base: string, ownHosts?: string[]): { errors: string[]; warnings: string[]; links: string[]; files: PageFile[] } {
   const { document } = new JSDOM(html, { url: pageUrl }).window
   const errors: string[] = []
   const warnings: string[] = []
@@ -55,6 +61,23 @@ export function pageFindings(html: string, pageUrl: string, base: string, ownHos
   if (noAlt) warnings.push(`${noAlt} image${noAlt === 1 ? '' : 's'} without alt text`)
 
   const origin = new URL(base).origin
+  const files: PageFile[] = []
+  const addFile = (raw: string | null | undefined, kind: PageFile['kind']) => {
+    if (!raw?.trim()) return
+    try {
+      const u = new URL(raw.trim(), pageUrl)
+      u.hash = ''
+      if (/^https?:$/.test(u.protocol) && !files.some((f) => f.url === u.href)) files.push({ url: u.href, kind })
+    } catch {
+      // Not an address: left out.
+    }
+  }
+  // Every size of an image is a file a visitor may be sent: a phone takes the smallest.
+  for (const el of document.querySelectorAll('img[src], img[srcset], source[srcset]')) {
+    addFile(el.getAttribute('src'), 'image')
+    for (const candidate of (el.getAttribute('srcset') ?? '').split(/,\s+|,$/)) addFile(candidate.trim().split(/\s+/)[0], 'image')
+  }
+  addFile(document.querySelector('meta[property="og:image"]')?.getAttribute('content'), 'image')
   const links: string[] = []
   for (const a of document.querySelectorAll('a[href]')) {
     let u: URL
@@ -63,12 +86,14 @@ export function pageFindings(html: string, pageUrl: string, base: string, ownHos
     } catch {
       continue
     }
+    // A document on another host (the storage) is not a page, but it must load: the caller decides which hosts.
+    if (u.origin !== origin && DOCUMENT.test(u.pathname)) addFile(u.href, 'document')
     if (u.origin !== origin || NOT_PAGES.test(u.pathname)) continue
     u.hash = ''
     if (u.href === pageUrl && (a.getAttribute('href') ?? '').startsWith('#')) continue
     if (!links.includes(u.href)) links.push(u.href)
   }
-  return { errors, warnings, links }
+  return { errors, warnings, links, files }
 }
 
 type AxeViolation = { id: string; impact?: string | null; help?: string; nodes: unknown[] }
@@ -143,6 +168,17 @@ async function finalStatus(fetchImpl: Fetch, url: string): Promise<number> {
   return 310
 }
 
+/** Whether a file answers: HEAD, or the first byte for a store that refuses HEAD. Redirects are followed. */
+async function fileStatus(fetchImpl: Fetch, url: string): Promise<number> {
+  let res = await fetchImpl(url, { method: 'HEAD', signal: AbortSignal.timeout(20_000) })
+  if (res.status === 403 || res.status === 405 || res.status === 501) {
+    await res.body?.cancel()
+    res = await fetchImpl(url, { headers: { Range: 'bytes=0-0' }, signal: AbortSignal.timeout(20_000) })
+  }
+  await res.body?.cancel()
+  return res.status
+}
+
 async function inParallel<T>(items: T[], work: (item: T, i: number) => Promise<void>): Promise<void> {
   let next = 0
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, items.length) }, async () => {
@@ -177,13 +213,15 @@ export function robotsBlocksAll(text: string): boolean {
 /**
  * `ownHosts` are the site's own domains (site/config.ts). On one of them, the site must be open to
  * search engines: robots.txt, noindex and canonical addresses are checked. On a preview they are not.
+ * `assetHosts` are the hosts that serve the site's documents (its storage): a document linked there must load.
  */
-export async function launchCheck(base: string, opts: { fetch?: Fetch; maxPages?: number; maxLinks?: number; ownHosts?: string[] } = {}): Promise<LaunchResult> {
+export async function launchCheck(base: string, opts: { fetch?: Fetch; maxPages?: number; maxLinks?: number; maxFiles?: number; ownHosts?: string[]; assetHosts?: string[] } = {}): Promise<LaunchResult> {
   const fetchImpl: Fetch = opts.fetch ?? ((u, init) => fetch(u, init))
   const maxPages = opts.maxPages ?? 500
   const maxLinks = opts.maxLinks ?? 2000
+  const maxFiles = opts.maxFiles ?? 3000
   const root = base.replace(/\/+$/, '')
-  const result: LaunchResult = { errors: [], warnings: [], notes: [], pages: 0, linksChecked: 0 }
+  const result: LaunchResult = { errors: [], warnings: [], notes: [], pages: 0, linksChecked: 0, filesChecked: 0 }
   const own = opts.ownHosts?.includes(new URL(root).hostname) ? opts.ownHosts : undefined
   if (opts.ownHosts && !own) {
     result.notes.push('Search engine access (robots.txt, noindex, canonical addresses) is not checked on a preview address, where it is blocked on purpose. Run the check on the own domain after the move.')
@@ -195,6 +233,7 @@ export async function launchCheck(base: string, opts: { fetch?: Fetch; maxPages?
     return result
   }
   const all = sitemapPaths(await readBody(map))
+  if (!all.length) result.errors.push({ page: `${root}/sitemap.xml`, text: 'the sitemap lists no pages' })
   const paths = all.slice(0, maxPages)
   if (all.length > paths.length) result.notes.push(`Checked the first ${paths.length} of ${all.length} pages in the sitemap.`)
   if (own) {
@@ -204,11 +243,19 @@ export async function launchCheck(base: string, opts: { fetch?: Fetch; maxPages?
     }
   }
 
-  const perPage: { errors: Finding[]; warnings: Finding[]; links: string[] }[] = []
+  // The sitemap can be right while the address visitors type is not.
+  try {
+    const status = await finalStatus(fetchImpl, `${root}/`)
+    if (status >= 400) result.errors.push({ page: `${root}/`, text: `the home page answers ${status}` })
+  } catch (e) {
+    result.errors.push({ page: `${root}/`, text: `the home page could not be read (${e instanceof Error ? e.message : String(e)})` })
+  }
+
+  const perPage: { errors: Finding[]; warnings: Finding[]; links: string[]; files: PageFile[] }[] = []
   const answered = new Set<string>()
   await inParallel(paths, async (p, i) => {
     const page = root + p
-    const out = { errors: [] as Finding[], warnings: [] as Finding[], links: [] as string[] }
+    const out = { errors: [] as Finding[], warnings: [] as Finding[], links: [] as string[], files: [] as PageFile[] }
     perPage[i] = out
     try {
       const res = await fetchImpl(page, { redirect: 'manual', signal: AbortSignal.timeout(20_000) })
@@ -222,6 +269,7 @@ export async function launchCheck(base: string, opts: { fetch?: Fetch; maxPages?
       out.errors.push(...f.errors.map((text) => ({ page, text })))
       out.warnings.push(...f.warnings.map((text) => ({ page, text })))
       out.links = f.links
+      out.files = f.files
     } catch (e) {
       out.errors.push({ page, text: `the page could not be read (${e instanceof Error ? e.message : String(e)})` })
     }
@@ -252,5 +300,32 @@ export async function launchCheck(base: string, opts: { fetch?: Fetch; maxPages?
   })
   for (const b of broken) if (b) result.errors.push(b)
   result.linksChecked = toCheck.length
+
+  // Every image a page shows, and every document it links to on the storage host, once, from the first page that has it.
+  const fileFrom = new Map<string, { page: string; kind: PageFile['kind'] }>()
+  perPage.forEach((p, i) => {
+    for (const f of p.files) {
+      if (fileFrom.has(f.url) || (f.kind === 'document' && !opts.assetHosts?.includes(new URL(f.url).hostname))) continue
+      fileFrom.set(f.url, { page: root + paths[i], kind: f.kind })
+    }
+  })
+  const files = [...fileFrom.keys()]
+  const filesToLoad = files.slice(0, maxFiles)
+  if (files.length > filesToLoad.length) result.notes.push(`Checked the first ${filesToLoad.length} of ${files.length} images and documents.`)
+  const unloaded: (Finding | null)[] = []
+  await inParallel(filesToLoad, async (url, i) => {
+    const { page, kind } = fileFrom.get(url)!
+    const u = new URL(url)
+    const name = u.origin === new URL(root).origin ? u.pathname + u.search : u.href
+    const what = kind === 'image' ? 'an image does not load' : 'a linked document does not load'
+    try {
+      const status = await fileStatus(fetchImpl, url)
+      unloaded[i] = status >= 400 ? { page, text: `${what}: ${name} (${status})` } : null
+    } catch (e) {
+      unloaded[i] = { page, text: `${what}: ${name} (${e instanceof Error ? e.message : String(e)})` }
+    }
+  })
+  for (const f of unloaded) if (f) result.errors.push(f)
+  result.filesChecked = filesToLoad.length
   return result
 }
