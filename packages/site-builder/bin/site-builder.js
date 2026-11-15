@@ -5,9 +5,10 @@ import path from 'node:path'
 import { assess } from '../src/assess.js'
 import { compare } from '../src/compare.js'
 import { crawl } from '../src/crawl.js'
-import { crawlGate } from '../src/gate.js'
+import { assessedScope, crawlGate } from '../src/gate.js'
 import { extract } from '../src/extract.js'
 import { report } from '../src/report.js'
+import { makeScope } from '../src/scope.js'
 import { theme } from '../src/theme.js'
 
 const HELP = `site-builder <command> [options]
@@ -31,6 +32,8 @@ Options:
   --max-pages <n>    Page cap for assess (default 40)
   --budget <min>     Time budget in minutes (crawl 15, assess 3, compare 10 by default); then it writes what it has
   --accepted-scope   For crawl after a yellow assess, once the customer has accepted its scope
+  --exclude <path>   For assess: leave this content part out of the move, such as /intranett (repeat
+                     for more); crawl leaves out the same, from assess.json
   --new <url>        The new site's address, for compare
   --allow-private    Allow private and local addresses (for testing and intranet sites; compare: the new site only)
 `
@@ -38,6 +41,7 @@ Options:
 const args = process.argv.slice(2)
 const flag = (name) => { const i = args.indexOf(name); return i === -1 ? undefined : args[i + 1] }
 const has = (name) => args.includes(name)
+const all = (name) => args.flatMap((a, i) => (a === name ? [args[i + 1]] : []))
 const [cmd, target] = args
 const usage = (msg) => { if (msg) console.error(msg); console.log(HELP); process.exit(2) }
 const positive = (name, fallback, whole = false) => {
@@ -51,8 +55,14 @@ const isHttp = (s) => { try { return /^https?:$/.test(new URL(s).protocol) } cat
 try {
   if (cmd === 'assess') {
     if (!target || target.startsWith('--')) usage('assess needs a URL')
+    let scope
+    try {
+      const exclude = all('--exclude')
+      if (exclude.some((v) => v === undefined || v.startsWith('--'))) throw new Error('--exclude needs a path on the site, such as /intranett')
+      scope = makeScope({ exclude })
+    } catch (e) { usage(e.message) }
     const out = flag('--out') ?? path.join('.site-builder', new URL(target).hostname)
-    const r = await assess(target, { out, maxPages: positive('--max-pages', 40, true), budgetMs: positive('--budget', 3) * 60_000, allowPrivate: has('--allow-private'), log: (s) => console.log(s) })
+    const r = await assess(target, { out, maxPages: positive('--max-pages', 40, true), budgetMs: positive('--budget', 3) * 60_000, allowPrivate: has('--allow-private'), scope, log: (s) => console.log(s) })
     console.log(`
 ${r.class.toUpperCase()}: ${r.counts.pagesRead} pages read → ${path.join(out, 'assess.md')}`)
     for (const reason of r.reasons) console.log(`- ${reason.class}: ${reason.text}`)
@@ -60,12 +70,13 @@ ${r.class.toUpperCase()}: ${r.counts.pagesRead} pages read → ${path.join(out, 
     if (r.class === 'red') process.exitCode = 3
   } else if (cmd === 'crawl') {
     if (!target || target.startsWith('--')) usage('crawl needs a URL')
+    if (has('--exclude')) usage('crawl uses the limits in assess.json: set them on assess (--exclude) and run it again')
     const out = flag('--out') ?? path.join('.site-builder', new URL(target).hostname)
     const maxPages = positive('--max', 500, true)
     const budgetMs = positive('--budget', 15) * 60_000
     const refused = crawlGate(out, target, has('--accepted-scope'))
     if (refused) { console.error(refused); process.exit(3) }
-    const inv = await crawl(target, { out, maxPages, budgetMs, allowPrivate: has('--allow-private'), log: (s) => console.log(s) })
+    const inv = await crawl(target, { out, maxPages, budgetMs, allowPrivate: has('--allow-private'), scope: assessedScope(out), log: (s) => console.log(s) })
     console.log(`\n${inv.pages.length} pages, ${inv.media.length} images, ${inv.documents.length} documents → ${out}`)
     for (const n of inv.notes) console.log('note: ' + n)
   } else if (cmd === 'extract' || cmd === 'theme' || cmd === 'report') {

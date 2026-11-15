@@ -7,6 +7,7 @@ import zlib from 'node:zlib'
 
 import { LIMITS, assess, classify, markdown, md, spread } from '../src/assess.js'
 import { get as netGet } from '../src/net.js'
+import { makeScope } from '../src/scope.js'
 import { serve } from './server.js'
 
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'assess-'))
@@ -465,5 +466,135 @@ test('a check that could not read enough is run again, never accepted: the reaso
     const text = markdown(r)
     assert.match(text, /Not decided yet/)
     assert.doesNotMatch(text, /accept/i)
+  } finally { await s.close() }
+})
+
+// The customer's limits (src/scope.js): what is left out is never requested and not counted.
+function siteWithMemberArea() {
+  return contentSite({
+    '/sitemap.xml': (req) => xml(urlset(req.headers.host, ['/', '/om-oss', '/tjenester', '/kontakt', '/intranett', '/intranett/rutiner', '/intranett/ferie', '/min-side'])),
+    '/': page('Hjem', `${NAV}<main><h1>Velkommen</h1><p>Vi er et lite firma.</p><a href="/min-side">Min side</a> <a href="/intranett">Intranett</a></main>`),
+    '/intranett': page('Intranett', '<main><p>Intern.</p></main>'),
+    '/min-side': page('Min side', '<form action="/login" method="post"><input type="password" name="p"></form>'),
+  })
+}
+
+// Review of #31: a site with a member area stays red whatever is left out; left-out content is not counted.
+test('assess leaves out what the customer excluded, and a member area stays red', async () => {
+  const s = await siteWithMemberArea()
+  const out = tmp()
+  try {
+    const r = await assess(s.url + '/', { out, allowPrivate: true, delayMs: 0, scope: makeScope({ exclude: ['/intranett'] }) })
+    assert.equal(r.estimates.htmlPages, 5)
+    assert.equal(r.counts.leftOut, 3)
+    assert.ok(codes(r).includes('login'), JSON.stringify(codes(r)))
+    assert.equal(r.class, 'red')
+    assert.deepEqual(JSON.parse(fs.readFileSync(path.join(out, 'assess.json'), 'utf8')).scope, { exclude: ['/intranett'] })
+    const text = fs.readFileSync(path.join(out, 'assess.md'), 'utf8')
+    assert.match(text, /## Left out at your request/)
+    assert.match(text, /\/intranett/)
+    assert.doesNotMatch(text, /member area:/)
+  } finally { await s.close() }
+})
+
+test('without the customer\'s limits, the same site counts every page and its member area is red', async () => {
+  const s = await siteWithMemberArea()
+  try {
+    const r = await run(s)
+    assert.ok(codes(r).includes('login'), JSON.stringify(codes(r)))
+    assert.equal(r.class, 'red')
+    assert.equal(r.estimates.htmlPages, 8)
+    assert.deepEqual([r.scope, r.counts.leftOut], [{ exclude: [] }, 0])
+  } finally { await s.close() }
+})
+
+test('a catalogue stays red when its product pages are left out under another name', async () => {
+  const product = (i) => doc('nb', `Lampe ${i}`, '<p>En lampe.</p>', ld({ '@context': 'https://schema.org', '@type': 'Product', name: `Lampe ${i}` }))
+  const routes = { '/': doc('nb', 'Hjem', `${NAV}<p>Hei</p>`), '/om-oss': doc('nb', 'Om', '<p>Om oss.</p>'), '/kontakt': doc('nb', 'Kontakt', '<p>Ring.</p>') }
+  for (let i = 0; i < 60; i++) routes[`/sortiment/lampe-${i}`] = product(i)
+  const s = await siteOf(routes)
+  try {
+    const r = await run(s, { scope: makeScope({ exclude: ['/sortiment'] }) })
+    assert.ok(codes(r).includes('catalogue'), JSON.stringify(r.reasons))
+    assert.equal(r.class, 'red')
+    assert.equal(r.estimates.htmlPages, 3, 'the left-out pages are not counted')
+  } finally { await s.close() }
+})
+
+// Bjørn's review of #31, round 3: with (nearly) the whole site left out, the answer came from the
+// left-out pages read, and said no sitemap was found.
+test('when the exclusions leave almost nothing, the check has not read enough, and does not say there is no sitemap', async () => {
+  for (const [home, left] of [[true, 1], [false, 0]]) {
+    const routes = { '/': doc('nb', 'Hjem', '<p>Velg språk</p><a href="/no/side0">Norsk</a> <a href="/en/side0">English</a>') }
+    for (const l of ['no', 'en']) for (let i = 0; i < 6; i++) routes[`/${l}/side${i}`] = doc(l === 'no' ? 'nb' : 'en', `Side ${i}`, '<p>Tekst.</p>')
+    const s = await serve({
+      '/robots.txt': (req) => ({ headers: { 'content-type': 'text/plain' }, body: `User-agent: *\nDisallow:\nSitemap: http://${req.headers.host}/sitemap.xml\n` }),
+      '/sitemap.xml': (req) => xml(urlset(req.headers.host, Object.keys(routes).filter((p) => home || p !== '/'))),
+      ...routes,
+    })
+    try {
+      const r = await run(s, { scope: makeScope({ exclude: ['/no', '/en'] }) })
+      assert.deepEqual(codes(r), ['not-enough-read'], `home in the sitemap: ${home}`)
+      assert.equal(r.estimates.htmlPages, left)
+      assert.ok(!r.notes.some((n) => /No sitemap/.test(n)), JSON.stringify(r.notes))
+    } finally { await s.close() }
+  }
+})
+
+// Bjørn's review of #31, round 3: a small excluded path could go unread, and a login under it was missed.
+test('a page or two of each excluded path is always read, so a member area under it is still found', async () => {
+  const routes = { '/': doc('nb', 'Hjem', '<p>Hei</p><a href="/a/side0">A</a>') }
+  for (const g of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']) for (let i = 0; i < 3; i++) routes[`/${g}/side${i}`] = doc('nb', `Side ${i}`, '<p>Tekst.</p>')
+  routes['/arkiv/gammel'] = doc('nb', 'Gammel', '<form action="/login" method="post"><input type="password" name="p"></form>')
+  const s = await siteOf(routes)
+  try {
+    const r = await run(s, { maxPages: 6, scope: makeScope({ exclude: ['/arkiv'] }) })
+    assert.ok(s.requests.includes('/arkiv/gammel'), JSON.stringify(s.requests))
+    assert.ok(codes(r).includes('login'), JSON.stringify(r.reasons))
+    assert.equal(r.class, 'red')
+  } finally { await s.close() }
+})
+
+// A real run on ablernordic.com with nearly all of it left out: the spread went to left-out pages,
+// and not all of the few pages left were read.
+test('the pages that are moved are sampled before left-out ones, so a small remainder is read in full', async () => {
+  const routes = { '/': doc('nb', 'Hjem', '<p>Hei</p>'), '/om': doc('nb', 'Om', '<p>Om oss.</p>'), '/kontakt': doc('nb', 'Kontakt', '<p>Ring.</p>') }
+  for (let i = 0; i < 60; i++) routes[`/arkiv/sak-${i}`] = doc('nb', `Sak ${i}`, '<p>Gammel sak.</p>')
+  const s = await siteOf(routes)
+  try {
+    const r = await run(s, { maxPages: 10, scope: makeScope({ exclude: ['/arkiv'] }) })
+    assert.ok(['/', '/om', '/kontakt'].every((p) => s.requests.includes(p)), JSON.stringify(s.requests))
+    assert.equal(r.class, 'green', JSON.stringify(r.reasons))
+    assert.equal(r.estimates.htmlPages, 3)
+  } finally { await s.close() }
+})
+
+test('the reason for too little read counts only the pages that are moved', async () => {
+  const routes = { '/': doc('nb', 'Hjem', '<p>Hei</p>'), '/om': { status: 500, body: 'feil' }, '/kontakt': { status: 500, body: 'feil' } }
+  for (let i = 0; i < 6; i++) routes[`/arkiv/sak-${i}`] = doc('nb', `Sak ${i}`, '<p>Gammel sak.</p>')
+  const s = await siteOf(routes)
+  try {
+    const r = await run(s, { scope: makeScope({ exclude: ['/arkiv'] }) })
+    assert.deepEqual(codes(r), ['not-enough-read'])
+    assert.match(r.reasons[0].text, /\(1 pages could be read\)/)
+  } finally { await s.close() }
+})
+
+// Same review: what was read only for the red checks is not counted, nor the documents only it links to.
+test('without a sitemap, left-out pages that were read are not counted, nor the documents only they link to', async () => {
+  const pdfs = Array.from({ length: 30 }, (_, i) => `<a href="/filer/sak-${i}.pdf">Sak ${i}</a>`).join(' ')
+  const s = await serve({
+    '/robots.txt': { headers: { 'content-type': 'text/plain' }, body: 'User-agent: *\nDisallow:\n' },
+    '/': page('Hjem', '<main><p>Hei</p><a href="/om">Om</a> <a href="/kontakt">Kontakt</a> <a href="/arkiv/a">A</a> <a href="/arkiv/b">B</a></main>'),
+    '/om': page('Om', '<p>Om oss.</p>'),
+    '/kontakt': page('Kontakt', '<p>Ring.</p>'),
+    '/arkiv/a': page('A', `<main>${pdfs}</main>`),
+    '/arkiv/b': page('B', `<main>${pdfs}</main>`),
+  })
+  try {
+    const r = await run(s, { scope: makeScope({ exclude: ['/arkiv'] }) })
+    assert.ok(s.requests.some((p) => p.startsWith('/arkiv/')), 'read for the red checks')
+    assert.equal(r.estimates.htmlPages, 3)
+    assert.equal(r.estimates.documents, 0)
   } finally { await s.close() }
 })

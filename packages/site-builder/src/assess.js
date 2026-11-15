@@ -12,6 +12,7 @@ import { extractPage } from './extract.js'
 import { decode } from './html.js'
 import { get as defaultGet } from './net.js'
 import { countPages } from './pages.js'
+import { excludedBy, leftOut, makeScope } from './scope.js'
 import { DOCUMENT, isProductPath, pageSignals, robotsCartRules } from './signals.js'
 
 /**
@@ -41,7 +42,7 @@ export const LIMITS = Object.freeze({
   productPathMin: 50,
   /** ... that are at least this share of the sitemap's pages: red (a catalogue). */
   productPathShare: 0.3,
-  /** Fewer pages read than this (or than the site has, if fewer): yellow, too little to decide. */
+  /** Fewer pages read than this (or than the site has, if fewer), or fewer sitemap pages than this left after the customer's exclusions: yellow, too little to decide. */
   minPagesRead: 3,
   /** More password-protected pages than this among those read: yellow (their content cannot be read). */
   scopePasswordPosts: 3,
@@ -135,10 +136,10 @@ const gigabytes = (b) => (b >= 1024 ** 3 ? `${(b / 1024 ** 3).toFixed(1)} GB` : 
 
 /**
  * @param {string} start
- * @param {{ out: string, maxPages?: number, budgetMs?: number, concurrency?: number, delayMs?: number, allowPrivate?: boolean, get?: typeof defaultGet, log?: (s: string) => void }} opts
+ * @param {{ out: string, maxPages?: number, budgetMs?: number, concurrency?: number, delayMs?: number, allowPrivate?: boolean, scope?: ReturnType<typeof makeScope>, get?: typeof defaultGet, log?: (s: string) => void }} opts
  */
 export async function assess(start, opts) {
-  const { out, maxPages = 40, budgetMs = 3 * 60_000, concurrency = 2, delayMs = 250, allowPrivate = false, log = () => {} } = opts
+  const { out, maxPages = 40, budgetMs = 3 * 60_000, concurrency = 2, delayMs = 250, allowPrivate = false, scope = makeScope(), log = () => {} } = opts
   if (!(Number.isInteger(maxPages) && maxPages > 0)) throw new Error('maxPages must be a positive whole number')
   if (!(Number.isFinite(budgetMs) && budgetMs > 0)) throw new Error('budgetMs must be a positive number')
   const get = opts.get ?? defaultGet
@@ -153,6 +154,14 @@ export async function assess(start, opts) {
   const root = new URL(first)
   const host = root.hostname
   fs.mkdirSync(out, { recursive: true })
+  // Addresses the customer left out (src/scope.js) are not counted. They may still be read for the
+  // red checks, so leaving out a catalogue's pages or a member area does not make a content site.
+  const skipped = new Set()
+  const left = (n) => {
+    if (!leftOut(scope, new URL(n))) return false
+    if (skipped.size < MAX_SITE_LINKS) skipped.add(n)
+    return true
+  }
 
   const getFollowing = followingGet(get, root, allowPrivate)
   const { robots, text: robotsText, unavailable, note } = await readRobots(getFollowing, root)
@@ -161,7 +170,7 @@ export async function assess(start, opts) {
   const shop = robotsCartRules(robotsText).map((rule) => evidence(robotsUrl, rule))
 
   // Every sitemap address is counted; page addresses are kept (up to a cap) to sample from.
-  const sitemap = { files: 0, urls: 0, pages: new Set(), uncapped: 0, documents: 0, images: 0 }
+  const sitemap = { files: 0, urls: 0, pages: new Set(), excluded: new Set(), uncapped: 0, documents: 0, images: 0 }
   const isPage = (u) => !DOCUMENT.test(u.pathname) && !IMAGE.test(u.pathname) && !SKIP.test(u.pathname)
   if (!unavailable) {
     sitemap.files = await readSitemaps(getFollowing, root, robots, {
@@ -173,6 +182,10 @@ export async function assess(start, opts) {
           if (!n || !sameSite(new URL(n).hostname, host)) continue
           const u = new URL(n)
           sitemap.urls++
+          if (left(n)) {
+            if (isPage(u) && sitemap.excluded.size < MAX_SITEMAP_URLS) sitemap.excluded.add(n)
+            continue
+          }
           if (DOCUMENT.test(u.pathname)) sitemap.documents++
           else if (IMAGE.test(u.pathname)) sitemap.images++
           else if (!isPage(u) || sitemap.pages.has(n)) continue
@@ -255,7 +268,16 @@ export async function assess(start, opts) {
     if (home?.sig.forward && !sameSite(new URL(home.sig.forward).hostname, host)) elsewhere = home.sig.forward
     const nav = home ? [...new Set(home.nav.map((l) => normalize(l.href, home.url)).filter((n) => n && pageLink(n) && !tried.has(n)))].slice(0, Math.min(MAX_NAV, Math.floor(maxPages / 4))) : []
     await run(nav.map((url) => ({ url, role: 'nav' })))
+    // One or two pages of each excluded path are always read, so a shop, a catalogue or a login
+    // under it is still found. A path the sitemap does not list is tried as it is.
+    const underEach = new Map(scope.exclude.map((x) => [x, []]))
+    for (const n of sitemap.excluded) underEach.get(excludedBy(scope, new URL(n)))?.push(n)
+    const perPath = scope.exclude.length > 5 ? 1 : 2
+    const excludedSample = [...underEach].flatMap(([x, list]) => (list.length ? evenly(list, perPath) : [new URL(x, root).toString()]))
+    await run(excludedSample.filter((u) => !tried.has(u)).map((url) => ({ url, role: 'sample' })))
     await run(spread([...sitemap.pages].filter((u) => !tried.has(u)), maxPages - reserved).map((url) => ({ url, role: 'sample' })))
+    // Left-out pages fill the room that is left, for the red checks.
+    await run(spread([...sitemap.excluded].filter((u) => !tried.has(u)), maxPages - reserved).map((url) => ({ url, role: 'sample' })))
     // No sitemap: sample the links the pages read so far lead to.
     if (!sitemap.pages.size) {
       const linked = [...new Set(read.flatMap((p) => [...p.sig.links]))].filter((u) => !tried.has(u))
@@ -263,12 +285,18 @@ export async function assess(start, opts) {
     }
   }
 
-  // How many pages the site has: the sitemap's count, else the pages read and linked.
-  const siteLinks = new Set(read.map((p) => p.url))
-  for (const p of read) for (const l of p.sig.links) if (siteLinks.size < MAX_SITE_LINKS) siteLinks.add(l)
+  // How many pages the site has: the sitemap's count after the exclusions, else the pages read and
+  // linked. Left-out pages read for the red checks are not counted.
+  const kept = read.filter((p) => !left(p.url))
+  const siteLinks = new Set(kept.map((p) => p.url))
+  for (const p of read) for (const l of p.sig.links) if (siteLinks.size < MAX_SITE_LINKS && !left(l)) siteLinks.add(l)
   const sitemapPages = sitemap.pages.size + sitemap.uncapped
-  const htmlPages = sitemapPages || (read.length ? siteLinks.size : 0)
-  if (!sitemapPages && read.length) notes.push('No sitemap was found, so the page count is the pages read and the pages they link to; it is an estimate.')
+  const hadSitemap = sitemapPages > 0 || sitemap.excluded.size > 0
+  const htmlPages = hadSitemap ? sitemapPages : kept.length ? siteLinks.size : 0
+  if (!hadSitemap && read.length) notes.push('No sitemap was found, so the page count is the pages read and the pages they link to; it is an estimate.')
+  // Leaving out (nearly) the whole site leaves nothing to decide on.
+  const littleLeft = sitemap.excluded.size > 0 && sitemapPages < LIMITS.minPagesRead
+  if (littleLeft) notes.push(`Only ${sitemapPages} of the sitemap's pages are left once the parts left out are taken away. Check which parts are to be left out, and run the check again.`)
 
   const payment = []
   const login = []
@@ -286,15 +314,17 @@ export async function assess(start, opts) {
   if (passwordPosts.length && passwordPosts.length <= LIMITS.scopePasswordPosts) notes.push(`${passwordPosts.length} of the pages read are password-protected posts (${passwordPosts[0].url}). Their text cannot be read: the customer gives it, or they are left out.`)
 
   // A catalogue: product markup on pages read, extrapolated per sitemap group, or product paths.
+  // A catalogue is judged on the whole sitemap, left-out pages too.
+  const allPages = new Set([...sitemap.pages, ...sitemap.excluded])
   const products = read.filter((p) => p.sig.product)
   let productPages = 0
   if (products.length) {
-    if (sitemap.pages.size) {
+    if (allPages.size) {
       const size = new Map()
-      for (const u of sitemap.pages) size.set(prefix(u), (size.get(prefix(u)) ?? 0) + 1)
+      for (const u of allPages) size.set(prefix(u), (size.get(prefix(u)) ?? 0) + 1)
       const sampled = new Map()
       for (const p of read) {
-        if (!sitemap.pages.has(p.url)) continue
+        if (!allPages.has(p.url)) continue
         const s = sampled.get(prefix(p.url)) ?? { n: 0, products: 0 }
         s.n++
         if (p.sig.product) s.products++
@@ -309,9 +339,9 @@ export async function assess(start, opts) {
     catalogue.push(evidence(products[0].url, `product markup on ${products.length} of ${read.length} pages read; about ${productPages} product pages in all`))
     for (const p of products.slice(1, 3)) catalogue.push(evidence(p.url, 'product markup'))
   }
-  const productPaths = [...sitemap.pages].filter((u) => isProductPath(new URL(u).pathname))
-  if (productPaths.length >= LIMITS.productPathMin && productPaths.length >= LIMITS.productPathShare * sitemap.pages.size)
-    catalogue.push(evidence(productPaths[0], `${productPaths.length} of ${sitemap.pages.size} sitemap pages have product addresses`))
+  const productPaths = [...allPages].filter((u) => isProductPath(new URL(u).pathname))
+  if (productPaths.length >= LIMITS.productPathMin && productPaths.length >= LIMITS.productPathShare * allPages.size)
+    catalogue.push(evidence(productPaths[0], `${productPaths.length} of ${allPages.size} sitemap pages have product addresses`))
 
   // Documents and images: what the home page and navigation link to is counted once; what the
   // spread sample finds besides is extrapolated to the pages not read.
@@ -320,8 +350,8 @@ export async function assess(start, opts) {
     const extra = new Set()
     let baseRead = 0
     let sampleRead = 0
-    for (const p of read) if (p.role !== 'sample') { baseRead++; for (const x of p.sig[kind]) base.add(x) }
-    for (const p of read) if (p.role === 'sample') { sampleRead++; for (const x of p.sig[kind]) if (!base.has(x)) extra.add(x) }
+    for (const p of kept) if (p.role !== 'sample') { baseRead++; for (const x of p.sig[kind]) if (!left(x)) base.add(x) }
+    for (const p of kept) if (p.role === 'sample') { sampleRead++; for (const x of p.sig[kind]) if (!base.has(x) && !left(x)) extra.add(x) }
     const rest = Math.max(0, htmlPages - baseRead)
     const fromSample = sampleRead ? Math.max(extra.size, (extra.size / sampleRead) * rest) : 0
     return { found: [...base, ...extra], count: Math.round(Math.max(base.size + fromSample, inSitemap)) }
@@ -364,11 +394,11 @@ export async function assess(start, opts) {
   // No sitemap and nothing linked from the pages read: the site may need JavaScript to show its pages.
   // A one-page site with text and #anchor links is enough; a near-empty page is not.
   const homeText = read.find((p) => p.role === 'home')?.sig.textLength ?? 0
-  const noLinks = !sitemapPages && read.length > 0 && homeText < LIMITS.minHomeText && !read.some((p) => [...p.sig.links].some((l) => l !== p.url && l !== root.toString()))
-  const enough = !elsewhere && !noLinks && read.length >= Math.min(LIMITS.minPagesRead, Math.max(1, htmlPages))
-  const enoughWhy = unavailable ? 'robots.txt did not answer' : !homeAllowed ? 'robots.txt does not allow reading the home page' : elsewhere ? 'the home page leads to another site' : noLinks ? 'there is no sitemap and the home page links to no other page; it may need JavaScript' : budgetReached ? 'the time budget ran out' : `${read.length} pages could be read`
+  const noLinks = !hadSitemap && read.length > 0 && homeText < LIMITS.minHomeText && !read.some((p) => [...p.sig.links].some((l) => l !== p.url && l !== root.toString()))
+  const enough = !elsewhere && !noLinks && !littleLeft && kept.length >= Math.min(LIMITS.minPagesRead, Math.max(1, htmlPages))
+  const enoughWhy = unavailable ? 'robots.txt did not answer' : !homeAllowed ? 'robots.txt does not allow reading the home page' : elsewhere ? 'the home page leads to another site' : littleLeft ? `only ${sitemapPages} pages are left once the parts left out are taken away` : noLinks ? 'there is no sitemap and the home page links to no other page; it may need JavaScript' : budgetReached ? 'the time budget ran out' : `${kept.length} pages could be read`
 
-  const { pagesPerLanguage, largestLanguagePages, articles } = countPages({ read, pool: sitemap.pages.size ? sitemap.pages : siteLinks, host, uncapped: sitemap.uncapped })
+  const { pagesPerLanguage, largestLanguagePages, articles } = countPages({ read, pool: hadSitemap ? sitemap.pages : siteLinks, host, uncapped: sitemap.uncapped })
 
   const verdict = classify({ shop, payment, catalogue, login, integrations: [...integrations.values()], htmlPages: largestLanguagePages, totalPages: Object.values(pagesPerLanguage).reduce((a, b) => a + b, 0), articles, passwordPosts: passwordPosts.length, documents: documents.count, mediaBytes, enough, enoughWhy })
   const result = {
@@ -386,6 +416,7 @@ export async function assess(start, opts) {
       pagesTried: reserved,
       pagesRead: read.length,
       pagesFailed: failed.length,
+      leftOut: skipped.size,
     },
     estimates: { htmlPages, pagesPerLanguage, largestLanguagePages, articles, documents: documents.count, images: images.count, mediaBytes, mediaBytesComplete: !sizeUnknown, productPages },
     site: {
@@ -396,6 +427,7 @@ export async function assess(start, opts) {
     },
     pages: pages.map((p) => ({ ...p, url: clean(p.url, 300) })),
     limits: LIMITS,
+    scope,
     notice: NOTICE,
     notes,
   }
@@ -440,6 +472,12 @@ export function markdown(r) {
     for (const e of reason.evidence) lines.push(`  - ${md(e.match)}: ${md(e.url)}`)
   }
   if (r.reasons.length) lines.push('')
+  const scope = r.scope ?? { exclude: [] }
+  if (scope.exclude.length) {
+    lines.push('## Left out at your request', '')
+    for (const x of scope.exclude) lines.push(`- ${md(x)} and everything under it: not moved or counted (the check still looks at it for a shop or a catalogue)`)
+    lines.push('', `${r.counts.leftOut} addresses were left out.`, '')
+  }
   const e = r.estimates
   const c = r.counts
   lines.push(

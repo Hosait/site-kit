@@ -4,7 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
 
-import { crawlGate } from '../src/gate.js'
+import { assessedScope, crawlGate } from '../src/gate.js'
 
 test('crawlGate lets crawl start only after a finished check of the same site that is not red', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gate-'))
@@ -34,6 +34,18 @@ test('a fit check older than seven days, or without a date, runs again before cr
   assert.match(String(crawlGate(dir, 'https://www.acme.no/', false)), /more than 7 days old.*site-builder assess/)
   write({})
   assert.match(String(crawlGate(dir, 'https://www.acme.no/', false)), /no date.*site-builder assess/)
+})
+
+// The customer's limits are set once, on assess; crawl uses the ones assess.json keeps.
+test('assessedScope gives the limits assess.json keeps, none when it has none, and refuses a changed one', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gate-'))
+  const write = (o) => fs.writeFileSync(path.join(dir, 'assess.json'), JSON.stringify({ source: 'https://www.acme.no/', class: 'green', reasons: [], assessedAt: new Date().toISOString(), ...o }))
+  write({ scope: { exclude: ['/intranett'] } })
+  assert.deepEqual(assessedScope(dir), { exclude: ['/intranett'] })
+  write({})
+  assert.deepEqual(assessedScope(dir), { exclude: [] })
+  write({ scope: { exclude: ['../etc'] } })
+  assert.throws(() => assessedScope(dir), /exclude/)
 })
 
 // Bjørn's review of #13: a check dated in the future was accepted, and would never grow old.
