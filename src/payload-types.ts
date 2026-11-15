@@ -68,6 +68,9 @@ export interface Config {
   blocks: {};
   collections: {
     pages: Page;
+    globalSections: GlobalSection;
+    pageTemplates: PageTemplate;
+    sectionPresets: SectionPreset;
     articles: Article;
     people: Person;
     documents: Document;
@@ -97,6 +100,9 @@ export interface Config {
   };
   collectionsSelect: {
     pages: PagesSelect<false> | PagesSelect<true>;
+    globalSections: GlobalSectionsSelect<false> | GlobalSectionsSelect<true>;
+    pageTemplates: PageTemplatesSelect<false> | PageTemplatesSelect<true>;
+    sectionPresets: SectionPresetsSelect<false> | SectionPresetsSelect<true>;
     articles: ArticlesSelect<false> | ArticlesSelect<true>;
     people: PeopleSelect<false> | PeopleSelect<true>;
     documents: DocumentsSelect<false> | DocumentsSelect<true>;
@@ -207,6 +213,8 @@ export interface Page {
         | BannerBlock
         | ButtonGroupBlock
         | DividerBlock
+        | GlobalSectionBlock
+        | PresetBlock
       )[]
     | null;
   meta?: {
@@ -219,6 +227,10 @@ export interface Page {
     noindex?: boolean | null;
   };
   site: 'main';
+  /**
+   * Bare for en side uten seksjoner: siden får en kopi av malens seksjoner. Etterpå er den uavhengig av malen.
+   */
+  template?: (number | null) | PageTemplate;
   isHome?: boolean | null;
   parent?: (number | null) | Page;
   /**
@@ -1563,6 +1575,190 @@ export interface NewsletterBlock {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "GlobalSectionBlock".
+ */
+export interface GlobalSectionBlock {
+  /**
+   * Endres den felles seksjonen, endres alle sidene som bruker den.
+   */
+  globalSection: number | GlobalSection;
+  section?: SectionSettings;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'globalSection';
+}
+/**
+ * Seksjoner som vises på flere sider, for eksempel en kontaktseksjon. Endre dem her, så endres alle sidene som bruker dem.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "globalSections".
+ */
+export interface GlobalSection {
+  id: number;
+  /**
+   * Bare synlig i administrasjonen.
+   */
+  title: string;
+  layout?:
+    | (
+        | HeroBlock
+        | ContentBlock
+        | TextImageBlock
+        | ColumnsBlock
+        | FullImageBlock
+        | ImageGridBlock
+        | CardsBlock
+        | ChildPagesBlock
+        | CallToActionBlock
+        | QuoteBlock
+        | StatsBlock
+        | FactsBlock
+        | ArticleFeedBlock
+        | PeopleBlock
+        | DocumentsBlock
+        | TimelineBlock
+        | AccordionBlock
+        | VideoBlock
+        | EmbedBlock
+        | FormBlock
+        | TabsBlock
+        | PricingBlock
+        | LogoWallBlock
+        | TestimonialsBlock
+        | CarouselBlock
+        | TableBlock
+        | ContactCardBlock
+        | NewsletterBlock
+        | IconFeaturesBlock
+        | BannerBlock
+        | ButtonGroupBlock
+        | DividerBlock
+      )[]
+    | null;
+  site: 'main';
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "PresetBlock".
+ */
+export interface PresetBlock {
+  /**
+   * Når siden lagres, byttes denne ut med en kopi av seksjonen. Kopien kan du redigere fritt.
+   */
+  preset: number | SectionPreset;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'preset';
+}
+/**
+ * En seksjon du bruker ofte. Sett den inn på en side med «Sett inn lagret seksjon».
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sectionPresets".
+ */
+export interface SectionPreset {
+  id: number;
+  name: string;
+  /**
+   * Hva seksjonen er til for. Bare synlig i administrasjonen.
+   */
+  description?: string | null;
+  block?:
+    | (
+        | HeroBlock
+        | ContentBlock
+        | TextImageBlock
+        | ColumnsBlock
+        | FullImageBlock
+        | ImageGridBlock
+        | CardsBlock
+        | ChildPagesBlock
+        | CallToActionBlock
+        | QuoteBlock
+        | StatsBlock
+        | FactsBlock
+        | ArticleFeedBlock
+        | PeopleBlock
+        | DocumentsBlock
+        | TimelineBlock
+        | AccordionBlock
+        | VideoBlock
+        | EmbedBlock
+        | FormBlock
+        | TabsBlock
+        | PricingBlock
+        | LogoWallBlock
+        | TestimonialsBlock
+        | CarouselBlock
+        | TableBlock
+        | ContactCardBlock
+        | NewsletterBlock
+        | IconFeaturesBlock
+        | BannerBlock
+        | ButtonGroupBlock
+        | DividerBlock
+        | GlobalSectionBlock
+      )[]
+    | null;
+  site: 'main';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Ferdige sideoppsett. Velg en mal når du lager en ny side, så får siden en kopi av seksjonene.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pageTemplates".
+ */
+export interface PageTemplate {
+  id: number;
+  name: string;
+  layout?:
+    | (
+        | HeroBlock
+        | ContentBlock
+        | TextImageBlock
+        | ColumnsBlock
+        | FullImageBlock
+        | ImageGridBlock
+        | CardsBlock
+        | ChildPagesBlock
+        | CallToActionBlock
+        | QuoteBlock
+        | StatsBlock
+        | FactsBlock
+        | ArticleFeedBlock
+        | PeopleBlock
+        | DocumentsBlock
+        | TimelineBlock
+        | AccordionBlock
+        | VideoBlock
+        | EmbedBlock
+        | FormBlock
+        | TabsBlock
+        | PricingBlock
+        | LogoWallBlock
+        | TestimonialsBlock
+        | CarouselBlock
+        | TableBlock
+        | ContactCardBlock
+        | NewsletterBlock
+        | IconFeaturesBlock
+        | BannerBlock
+        | ButtonGroupBlock
+        | DividerBlock
+        | GlobalSectionBlock
+      )[]
+    | null;
+  site: 'main';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "site-settings".
  */
 export interface SiteSetting {
@@ -2032,6 +2228,18 @@ export interface PayloadLockedDocument {
         value: number | Page;
       } | null)
     | ({
+        relationTo: 'globalSections';
+        value: number | GlobalSection;
+      } | null)
+    | ({
+        relationTo: 'pageTemplates';
+        value: number | PageTemplate;
+      } | null)
+    | ({
+        relationTo: 'sectionPresets';
+        value: number | SectionPreset;
+      } | null)
+    | ({
         relationTo: 'articles';
         value: number | Article;
       } | null)
@@ -2178,6 +2386,8 @@ export interface PagesSelect<T extends boolean = true> {
         banner?: T | BannerBlockSelect<T>;
         buttonGroup?: T | ButtonGroupBlockSelect<T>;
         divider?: T | DividerBlockSelect<T>;
+        globalSection?: T | GlobalSectionBlockSelect<T>;
+        preset?: T | PresetBlockSelect<T>;
       };
   meta?:
     | T
@@ -2188,6 +2398,7 @@ export interface PagesSelect<T extends boolean = true> {
         noindex?: T;
       };
   site?: T;
+  template?: T;
   isHome?: T;
   parent?: T;
   slug?: T;
@@ -2923,6 +3134,167 @@ export interface NewsletterBlockSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "GlobalSectionBlock_select".
+ */
+export interface GlobalSectionBlockSelect<T extends boolean = true> {
+  globalSection?: T;
+  section?: T | SectionSettingsSelect<T>;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "PresetBlock_select".
+ */
+export interface PresetBlockSelect<T extends boolean = true> {
+  preset?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "globalSections_select".
+ */
+export interface GlobalSectionsSelect<T extends boolean = true> {
+  title?: T;
+  layout?:
+    | T
+    | {
+        hero?: T | HeroBlockSelect<T>;
+        content?: T | ContentBlockSelect<T>;
+        textImage?: T | TextImageBlockSelect<T>;
+        columns?: T | ColumnsBlockSelect<T>;
+        fullImage?: T | FullImageBlockSelect<T>;
+        imageGrid?: T | ImageGridBlockSelect<T>;
+        cards?: T | CardsBlockSelect<T>;
+        childPages?: T | ChildPagesBlockSelect<T>;
+        cta?: T | CallToActionBlockSelect<T>;
+        quote?: T | QuoteBlockSelect<T>;
+        stats?: T | StatsBlockSelect<T>;
+        facts?: T | FactsBlockSelect<T>;
+        articleFeed?: T | ArticleFeedBlockSelect<T>;
+        people?: T | PeopleBlockSelect<T>;
+        documents?: T | DocumentsBlockSelect<T>;
+        timeline?: T | TimelineBlockSelect<T>;
+        accordion?: T | AccordionBlockSelect<T>;
+        video?: T | VideoBlockSelect<T>;
+        embed?: T | EmbedBlockSelect<T>;
+        formBlock?: T | FormBlockSelect<T>;
+        tabs?: T | TabsBlockSelect<T>;
+        pricing?: T | PricingBlockSelect<T>;
+        logoWall?: T | LogoWallBlockSelect<T>;
+        testimonials?: T | TestimonialsBlockSelect<T>;
+        carousel?: T | CarouselBlockSelect<T>;
+        table?: T | TableBlockSelect<T>;
+        contactCard?: T | ContactCardBlockSelect<T>;
+        newsletter?: T | NewsletterBlockSelect<T>;
+        iconFeatures?: T | IconFeaturesBlockSelect<T>;
+        banner?: T | BannerBlockSelect<T>;
+        buttonGroup?: T | ButtonGroupBlockSelect<T>;
+        divider?: T | DividerBlockSelect<T>;
+      };
+  site?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pageTemplates_select".
+ */
+export interface PageTemplatesSelect<T extends boolean = true> {
+  name?: T;
+  layout?:
+    | T
+    | {
+        hero?: T | HeroBlockSelect<T>;
+        content?: T | ContentBlockSelect<T>;
+        textImage?: T | TextImageBlockSelect<T>;
+        columns?: T | ColumnsBlockSelect<T>;
+        fullImage?: T | FullImageBlockSelect<T>;
+        imageGrid?: T | ImageGridBlockSelect<T>;
+        cards?: T | CardsBlockSelect<T>;
+        childPages?: T | ChildPagesBlockSelect<T>;
+        cta?: T | CallToActionBlockSelect<T>;
+        quote?: T | QuoteBlockSelect<T>;
+        stats?: T | StatsBlockSelect<T>;
+        facts?: T | FactsBlockSelect<T>;
+        articleFeed?: T | ArticleFeedBlockSelect<T>;
+        people?: T | PeopleBlockSelect<T>;
+        documents?: T | DocumentsBlockSelect<T>;
+        timeline?: T | TimelineBlockSelect<T>;
+        accordion?: T | AccordionBlockSelect<T>;
+        video?: T | VideoBlockSelect<T>;
+        embed?: T | EmbedBlockSelect<T>;
+        formBlock?: T | FormBlockSelect<T>;
+        tabs?: T | TabsBlockSelect<T>;
+        pricing?: T | PricingBlockSelect<T>;
+        logoWall?: T | LogoWallBlockSelect<T>;
+        testimonials?: T | TestimonialsBlockSelect<T>;
+        carousel?: T | CarouselBlockSelect<T>;
+        table?: T | TableBlockSelect<T>;
+        contactCard?: T | ContactCardBlockSelect<T>;
+        newsletter?: T | NewsletterBlockSelect<T>;
+        iconFeatures?: T | IconFeaturesBlockSelect<T>;
+        banner?: T | BannerBlockSelect<T>;
+        buttonGroup?: T | ButtonGroupBlockSelect<T>;
+        divider?: T | DividerBlockSelect<T>;
+        globalSection?: T | GlobalSectionBlockSelect<T>;
+      };
+  site?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sectionPresets_select".
+ */
+export interface SectionPresetsSelect<T extends boolean = true> {
+  name?: T;
+  description?: T;
+  block?:
+    | T
+    | {
+        hero?: T | HeroBlockSelect<T>;
+        content?: T | ContentBlockSelect<T>;
+        textImage?: T | TextImageBlockSelect<T>;
+        columns?: T | ColumnsBlockSelect<T>;
+        fullImage?: T | FullImageBlockSelect<T>;
+        imageGrid?: T | ImageGridBlockSelect<T>;
+        cards?: T | CardsBlockSelect<T>;
+        childPages?: T | ChildPagesBlockSelect<T>;
+        cta?: T | CallToActionBlockSelect<T>;
+        quote?: T | QuoteBlockSelect<T>;
+        stats?: T | StatsBlockSelect<T>;
+        facts?: T | FactsBlockSelect<T>;
+        articleFeed?: T | ArticleFeedBlockSelect<T>;
+        people?: T | PeopleBlockSelect<T>;
+        documents?: T | DocumentsBlockSelect<T>;
+        timeline?: T | TimelineBlockSelect<T>;
+        accordion?: T | AccordionBlockSelect<T>;
+        video?: T | VideoBlockSelect<T>;
+        embed?: T | EmbedBlockSelect<T>;
+        formBlock?: T | FormBlockSelect<T>;
+        tabs?: T | TabsBlockSelect<T>;
+        pricing?: T | PricingBlockSelect<T>;
+        logoWall?: T | LogoWallBlockSelect<T>;
+        testimonials?: T | TestimonialsBlockSelect<T>;
+        carousel?: T | CarouselBlockSelect<T>;
+        table?: T | TableBlockSelect<T>;
+        contactCard?: T | ContactCardBlockSelect<T>;
+        newsletter?: T | NewsletterBlockSelect<T>;
+        iconFeatures?: T | IconFeaturesBlockSelect<T>;
+        banner?: T | BannerBlockSelect<T>;
+        buttonGroup?: T | ButtonGroupBlockSelect<T>;
+        divider?: T | DividerBlockSelect<T>;
+        globalSection?: T | GlobalSectionBlockSelect<T>;
+      };
+  site?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "articles_select".
  */
 export interface ArticlesSelect<T extends boolean = true> {
@@ -3646,6 +4018,10 @@ export interface TaskSchedulePublish {
       | ({
           relationTo: 'pages';
           value: number | Page;
+        } | null)
+      | ({
+          relationTo: 'globalSections';
+          value: number | GlobalSection;
         } | null)
       | ({
           relationTo: 'articles';

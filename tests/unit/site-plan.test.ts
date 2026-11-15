@@ -121,3 +121,37 @@ test('a broken form is refused with its path', () => {
     assert.ok(!r.ok && r.errors.some((e) => e.startsWith(path)), `${what}: ${JSON.stringify(r)}`)
   }
 })
+
+const withSection = () => {
+  const p = minimal()
+  p.globalSections = [{ ref: 'contact', title: 'Kontakt', layout: { no: [{ blockType: 'cta', heading: 'Ta kontakt' }], en: [{ blockType: 'cta', heading: 'Contact us' }] } }]
+  p.pages[0].layout.no.push({ blockType: 'globalSection', globalSection: { $globalSection: 'contact' } })
+  return p
+}
+
+test('a plan with a global section, used by a page, is valid', () => {
+  const r = validateSitePlan(withSection())
+  assert.equal(r.ok, true, JSON.stringify(r))
+})
+
+test('global sections need a ref, a title and a layout, and unknown fields are refused', () => {
+  for (const mutate of [(g: Record<string, unknown>) => delete g.title, (g: Record<string, unknown>) => delete g.layout, (g: Record<string, unknown>) => (g.ref = 'Not A Ref'), (g: Record<string, unknown>) => (g.colour = 'red')]) {
+    const p = withSection()
+    mutate(p.globalSections[0])
+    assert.equal(validateSitePlan(p).ok, false)
+  }
+})
+
+test('global section refs are unique', () => {
+  const p = withSection()
+  p.globalSections.push({ ...p.globalSections[0] })
+  const r = validateSitePlan(p)
+  assert.ok(!r.ok && r.errors.some((e) => e.startsWith('/globalSections/1/ref duplicate ref "contact"')))
+})
+
+test('a global section cannot contain another, so sections never nest', () => {
+  const p = withSection()
+  p.globalSections.push({ ref: 'outer', title: 'Ytre', layout: { en: [{ blockType: 'hero' }, { blockType: 'globalSection', globalSection: { $globalSection: 'contact' } }] } })
+  const r = validateSitePlan(p)
+  assert.ok(!r.ok && r.errors.some((e) => e.startsWith('/globalSections/1/layout/en/1 a global section cannot contain another')))
+})

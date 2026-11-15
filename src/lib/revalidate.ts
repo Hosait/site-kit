@@ -8,7 +8,7 @@ import { SITE_KEYS } from './sites'
  * eller endres, tømmer vi taggen for samlingen og nettstedet. Det er grovkornet, men
  * trygt: alle lister, menyer og artikkelstrømmer som kan vise dokumentet, bygges på nytt.
  */
-function tagsFor(collection: string, site?: string | null): string[] {
+export function tagsFor(collection: string, site?: string | null): string[] {
   const tags = [collection]
   if (site) tags.push(`${collection}:${site}`, `site:${site}`)
   return tags
@@ -39,7 +39,7 @@ export const revalidateDocDelete: CollectionAfterDeleteHook = ({ doc, collection
   return doc
 }
 
-const CONTENT_TAGS = ['pages', 'articles', 'people', 'documents', 'media', 'site-settings', 'redirects']
+const CONTENT_TAGS = ['pages', 'globalSections', 'articles', 'people', 'documents', 'media', 'site-settings', 'redirects']
 
 /**
  * Tømmer all cache etter en import eller et skript som skriver direkte til databasen.

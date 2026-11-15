@@ -2,7 +2,8 @@ import configPromise from '@payload-config'
 import { unstable_cache } from 'next/cache'
 import { getPayload, type Where } from 'payload'
 
-import type { Article, Page, SiteSetting } from '@/payload-types'
+import type { Article, GlobalSection, Page, SiteSetting } from '@/payload-types'
+import { tagsFor } from './revalidate'
 import { type Locale, LOCALES, SITE_CONFIG, type SiteKey } from './sites'
 
 /**
@@ -32,6 +33,35 @@ async function findPage(site: SiteKey, locale: Locale, path: string, draft: bool
 const findPageCached = cached(findPage, 'page', (site) => ['pages', `pages:${site}`, 'media', 'people', 'documents'])
 export const getPage = (site: SiteKey, locale: Locale, path: string, draft = false) =>
   draft ? findPage(site, locale, path, true) : findPageCached(site, locale, path, false)
+
+/**
+ * A global section's layout, for the «Felles seksjon» block. Cached under `globalSections` tags, so a
+ * page that shows one carries them, and publishing the section (src/lib/revalidate.ts) rebuilds the page.
+ * Only the site's own sections are found, and only published ones unless `draft` (preview).
+ */
+async function findGlobalSection(site: SiteKey, locale: Locale, id: number, draft: boolean): Promise<GlobalSection | null> {
+  const p = await payload()
+  const res = await p.find({
+    collection: 'globalSections',
+    locale,
+    draft,
+    depth: 2,
+    limit: 1,
+    overrideAccess: draft,
+    where: { and: [{ site: { equals: site } }, { id: { equals: id } }] },
+  })
+  return res.docs[0] ?? null
+}
+const findGlobalSectionCached = cached(findGlobalSection, 'global-section', (site) => [
+  ...tagsFor('globalSections', site),
+  'pages',
+  `pages:${site}`,
+  'media',
+  'people',
+  'documents',
+])
+export const getGlobalSection = (site: SiteKey, locale: Locale, id: number, draft = false) =>
+  draft ? findGlobalSection(site, locale, id, true) : findGlobalSectionCached(site, locale, id, false)
 
 async function findArticle(site: SiteKey, locale: Locale, slug: string, draft: boolean): Promise<Article | null> {
   const p = await payload()

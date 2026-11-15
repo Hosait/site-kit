@@ -107,7 +107,7 @@ images and PDFs in `seed/media/` (or use public https URLs). Office files (Word,
 PowerPoint), zip and DWG cannot be imported from a URL: download them into `seed/media/` and list
 them under `documents`. SVG is not imported: the logo goes in `public/brand/` (step 4), and other
 SVG graphics are a gap. Every file is checked by its first bytes, not its name. Link with
-`$media`, `$page`, `$pageLink`, `$person`, `$document`, `$form`; rich text is `$html`. Every block
+`$media`, `$page`, `$pageLink`, `$person`, `$document`, `$form`, `$globalSection`; rich text is `$html`. Every block
 takes an optional `section`: `spaceTop` and `spaceBottom` (`auto|none|s|m|l|xl`), `width`
 (`auto|text|content|wide|full`), `backgroundMedia` (`{ "$media": "<ref>" }`) with `overlay`
 (`none|light|dark`), `anchor` (a slug, unique on the page), `hide` (`none|mobile|desktop`) and
@@ -124,7 +124,11 @@ opening hours (its `mapUrl` is an https embed address). Forms go in
 or `"keep"`) from the intake answer; left out, the site default in `site/config.ts` applies. A
 `formBlock` points at one with `{ "$form": "<ref>" }`. Submissions are read in the admin and
 deleted each night once older than the period; the privacy page says how long each form's
-submissions are kept, with the same periods. Add `redirects` for every old URL that moves, and
+submissions are kept, with the same periods. A section that appears on several pages (a contact
+section, a newsletter band, a shared call to action) goes once under `globalSections`
+(`{ "ref", "title", "layout" }`, with `layout` per language like a page's), and each page that shows
+it has a `globalSection` block with `{ "$globalSection": "<ref>" }`; the editor then changes it in
+one place. A global section cannot contain another. Add `redirects` for every old URL that moves, and
 `gaps` for anything no block matches (a form that must send e-mail or take payment is still a
 gap). Check it until it passes, then try it locally:
 

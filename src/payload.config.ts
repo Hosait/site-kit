@@ -13,10 +13,13 @@ import { AnalyticsDaily, AnalyticsEvents, AnalyticsSalts, AnalyticsSettings, Aud
 import { jobs } from './jobs'
 import { migrations } from './migrations'
 import { Documents } from './collections/Documents'
+import { GlobalSections } from './collections/GlobalSections'
 import { Media } from './collections/Media'
+import { PageTemplates } from './collections/PageTemplates'
 import { Pages } from './collections/Pages'
 import { People } from './collections/People'
 import { SearchIndex } from './collections/SearchIndex'
+import { SectionPresets } from './collections/SectionPresets'
 import { SiteSettings } from './collections/SiteSettings'
 import { Users } from './collections/Users'
 import { richTextEditor } from './fields/richText'
@@ -63,7 +66,7 @@ export default buildConfig({
     push: process.env.NODE_ENV !== 'production',
     prodMigrations: migrations,
   }),
-  collections: [Pages, Articles, People, Documents, Media, SiteSettings, Users, SearchIndex, AnalyticsEvents, AnalyticsDaily, AnalyticsSalts, ConsentLog, AuditLog],
+  collections: [Pages, GlobalSections, PageTemplates, SectionPresets, Articles, People, Documents, Media, SiteSettings, Users, SearchIndex, AnalyticsEvents, AnalyticsDaily, AnalyticsSalts, ConsentLog, AuditLog],
   globals: [AnalyticsSettings],
   cors: [getServerSideURL()].filter(Boolean),
   plugins,

@@ -37,7 +37,7 @@ pnpm tsx scripts/dev-admin.ts # a local admin user; password saved in .env
 ## Fill a site with content
 
 A site plan (`site-plan.json`, schema in `schema/site-plan.schema.json`) describes pages as blocks,
-articles, people, documents, media, menus and redirects. `examples/demo/` is a complete example.
+articles, people, documents, media, menus, redirects and global sections. `examples/demo/` is a complete example.
 
 There are 32 blocks (the list is `blockTypes` in `schema/blocks.schema.json`). Layout: `columns` (2–4 columns,
 ratio presets, stacked on mobile; each column holds any block except columns, forms, `hero` and `newsletter`),
@@ -59,6 +59,22 @@ in the background (`/next/seed/status` shows progress). The admin dashboard's se
 same by hand. It never replaces content unless asked (`?replace=1`). Older sites can still ship a
 SQL dump (`pnpm kit:export-seed` → `seed/content.sql.gz` and `seed/files/`, with
 `"files": "seed/files"` added under `seed` in `hosait.json`), which is used when there is no plan.
+
+## Reuse content
+
+All three are in the admin's «Innhold» group and are per site:
+
+- **Felles seksjoner** (`globalSections`): sections shown on several pages, such as a contact
+  section. A page uses one with the «Felles seksjon» block and shows its published version, so
+  publishing the section rebuilds every page that shows it (cache tag `globalSections`). A global
+  section cannot contain another. In a site plan they go under `globalSections`, and a page points
+  at one with `{ "$globalSection": "<ref>" }`.
+- **Sidemaler** (`pageTemplates`): a ready layout. Choosing one in «Start fra sidemal» on a new page
+  copies its sections (in the language the page is created in) when the page is first saved.
+- **Lagrede seksjoner** (`sectionPresets`): one block saved under a name. On a page, add the block
+  «Sett inn lagret seksjon» and pick one; saving the page swaps it for an independent copy.
+
+Pages are not rebuilt from templates or saved sections afterwards: only global sections stay shared.
 
 ## Checks
 

@@ -62,3 +62,19 @@ test('a form block points at a form with $form, checked and resolved like the ot
   const ids = { media: new Map(), pages: new Map(), forms: new Map([['contact', 12]]) }
   assert.deepEqual(await resolveValue({ blockType: 'formBlock', form: { $form: 'contact' } }, ids, async () => null), { blockType: 'formBlock', form: 12 })
 })
+
+test('a globalSection block points at a global section with $globalSection, and a missing one is named', async () => {
+  const p = plan()
+  p.globalSections = [{ ref: 'contact', title: 'Kontakt', layout: { no: [{ blockType: 'cta', heading: 'Ta kontakt', links: [{ link: { type: 'reference', reference: { $pageLink: 'home' } } }] }] } }]
+  p.pages[0].layout.no.push({ blockType: 'globalSection', globalSection: { $globalSection: 'contact' } })
+  assert.deepEqual(findMissingRefs(p), [])
+  p.pages[0].layout.no.push({ blockType: 'globalSection', globalSection: { $globalSection: 'nope' } })
+  p.globalSections[0].layout.no.push({ blockType: 'hero', media: { $media: 'gone' }, parent: { $page: 'ghost' } })
+  assert.deepEqual(findMissingRefs(p).sort(), ['globalSection "nope"', 'media "gone"', 'page "ghost"'])
+})
+
+test('resolveValue swaps $globalSection for the section id', async () => {
+  const ids = { media: new Map(), pages: new Map(), globalSections: new Map([['contact', 12]]) }
+  const out = await resolveValue({ blockType: 'globalSection', globalSection: { $globalSection: 'contact' } }, ids, async () => null)
+  assert.deepEqual(out, { blockType: 'globalSection', globalSection: 12 })
+})
