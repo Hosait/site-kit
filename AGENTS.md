@@ -4,6 +4,30 @@ For an AI agent (or a person) rebuilding an existing website on this template an
 on Hosait. You fill in content, theme and configuration; you do not write front-end code. Where
 no block fits a part of the old site, list it as a gap in the plan.
 
+## Before you start
+
+A move needs two things this template cannot give itself. Check both before step 0, and stop if
+either is missing.
+
+1. **The Hosait connection.** You need the tools of the `hosait` MCP server: at least
+   `get_project_status` (step 0) and `connect_repository` (step 7). If you do not have them, stop
+   and tell the user to connect Hosait to their AI tool first. In Claude Code that is
+   `claude plugin install hosait --marketplace Hosait/claude-plugin`, then `/mcp`, choose hosait
+   and sign in; hosait.com shows the commands for other AI tools when the user connects one to
+   the project. Do not start the move without it, and do not read the old site some other way
+   instead. When the tools are there, call `get_project_status`. If the project it returns is not
+   the one the user means (another name or address), stop and ask: the connection points at the
+   wrong project.
+2. **The local tools.** Run
+
+       node scripts/kit/preflight.mjs
+
+   (the same as `pnpm kit:preflight`; plain Node, so it works before `pnpm install`). It checks
+   Node.js, pnpm, git, Docker, the Site Kit packages, Playwright's Chromium and site-builder.
+   It exits 1 when something is missing. Run the commands it lists under «Run yourself». Pass the
+   ones under «Ask the user to» on to the user in plain words and wait for them. Run the check
+   again until it says «All set».
+
 ## 0. Check that the site fits
 
 Hosait Sites moves simple content websites: about, services, news, people and contact, up to

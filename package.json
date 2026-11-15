@@ -26,6 +26,7 @@
     "kit:schema": "tsx scripts/kit/schema.ts",
     "kit:import": "tsx scripts/kit/import-plan.ts",
     "kit:check-plan": "tsx scripts/kit/check-plan.ts",
+    "kit:preflight": "node scripts/kit/preflight.mjs",
     "kit:export-seed": "node scripts/deploy/export-seed.mjs",
     "kit:editor-thumbnails": "tsx scripts/kit/editor-thumbnails.ts",
     "spend:ci": "tsx scripts/kit/ci-minutes.ts",

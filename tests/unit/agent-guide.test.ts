@@ -20,6 +20,18 @@ test('the guide uses only real site-builder commands and points at the shipped f
     assert.ok(guide.includes(f), f)
 })
 
+test('before step 0 the agent checks its Hosait connection and the local tools, and stops without them', () => {
+  const at = guide.indexOf('## Before you start')
+  assert.ok(at !== -1 && at < guide.indexOf('## 0.'))
+  const before = guide.slice(at, guide.indexOf('## 0.')).replace(/\s+/g, ' ')
+  assert.match(before, /`get_project_status`.*`connect_repository`.*If you do not have them, stop/)
+  assert.match(before, /do not read the old site some other way/)
+  assert.match(before, /not the one the user means.*stop and ask/)
+  assert.match(before, /node scripts\/kit\/preflight\.mjs/)
+  assert.equal(scripts['kit:preflight'], 'node scripts/kit/preflight.mjs')
+  assert.match(before, /«Run yourself».*«Ask the user to».*«All set»/)
+})
+
 test('step 0 checks that the site fits before anything is set up or read: red stops, yellow asks', () => {
   const at = guide.indexOf('## 0.')
   assert.ok(at !== -1 && at < guide.indexOf('## 1.') && at < guide.indexOf('site-builder crawl'))
