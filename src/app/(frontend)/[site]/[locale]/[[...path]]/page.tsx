@@ -122,7 +122,7 @@ export default async function Page({ params }: { params: Params }) {
         </div>
       )}
       {found.kind === 'page' ? (
-        <RenderBlocks blocks={found.doc.layout} site={site} locale={loc} pageId={found.doc.id} />
+        <RenderBlocks blocks={found.doc.layout} site={site} locale={loc} pageId={found.doc.id} editable={draft} />
       ) : (
         <ArticleView article={found.doc} site={site} locale={loc} />
       )}

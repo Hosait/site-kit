@@ -58,6 +58,15 @@ export const Users: CollectionConfig = {
       access: { update: ({ req: { user } }) => isAdmin(user as User | null) },
       saveToJWT: true,
     },
+    {
+      name: 'simpleMode',
+      type: 'checkbox',
+      label: 'Enkel modus',
+      defaultValue: false,
+      admin: {
+        description: 'Åpner sider i den visuelle editoren. Det vanlige skjemaet er alltid ett klikk unna («Avansert redigering»).',
+      },
+    },
   ],
   hooks: {
     // Endringer i tilgang til besøksanalysen logges.

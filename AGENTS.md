@@ -178,6 +178,12 @@ import cut off part-way (the web service restarted during it) leaves pages that 
 again" refuse; the admin then replaces the content with "Legg inn innhold" in the Testinnhold
 panel on the admin dashboard.
 
+Tell the user about «Visuell redigering»: each page has a button for it, and a user with
+«Enkel modus» (on their user, under Brukere) opens pages there directly. It edits the same
+sections as the form, on the real page: drag sections in, click text to change it, drop an image
+on an image. Blocks in `site/blocks/custom/` work there too; they show without a picture in the
+section library.
+
 Before the domain switch, run `pnpm site-builder compare` again with `--new` set to the site's
 hosait.com address.
 

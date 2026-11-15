@@ -27,6 +27,7 @@
     "kit:import": "tsx scripts/kit/import-plan.ts",
     "kit:check-plan": "tsx scripts/kit/check-plan.ts",
     "kit:export-seed": "node scripts/deploy/export-seed.mjs",
+    "kit:editor-thumbnails": "tsx scripts/kit/editor-thumbnails.ts",
     "spend:ci": "tsx scripts/kit/ci-minutes.ts",
     "site-builder": "node packages/site-builder/bin/site-builder.js",
     "site-builder:install": "npm ci --prefix packages/site-builder"

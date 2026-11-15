@@ -35,10 +35,13 @@ export default buildConfig({
     components: {
       beforeDashboard: ['/components/admin/SeedPanel#SeedPanel', ...(FEATURES.search ? ['/components/admin/SearchPanel#SearchPanel'] : [])],
       afterNavLinks: FEATURES.analytics === 'builtin' ? ['/components/analytics/admin/AnalyticsNav#AnalyticsNav'] : [],
-      views:
-        FEATURES.analytics === 'builtin'
+      views: {
+        // «Visuell redigering»: the simple editor for pages (src/components/visual-editor).
+        visualEditor: { Component: '/components/visual-editor/VisualEditorView#VisualEditorView', path: '/visual/pages/:id' },
+        ...(FEATURES.analytics === 'builtin'
           ? { analytics: { Component: '/components/analytics/admin/AnalyticsView#AnalyticsView', path: '/analytics' } }
-          : {},
+          : {}),
+      },
     },
     meta: { titleSuffix: SITE_CONFIG.admin.titleSuffix },
     livePreview: {

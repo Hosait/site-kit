@@ -1704,6 +1704,10 @@ export interface User {
    * Administratorer har alltid tilgang.
    */
   analyticsAccess?: boolean | null;
+  /**
+   * Åpner sider i den visuelle editoren. Det vanlige skjemaet er alltid ett klikk unna («Avansert redigering»).
+   */
+  simpleMode?: boolean | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -3183,6 +3187,7 @@ export interface UsersSelect<T extends boolean = true> {
   role?: T;
   sites?: T;
   analyticsAccess?: T;
+  simpleMode?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;

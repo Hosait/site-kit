@@ -3227,6 +3227,13 @@
             "null"
           ]
         },
+        "simpleMode": {
+          "description": "Åpner sider i den visuelle editoren. Det vanlige skjemaet er alltid ett klikk unna («Avansert redigering»).",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "updatedAt": {
           "type": "string"
         },
@@ -3342,6 +3349,9 @@
           "type": "boolean"
         },
         "analyticsAccess": {
+          "type": "boolean"
+        },
+        "simpleMode": {
           "type": "boolean"
         },
         "updatedAt": {

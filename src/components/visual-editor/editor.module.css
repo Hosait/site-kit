@@ -1,0 +1,335 @@
+/* Visual editor chrome. Colours come from Payload's admin theme, so light and dark mode both work. */
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  grid-template-columns: 17rem minmax(0, 1fr) 20rem;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: var(--theme-elevation-100);
+  color: var(--theme-text);
+  font-size: 0.875rem;
+}
+
+.root button,
+.root a,
+.root input,
+.root select,
+.root textarea,
+.root summary {
+  font: inherit;
+}
+
+.root :focus-visible {
+  outline: 3px solid var(--theme-success-500, #2563eb);
+  outline-offset: 2px;
+}
+
+.top {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: var(--theme-bg);
+  border-bottom: 1px solid var(--theme-elevation-150);
+  flex-wrap: wrap;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 0.5rem;
+  color: var(--theme-text);
+  text-decoration: none;
+}
+
+.title {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.2;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 10rem;
+}
+
+.titleKicker {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--theme-elevation-650);
+}
+
+.tools {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.status {
+  margin: 0;
+  color: var(--theme-elevation-700);
+  min-width: 10rem;
+}
+
+.status[data-status='error'] {
+  color: var(--theme-error-650, #b91c1c);
+  font-weight: 600;
+}
+
+.iconBtn,
+.btn,
+.primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--theme-elevation-250);
+  background: var(--theme-bg);
+  color: var(--theme-text);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.iconBtn {
+  padding: 0;
+}
+
+.iconBtn:disabled,
+.btn:disabled,
+.primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.iconBtn[aria-pressed='true'] {
+  background: var(--theme-elevation-800);
+  color: var(--theme-elevation-0);
+  border-color: var(--theme-elevation-800);
+}
+
+.primary {
+  background: var(--theme-elevation-800);
+  border-color: var(--theme-elevation-800);
+  color: var(--theme-elevation-0);
+  font-weight: 600;
+  padding: 0 1.25rem;
+}
+
+.left,
+.right {
+  overflow-y: auto;
+  background: var(--theme-bg);
+  padding: 1rem;
+}
+
+.left {
+  border-right: 1px solid var(--theme-elevation-150);
+}
+
+.right {
+  border-left: 1px solid var(--theme-elevation-150);
+}
+
+.panel + .panel {
+  margin-top: 1.5rem;
+}
+
+.panelTitle {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.hint {
+  margin: 0.25rem 0 0.75rem;
+  color: var(--theme-elevation-650);
+  font-size: 0.8125rem;
+}
+
+.noThumb {
+  display: block;
+  background: repeating-linear-gradient(45deg, var(--theme-elevation-100), var(--theme-elevation-100) 6px, var(--theme-elevation-150) 6px, var(--theme-elevation-150) 12px);
+}
+
+.stage {
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.frameWrap {
+  position: relative;
+  height: 100%;
+  max-width: 100%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.15);
+  transition: width 0.2s ease;
+}
+
+.frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  transition: opacity 0.15s ease;
+}
+
+/* While the page catches up with a change, clicks would land on the old version. */
+.frame[data-stale] {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.hoverBox,
+.selectBox {
+  position: absolute;
+  box-sizing: border-box;
+}
+
+.hoverBox {
+  border: 2px dashed rgb(37 99 235 / 0.7);
+}
+
+.selectBox {
+  border: 3px solid #2563eb;
+}
+
+.toolbar {
+  position: absolute;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 8px;
+  background: #1e3a8a;
+  color: #fff;
+  pointer-events: auto;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
+}
+
+.toolbar .iconBtn {
+  background: transparent;
+  border-color: transparent;
+  color: #fff;
+}
+
+.toolbar .iconBtn:hover:not(:disabled) {
+  background: rgb(255 255 255 / 0.15);
+}
+
+.toolbar .iconBtn:first-child {
+  cursor: grab;
+}
+
+.toolbarLabel {
+  padding: 0 0.5rem;
+  font-weight: 600;
+}
+
+.dropLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  background: rgb(37 99 235 / 0.04);
+}
+
+.dropLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: #2563eb;
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.empty,
+.updating {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: #1e3a8a;
+  color: #fff;
+}
+
+.empty {
+  top: 40%;
+  max-width: 24rem;
+  text-align: center;
+}
+
+.updating {
+  bottom: 1rem;
+  font-size: 0.8125rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.field label {
+  font-weight: 600;
+}
+
+.field input,
+.field select,
+.field textarea {
+  min-height: 44px;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--theme-elevation-400);
+  border-radius: 6px;
+  background: var(--theme-input-bg, var(--theme-bg));
+  color: var(--theme-text);
+}
+
+.field select[multiple] {
+  min-height: 6rem;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Narrow windows: the preview first, then the panels below it. */
+@media (max-width: 64rem) {
+  .root {
+    position: static;
+    min-height: 100vh;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 70vh auto auto;
+  }
+
+  .stage {
+    grid-row: 2;
+  }
+
+  .left,
+  .right {
+    border: 0;
+    border-top: 1px solid var(--theme-elevation-150);
+  }
+}
