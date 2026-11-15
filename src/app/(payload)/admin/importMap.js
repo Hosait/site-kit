@@ -30,12 +30,14 @@ import { MetaImageComponent as MetaImageComponent_a8a977ebc872c5d5ea7ee689724c08
 import { MetaDescriptionComponent as MetaDescriptionComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
 import { PreviewComponent as PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
 import { EditorialPanel as EditorialPanel_29991eab6d30e0273ca21263c97b37f3 } from '../../../components/admin/EditorialPanel'
+import { OpenVisualEditor as OpenVisualEditor_2b4847904f15a2f76d517711e8581471 } from '../../../components/visual-editor/OpenVisualEditor'
 import { FolderTableCell as FolderTableCell_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 import { FolderField as FolderField_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 import { FolderTypeField as FolderTypeField_2b8867833a34864a02ddf429b0728a40 } from '@payloadcms/next/client'
 import { AnalyticsNav as AnalyticsNav_a4dea861fdcd494d9251fd756a68779c } from '../../../components/analytics/admin/AnalyticsNav'
 import { SeedPanel as SeedPanel_b87cfb84f1f2c39ca3d119422578c92f } from '../../../components/admin/SeedPanel'
 import { SearchPanel as SearchPanel_fca060b7c9ab73a646724a4fe1961b02 } from '../../../components/admin/SearchPanel'
+import { VisualEditorView as VisualEditorView_98eb8935459ca7224a0e103f92c506fd } from '../../../components/visual-editor/VisualEditorView'
 import { AnalyticsView as AnalyticsView_b7319719689282746bbc0f018d0eb02e } from '../../../components/analytics/admin/AnalyticsView'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 import { S3ClientUploadHandler as S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24 } from '@payloadcms/storage-s3/client'
@@ -74,12 +76,14 @@ export const importMap = {
   "@payloadcms/plugin-seo/client#MetaDescriptionComponent": MetaDescriptionComponent_a8a977ebc872c5d5ea7ee689724c0860,
   "@payloadcms/plugin-seo/client#PreviewComponent": PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860,
   "/components/admin/EditorialPanel#EditorialPanel": EditorialPanel_29991eab6d30e0273ca21263c97b37f3,
+  "/components/visual-editor/OpenVisualEditor#OpenVisualEditor": OpenVisualEditor_2b4847904f15a2f76d517711e8581471,
   "@payloadcms/next/rsc#FolderTableCell": FolderTableCell_f9c02e79a4aed9a3924487c0cd4cafb1,
   "@payloadcms/next/rsc#FolderField": FolderField_f9c02e79a4aed9a3924487c0cd4cafb1,
   "@payloadcms/next/client#FolderTypeField": FolderTypeField_2b8867833a34864a02ddf429b0728a40,
   "/components/analytics/admin/AnalyticsNav#AnalyticsNav": AnalyticsNav_a4dea861fdcd494d9251fd756a68779c,
   "/components/admin/SeedPanel#SeedPanel": SeedPanel_b87cfb84f1f2c39ca3d119422578c92f,
   "/components/admin/SearchPanel#SearchPanel": SearchPanel_fca060b7c9ab73a646724a4fe1961b02,
+  "/components/visual-editor/VisualEditorView#VisualEditorView": VisualEditorView_98eb8935459ca7224a0e103f92c506fd,
   "/components/analytics/admin/AnalyticsView#AnalyticsView": AnalyticsView_b7319719689282746bbc0f018d0eb02e,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1,
   "@payloadcms/storage-s3/client#S3ClientUploadHandler": S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24

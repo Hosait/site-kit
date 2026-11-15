@@ -120,6 +120,7 @@ export const Pages: CollectionConfig<'pages'> = {
     useAsTitle: 'title',
     group: 'Innhold',
     livePreview: { url: ({ data, locale }) => previewUrl('pages', data, locale?.code) },
+    components: { edit: { beforeDocumentControls: ['/components/visual-editor/OpenVisualEditor#OpenVisualEditor'] } },
     preview: (data, { locale }) => previewUrl('pages', data, locale),
   },
   fields: [

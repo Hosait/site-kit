@@ -70,7 +70,22 @@ export function RenderBlocks({
 }: { blocks: Page['layout']; first?: boolean } & RenderContext) {
   if (!blocks?.length) return null
   const ctx = { site, locale, pageId, draft, nested }
-  return <>{blocks.map((block, index) => renderFramed(block, { site, locale, isFirst: first && index === 0 }, ctx, index))}</>
+  return (
+    <>
+      {blocks.map((block, index) => {
+        const section = renderFramed(block, { site, locale, isFirst: first && index === 0 }, ctx, index)
+        // Draft preview: each of the page's own sections is marked for the visual editor
+        // (`display: contents`, so the layout is unchanged). A global section's content is not.
+        return draft && !nested ? (
+          <div key={block.id ?? index} data-vb-block={index} style={{ display: 'contents' }}>
+            {section}
+          </div>
+        ) : (
+          section
+        )
+      })}
+    </>
+  )
 }
 
 /** A block inside its «Seksjonsoppsett» frame. Blocks in a column use the same frame. */
@@ -176,7 +191,8 @@ function renderBlock(
         enableIntro?: boolean | null
         introContent?: unknown
       }
-      if (typeof b.form !== 'object') return null
+      // A draft (e.g. a section just added in the visual editor) may not have a form yet.
+      if (!b.form || typeof b.form !== 'object') return null
       return (
         <FormBlock
           key={key}

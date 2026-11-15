@@ -7,6 +7,7 @@ import * as migration_20261115_120137_more_blocks from './20261115_120137_more_b
 import * as migration_20261115_122639_reusable_content from './20261115_122639_reusable_content';
 import * as migration_20261115_125636_editorial_workflow from './20261115_125636_editorial_workflow';
 import * as migration_20261115_125638_editorial_existing_users from './20261115_125638_editorial_existing_users';
+import * as migration_20261115_133523_visual_editor_simple_mode from './20261115_133523_visual_editor_simple_mode';
 
 export const migrations = [
   {
@@ -52,6 +53,11 @@ export const migrations = [
   {
     up: migration_20261115_125638_editorial_existing_users.up,
     down: migration_20261115_125638_editorial_existing_users.down,
-    name: '20261115_125638_editorial_existing_users'
+    name: '20261115_125638_editorial_existing_users',
+  },
+  {
+    up: migration_20261115_133523_visual_editor_simple_mode.up,
+    down: migration_20261115_133523_visual_editor_simple_mode.down,
+    name: '20261115_133523_visual_editor_simple_mode'
   },
 ];
