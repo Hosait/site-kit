@@ -5,7 +5,9 @@ import * as migration_20261016_190445_forms_retention from './20261016_190445_fo
 import * as migration_20261115_111150_section_settings from './20261115_111150_section_settings';
 import * as migration_20261115_120137_more_blocks from './20261115_120137_more_blocks';
 import * as migration_20261115_122639_reusable_content from './20261115_122639_reusable_content';
-import * as migration_20261115_132306_visual_editor_simple_mode from './20261115_132306_visual_editor_simple_mode';
+import * as migration_20261115_125636_editorial_workflow from './20261115_125636_editorial_workflow';
+import * as migration_20261115_125638_editorial_existing_users from './20261115_125638_editorial_existing_users';
+import * as migration_20261115_133523_visual_editor_simple_mode from './20261115_133523_visual_editor_simple_mode';
 
 export const migrations = [
   {
@@ -44,8 +46,18 @@ export const migrations = [
     name: '20261115_122639_reusable_content',
   },
   {
-    up: migration_20261115_132306_visual_editor_simple_mode.up,
-    down: migration_20261115_132306_visual_editor_simple_mode.down,
-    name: '20261115_132306_visual_editor_simple_mode'
+    up: migration_20261115_125636_editorial_workflow.up,
+    down: migration_20261115_125636_editorial_workflow.down,
+    name: '20261115_125636_editorial_workflow',
+  },
+  {
+    up: migration_20261115_125638_editorial_existing_users.up,
+    down: migration_20261115_125638_editorial_existing_users.down,
+    name: '20261115_125638_editorial_existing_users',
+  },
+  {
+    up: migration_20261115_133523_visual_editor_simple_mode.up,
+    down: migration_20261115_133523_visual_editor_simple_mode.down,
+    name: '20261115_133523_visual_editor_simple_mode'
   },
 ];

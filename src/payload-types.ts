@@ -77,6 +77,8 @@ export interface Config {
     media: Media;
     'site-settings': SiteSetting;
     users: User;
+    comments: Comment;
+    'content-audit-log': ContentAuditLog;
     'search-index': SearchIndex;
     'analytics-events': AnalyticsEvent;
     'analytics-daily': AnalyticsDaily;
@@ -109,6 +111,8 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
+    comments: CommentsSelect<false> | CommentsSelect<true>;
+    'content-audit-log': ContentAuditLogSelect<false> | ContentAuditLogSelect<true>;
     'search-index': SearchIndexSelect<false> | SearchIndexSelect<true>;
     'analytics-events': AnalyticsEventsSelect<false> | AnalyticsEventsSelect<true>;
     'analytics-daily': AnalyticsDailySelect<false> | AnalyticsDailySelect<true>;
@@ -145,6 +149,7 @@ export interface Config {
   jobs: {
     tasks: {
       'prune-form-submissions': TaskPruneFormSubmissions;
+      'prune-audit-log': TaskPruneAuditLog;
       schedulePublish: TaskSchedulePublish;
       inline: {
         input: unknown;
@@ -252,6 +257,8 @@ export interface Page {
   cardImage?: (number | null) | Media;
   summary?: string | null;
   hideFromNav?: boolean | null;
+  workflow?: ('draft' | 'in-review' | 'approved' | 'changes-requested') | null;
+  submittedBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -469,9 +476,51 @@ export interface Article {
    * Lages fra tittelen hvis tom.
    */
   slug?: string | null;
+  workflow?: ('draft' | 'in-review' | 'approved' | 'changes-requested') | null;
+  submittedBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "users".
+ */
+export interface User {
+  id: number;
+  name?: string | null;
+  /**
+   * Utgivere publiserer; redaktører lagrer utkast som en utgiver eller godkjenner publiserer; godkjennere godkjenner eller ber om endringer.
+   */
+  role: 'admin' | 'publisher' | 'editor' | 'reviewer';
+  sites?: 'main'[] | null;
+  /**
+   * Administratorer har alltid tilgang.
+   */
+  analyticsAccess?: boolean | null;
+  /**
+   * Åpner sider i den visuelle editoren. Det vanlige skjemaet er alltid ett klikk unna («Avansert redigering»).
+   */
+  simpleMode?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+  email: string;
+  resetPasswordToken?: string | null;
+  resetPasswordExpiration?: string | null;
+  salt?: string | null;
+  hash?: string | null;
+  resetPasswordRequestedAt?: string | null;
+  loginAttempts?: number | null;
+  lockUntil?: string | null;
+  sessions?:
+    | {
+        id: string;
+        createdAt?: string | null;
+        expiresAt: string;
+      }[]
+    | null;
+  password?: string | null;
+  collection: 'users';
 }
 /**
  * Luft, bredde, bakgrunnsbilde, anker og visning. «Automatisk» er blokkens eget oppsett.
@@ -1889,40 +1938,60 @@ export interface SiteSetting {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "users".
+ * via the `definition` "comments".
  */
-export interface User {
+export interface Comment {
   id: number;
-  name?: string | null;
-  role: 'admin' | 'editor';
-  sites?: 'main'[] | null;
-  /**
-   * Administratorer har alltid tilgang.
-   */
-  analyticsAccess?: boolean | null;
-  /**
-   * Åpner sider i den visuelle editoren. Det vanlige skjemaet er alltid ett klikk unna («Avansert redigering»).
-   */
-  simpleMode?: boolean | null;
+  doc:
+    | {
+        relationTo: 'pages';
+        value: number | Page;
+      }
+    | {
+        relationTo: 'articles';
+        value: number | Article;
+      };
+  blockId?: string | null;
+  author?: (number | null) | User;
+  text: string;
+  parent?: (number | null) | Comment;
+  resolved?: boolean | null;
+  site?: 'main' | null;
   updatedAt: string;
   createdAt: string;
-  email: string;
-  resetPasswordToken?: string | null;
-  resetPasswordExpiration?: string | null;
-  salt?: string | null;
-  hash?: string | null;
-  resetPasswordRequestedAt?: string | null;
-  loginAttempts?: number | null;
-  lockUntil?: string | null;
-  sessions?:
+}
+/**
+ * Hvem som endret hva og når (bare navn på felt, ikke innholdet). Loggen kan ikke endres; rader eldre enn 730 dager slettes hver natt.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "content-audit-log".
+ */
+export interface ContentAuditLog {
+  id: number;
+  user?: (number | null) | User;
+  /**
+   * E-post på tidspunktet, eller «system» for import og jobber.
+   */
+  actor?: string | null;
+  operation: 'create' | 'update' | 'publish' | 'unpublish' | 'delete';
+  collection: string;
+  docId: string;
+  docTitle?: string | null;
+  site?: string | null;
+  /**
+   * Navn på feltene som ble endret.
+   */
+  changedFields?:
     | {
-        id: string;
-        createdAt?: string | null;
-        expiresAt: string;
-      }[]
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
     | null;
-  password?: string | null;
-  collection: 'users';
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -2171,7 +2240,7 @@ export interface PayloadJob {
     | {
         executedAt: string;
         completedAt: string;
-        taskSlug: 'inline' | 'prune-form-submissions' | 'schedulePublish';
+        taskSlug: 'inline' | 'prune-form-submissions' | 'prune-audit-log' | 'schedulePublish';
         taskID: string;
         input?:
           | {
@@ -2204,7 +2273,7 @@ export interface PayloadJob {
         id?: string | null;
       }[]
     | null;
-  taskSlug?: ('inline' | 'prune-form-submissions' | 'schedulePublish') | null;
+  taskSlug?: ('inline' | 'prune-form-submissions' | 'prune-audit-log' | 'schedulePublish') | null;
   queue?: string | null;
   waitUntil?: string | null;
   processing?: boolean | null;
@@ -2266,6 +2335,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'users';
         value: number | User;
+      } | null)
+    | ({
+        relationTo: 'comments';
+        value: number | Comment;
+      } | null)
+    | ({
+        relationTo: 'content-audit-log';
+        value: number | ContentAuditLog;
       } | null)
     | ({
         relationTo: 'search-index';
@@ -2412,6 +2489,8 @@ export interface PagesSelect<T extends boolean = true> {
   cardImage?: T;
   summary?: T;
   hideFromNav?: T;
+  workflow?: T;
+  submittedBy?: T;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
@@ -3318,6 +3397,8 @@ export interface ArticlesSelect<T extends boolean = true> {
   kind?: T;
   publishedAt?: T;
   slug?: T;
+  workflow?: T;
+  submittedBy?: T;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
@@ -3577,6 +3658,37 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comments_select".
+ */
+export interface CommentsSelect<T extends boolean = true> {
+  doc?: T;
+  blockId?: T;
+  author?: T;
+  text?: T;
+  parent?: T;
+  resolved?: T;
+  site?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "content-audit-log_select".
+ */
+export interface ContentAuditLogSelect<T extends boolean = true> {
+  user?: T;
+  actor?: T;
+  operation?: T;
+  collection?: T;
+  docId?: T;
+  docTitle?: T;
+  site?: T;
+  changedFields?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -4006,6 +4118,16 @@ export interface CollectionsWidget {
  * via the `definition` "TaskPrune-form-submissions".
  */
 export interface TaskPruneFormSubmissions {
+  input?: unknown;
+  output: {
+    deleted?: number | null;
+  };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskPrune-audit-log".
+ */
+export interface TaskPruneAuditLog {
   input?: unknown;
   output: {
     deleted?: number | null;

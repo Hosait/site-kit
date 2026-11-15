@@ -18,7 +18,7 @@
     "test": "pnpm run test:unit && pnpm run test:e2e",
     "test:e2e": "cross-env NODE_OPTIONS=\"--no-deprecation --import=tsx/esm\" playwright test --config=playwright.config.ts",
     "typecheck": "tsc --noEmit",
-    "test:unit": "tsx --test tests/unit/*.test.ts",
+    "test:unit": "tsx --test --test-force-exit tests/unit/*.test.ts",
     "qa:urls": "tsx scripts/qa/url-parity.ts",
     "qa:axe": "tsx scripts/qa/axe-report.ts",
     "qa:launch": "tsx scripts/qa/launch-check.ts",

@@ -6,9 +6,11 @@
 import type { Config } from 'payload'
 
 import { FORMS } from '../lib/sites'
+import { pruneAuditLog } from './pruneAuditLog'
 import { pruneFormSubmissions } from './pruneFormSubmissions'
 
 export const PRUNE_TASK = 'prune-form-submissions'
+export const PRUNE_AUDIT_TASK = 'prune-audit-log'
 
 export const jobs: NonNullable<Config['jobs']> = {
   tasks: [
@@ -21,6 +23,13 @@ export const jobs: NonNullable<Config['jobs']> = {
         const result = await pruneFormSubmissions(req.payload, { siteDefault: FORMS.retentionDays })
         return { output: { deleted: result.reduce((n, r) => n + r.deleted, 0) } }
       },
+    },
+    {
+      slug: PRUNE_AUDIT_TASK,
+      // Fifteen minutes after the form submissions, in the same queue.
+      schedule: [{ cron: '0 30 2 * * *', queue: 'nightly' }],
+      outputSchema: [{ name: 'deleted', type: 'number' }],
+      handler: async ({ req }) => ({ output: { deleted: (await pruneAuditLog(req.payload)).deleted } }),
     },
   ],
   autoRun: [{ cron: '0 */5 * * * *', queue: 'nightly' }],

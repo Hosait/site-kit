@@ -11456,6 +11456,20 @@
           "primaryKey": false,
           "notNull": false
         },
+        "workflow": {
+          "name": "workflow",
+          "type": "enum_pages_workflow",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'draft'"
+        },
+        "submitted_by_id": {
+          "name": "submitted_by_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp(3) with time zone",
@@ -11530,6 +11544,36 @@
           "columns": [
             {
               "expression": "card_image_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "pages_workflow_idx": {
+          "name": "pages_workflow_idx",
+          "columns": [
+            {
+              "expression": "workflow",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "pages_submitted_by_idx": {
+          "name": "pages_submitted_by_idx",
+          "columns": [
+            {
+              "expression": "submitted_by_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -11619,6 +11663,19 @@
           "tableTo": "media",
           "columnsFrom": [
             "card_image_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "pages_submitted_by_id_users_id_fk": {
+          "name": "pages_submitted_by_id_users_id_fk",
+          "tableFrom": "pages",
+          "tableTo": "users",
+          "columnsFrom": [
+            "submitted_by_id"
           ],
           "columnsTo": [
             "id"
@@ -23906,6 +23963,20 @@
           "primaryKey": false,
           "notNull": false
         },
+        "version_workflow": {
+          "name": "version_workflow",
+          "type": "enum__pages_v_version_workflow",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'draft'"
+        },
+        "version_submitted_by_id": {
+          "name": "version_submitted_by_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "version_updated_at": {
           "name": "version_updated_at",
           "type": "timestamp(3) with time zone",
@@ -24032,6 +24103,36 @@
           "columns": [
             {
               "expression": "version_card_image_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "_pages_v_version_version_workflow_idx": {
+          "name": "_pages_v_version_version_workflow_idx",
+          "columns": [
+            {
+              "expression": "version_workflow",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "_pages_v_version_version_submitted_by_idx": {
+          "name": "_pages_v_version_version_submitted_by_idx",
+          "columns": [
+            {
+              "expression": "version_submitted_by_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -24224,6 +24325,19 @@
           "tableTo": "media",
           "columnsFrom": [
             "version_card_image_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "_pages_v_version_submitted_by_id_users_id_fk": {
+          "name": "_pages_v_version_submitted_by_id_users_id_fk",
+          "tableFrom": "_pages_v",
+          "tableTo": "users",
+          "columnsFrom": [
+            "version_submitted_by_id"
           ],
           "columnsTo": [
             "id"
@@ -71253,6 +71367,20 @@
           "primaryKey": false,
           "notNull": false
         },
+        "workflow": {
+          "name": "workflow",
+          "type": "enum_articles_workflow",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'draft'"
+        },
+        "submitted_by_id": {
+          "name": "submitted_by_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp(3) with time zone",
@@ -71322,6 +71450,36 @@
           "method": "btree",
           "with": {}
         },
+        "articles_workflow_idx": {
+          "name": "articles_workflow_idx",
+          "columns": [
+            {
+              "expression": "workflow",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "articles_submitted_by_idx": {
+          "name": "articles_submitted_by_idx",
+          "columns": [
+            {
+              "expression": "submitted_by_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "articles_updated_at_idx": {
           "name": "articles_updated_at_idx",
           "columns": [
@@ -71375,6 +71533,19 @@
           "tableTo": "media",
           "columnsFrom": [
             "hero_image_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "articles_submitted_by_id_users_id_fk": {
+          "name": "articles_submitted_by_id_users_id_fk",
+          "tableFrom": "articles",
+          "tableTo": "users",
+          "columnsFrom": [
+            "submitted_by_id"
           ],
           "columnsTo": [
             "id"
@@ -71598,6 +71769,20 @@
           "primaryKey": false,
           "notNull": false
         },
+        "version_workflow": {
+          "name": "version_workflow",
+          "type": "enum__articles_v_version_workflow",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'draft'"
+        },
+        "version_submitted_by_id": {
+          "name": "version_submitted_by_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "version_updated_at": {
           "name": "version_updated_at",
           "type": "timestamp(3) with time zone",
@@ -71709,6 +71894,36 @@
           "columns": [
             {
               "expression": "version_published_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "_articles_v_version_version_workflow_idx": {
+          "name": "_articles_v_version_version_workflow_idx",
+          "columns": [
+            {
+              "expression": "version_workflow",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "_articles_v_version_version_submitted_by_idx": {
+          "name": "_articles_v_version_version_submitted_by_idx",
+          "columns": [
+            {
+              "expression": "version_submitted_by_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -71875,6 +72090,19 @@
           "tableTo": "media",
           "columnsFrom": [
             "version_hero_image_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "_articles_v_version_submitted_by_id_users_id_fk": {
+          "name": "_articles_v_version_submitted_by_id_users_id_fk",
+          "tableFrom": "_articles_v",
+          "tableTo": "users",
+          "columnsFrom": [
+            "version_submitted_by_id"
           ],
           "columnsTo": [
             "id"
@@ -74524,13 +74752,6 @@
           "notNull": false,
           "default": false
         },
-        "simple_mode": {
-          "name": "simple_mode",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp(3) with time zone",
@@ -74643,6 +74864,562 @@
         }
       },
       "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.comments": {
+      "name": "comments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "block_id": {
+          "name": "block_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "author_id": {
+          "name": "author_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "text": {
+          "name": "text",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "parent_id": {
+          "name": "parent_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resolved": {
+          "name": "resolved",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "site": {
+          "name": "site",
+          "type": "enum_comments_site",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "comments_block_id_idx": {
+          "name": "comments_block_id_idx",
+          "columns": [
+            {
+              "expression": "block_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "comments_author_idx": {
+          "name": "comments_author_idx",
+          "columns": [
+            {
+              "expression": "author_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "comments_parent_idx": {
+          "name": "comments_parent_idx",
+          "columns": [
+            {
+              "expression": "parent_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "comments_site_idx": {
+          "name": "comments_site_idx",
+          "columns": [
+            {
+              "expression": "site",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "comments_updated_at_idx": {
+          "name": "comments_updated_at_idx",
+          "columns": [
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "comments_created_at_idx": {
+          "name": "comments_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "comments_author_id_users_id_fk": {
+          "name": "comments_author_id_users_id_fk",
+          "tableFrom": "comments",
+          "tableTo": "users",
+          "columnsFrom": [
+            "author_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "comments_parent_id_comments_id_fk": {
+          "name": "comments_parent_id_comments_id_fk",
+          "tableFrom": "comments",
+          "tableTo": "comments",
+          "columnsFrom": [
+            "parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.comments_rels": {
+      "name": "comments_rels",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "order": {
+          "name": "order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "parent_id": {
+          "name": "parent_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "path": {
+          "name": "path",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pages_id": {
+          "name": "pages_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "articles_id": {
+          "name": "articles_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "comments_rels_order_idx": {
+          "name": "comments_rels_order_idx",
+          "columns": [
+            {
+              "expression": "order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "comments_rels_parent_idx": {
+          "name": "comments_rels_parent_idx",
+          "columns": [
+            {
+              "expression": "parent_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "comments_rels_path_idx": {
+          "name": "comments_rels_path_idx",
+          "columns": [
+            {
+              "expression": "path",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "comments_rels_pages_id_idx": {
+          "name": "comments_rels_pages_id_idx",
+          "columns": [
+            {
+              "expression": "pages_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "comments_rels_articles_id_idx": {
+          "name": "comments_rels_articles_id_idx",
+          "columns": [
+            {
+              "expression": "articles_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "comments_rels_parent_fk": {
+          "name": "comments_rels_parent_fk",
+          "tableFrom": "comments_rels",
+          "tableTo": "comments",
+          "columnsFrom": [
+            "parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "comments_rels_pages_fk": {
+          "name": "comments_rels_pages_fk",
+          "tableFrom": "comments_rels",
+          "tableTo": "pages",
+          "columnsFrom": [
+            "pages_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "comments_rels_articles_fk": {
+          "name": "comments_rels_articles_fk",
+          "tableFrom": "comments_rels",
+          "tableTo": "articles",
+          "columnsFrom": [
+            "articles_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.content_audit_log": {
+      "name": "content_audit_log",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actor": {
+          "name": "actor",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "operation": {
+          "name": "operation",
+          "type": "enum_content_audit_log_operation",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "collection": {
+          "name": "collection",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "doc_id": {
+          "name": "doc_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "doc_title": {
+          "name": "doc_title",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "site": {
+          "name": "site",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "changed_fields": {
+          "name": "changed_fields",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "content_audit_log_user_idx": {
+          "name": "content_audit_log_user_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "content_audit_log_actor_idx": {
+          "name": "content_audit_log_actor_idx",
+          "columns": [
+            {
+              "expression": "actor",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "content_audit_log_operation_idx": {
+          "name": "content_audit_log_operation_idx",
+          "columns": [
+            {
+              "expression": "operation",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "content_audit_log_collection_idx": {
+          "name": "content_audit_log_collection_idx",
+          "columns": [
+            {
+              "expression": "collection",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "content_audit_log_doc_id_idx": {
+          "name": "content_audit_log_doc_id_idx",
+          "columns": [
+            {
+              "expression": "doc_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "content_audit_log_updated_at_idx": {
+          "name": "content_audit_log_updated_at_idx",
+          "columns": [
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "content_audit_log_created_at_idx": {
+          "name": "content_audit_log_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "content_audit_log_user_id_users_id_fk": {
+          "name": "content_audit_log_user_id_users_id_fk",
+          "tableFrom": "content_audit_log",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -78954,6 +79731,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "comments_id": {
+          "name": "comments_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "content_audit_log_id": {
+          "name": "content_audit_log_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "search_index_id": {
           "name": "search_index_id",
           "type": "integer",
@@ -79201,6 +79990,36 @@
           "columns": [
             {
               "expression": "users_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "payload_locked_documents_rels_comments_id_idx": {
+          "name": "payload_locked_documents_rels_comments_id_idx",
+          "columns": [
+            {
+              "expression": "comments_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "payload_locked_documents_rels_content_audit_log_id_idx": {
+          "name": "payload_locked_documents_rels_content_audit_log_id_idx",
+          "columns": [
+            {
+              "expression": "content_audit_log_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -79499,6 +80318,32 @@
           "tableTo": "users",
           "columnsFrom": [
             "users_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "payload_locked_documents_rels_comments_fk": {
+          "name": "payload_locked_documents_rels_comments_fk",
+          "tableFrom": "payload_locked_documents_rels",
+          "tableTo": "comments",
+          "columnsFrom": [
+            "comments_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "payload_locked_documents_rels_content_audit_log_fk": {
+          "name": "payload_locked_documents_rels_content_audit_log_fk",
+          "tableFrom": "payload_locked_documents_rels",
+          "tableTo": "content_audit_log",
+          "columnsFrom": [
+            "content_audit_log_id"
           ],
           "columnsTo": [
             "id"
@@ -82527,6 +83372,16 @@
         "main"
       ]
     },
+    "public.enum_pages_workflow": {
+      "name": "enum_pages_workflow",
+      "schema": "public",
+      "values": [
+        "draft",
+        "in-review",
+        "approved",
+        "changes-requested"
+      ]
+    },
     "public.enum_pages_status": {
       "name": "enum_pages_status",
       "schema": "public",
@@ -85013,6 +85868,16 @@
       "schema": "public",
       "values": [
         "main"
+      ]
+    },
+    "public.enum__pages_v_version_workflow": {
+      "name": "enum__pages_v_version_workflow",
+      "schema": "public",
+      "values": [
+        "draft",
+        "in-review",
+        "approved",
+        "changes-requested"
       ]
     },
     "public.enum__pages_v_version_status": {
@@ -94884,6 +95749,16 @@
         "blog"
       ]
     },
+    "public.enum_articles_workflow": {
+      "name": "enum_articles_workflow",
+      "schema": "public",
+      "values": [
+        "draft",
+        "in-review",
+        "approved",
+        "changes-requested"
+      ]
+    },
     "public.enum_articles_status": {
       "name": "enum_articles_status",
       "schema": "public",
@@ -94905,6 +95780,16 @@
       "values": [
         "news",
         "blog"
+      ]
+    },
+    "public.enum__articles_v_version_workflow": {
+      "name": "enum__articles_v_version_workflow",
+      "schema": "public",
+      "values": [
+        "draft",
+        "in-review",
+        "approved",
+        "changes-requested"
       ]
     },
     "public.enum__articles_v_version_status": {
@@ -95026,7 +95911,27 @@
       "schema": "public",
       "values": [
         "admin",
-        "editor"
+        "publisher",
+        "editor",
+        "reviewer"
+      ]
+    },
+    "public.enum_comments_site": {
+      "name": "enum_comments_site",
+      "schema": "public",
+      "values": [
+        "main"
+      ]
+    },
+    "public.enum_content_audit_log_operation": {
+      "name": "enum_content_audit_log_operation",
+      "schema": "public",
+      "values": [
+        "create",
+        "update",
+        "publish",
+        "unpublish",
+        "delete"
       ]
     },
     "public.enum_redirects_site": {
@@ -95067,6 +95972,7 @@
       "values": [
         "inline",
         "prune-form-submissions",
+        "prune-audit-log",
         "schedulePublish"
       ]
     },
@@ -95084,6 +95990,7 @@
       "values": [
         "inline",
         "prune-form-submissions",
+        "prune-audit-log",
         "schedulePublish"
       ]
     },
@@ -95106,6 +96013,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "73127283-4cc7-470a-ae49-33db974c6a25",
+  "id": "b8fc85b4-2ee7-4977-9d83-4d0efa0f6a0d",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }
