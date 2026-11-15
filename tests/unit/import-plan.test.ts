@@ -267,3 +267,55 @@ test('a second-language update the database refuses also names the form', async 
   }
   await assert.rejects(importPlan(payload, p, { baseDir: 'tests/fixtures', toLexical }), /form "contact" \(en\): The following field is invalid/)
 })
+
+// The cloud storage plugin leaves a flag on the context it is given. When every upload shared one
+// context, only the first file reached object storage and the rest were database rows without files.
+test('every upload gets its own context, so a flag left by the storage plugin cannot make later uploads skip storage', async () => {
+  const p = plan()
+  p.media.push({ ref: 'second', source: 'https://cdn.example/second.jpg' })
+  const payload = fakePayload()
+  const create = payload.create
+  const flagged: string[] = []
+  ;(payload as any).create = async (a: any) => {
+    if (a.collection === 'media') {
+      if (a.context.skipStorage) flagged.push(a.file ? 'fetched file' : 'local file')
+      assert.equal(a.context.disableRevalidate, true, 'uploads still skip the revalidate hooks')
+      a.context.skipStorage = true
+    }
+    return create(a)
+  }
+  const fetchMedia = async () => ({ data: Buffer.from('x'), mimetype: 'image/jpeg', name: 'second.jpg' })
+  await importPlan(payload, p, { baseDir: 'tests/fixtures', toLexical, fetchMedia })
+  assert.deepEqual(flagged, [], 'an upload saw a flag left by an earlier one')
+})
+
+const articlePlan = (contentHtml: string) => {
+  const p = plan()
+  p.articles = [{ ref: 'news-1', kind: 'news', publishedAt: '2026-01-05', title: { no: 'Nyhet' }, slug: { no: 'nyhet' }, contentHtml: { no: contentHtml } }]
+  return p
+}
+
+test('an image marked data-media-ref in article text becomes an upload of that plan media, with a number as its id', async () => {
+  const payload = fakePayload()
+  const seen: string[] = []
+  // What the HTML converter returns: the upload id as a string.
+  const lexicalWithUpload = async (h: string) => {
+    seen.push(h)
+    return { root: { type: 'root', children: [{ type: 'paragraph', children: [{ type: 'upload', relationTo: 'media', value: '1' }] }] } }
+  }
+  await importPlan(payload, articlePlan('<p>Tekst</p><img data-media-ref="hero" alt="">'), { baseDir: 'tests/fixtures', toLexical: lexicalWithUpload })
+  assert.match(seen[0], /<img data-lexical-upload-id="1" data-lexical-upload-relation-to="media" alt="">/)
+  assert.doesNotMatch(seen[0], /data-media-ref/)
+  const article = payload.calls.find((c) => c.op === 'create' && c.collection === 'articles') as any
+  assert.strictEqual(article.data.content.root.children[0].children[0].value, 1)
+})
+
+test('an article image whose ref is not in the plan is left out of the text', async () => {
+  const payload = fakePayload()
+  const seen: string[] = []
+  await importPlan(payload, articlePlan('<p>Tekst</p><img data-media-ref="no-such-media" alt="x">'), {
+    baseDir: 'tests/fixtures',
+    toLexical: async (h) => { seen.push(h); return { html: h } },
+  })
+  assert.equal(seen[0], '<p>Tekst</p>')
+})
