@@ -8,6 +8,7 @@ import * as migration_20261115_122639_reusable_content from './20261115_122639_r
 import * as migration_20261115_125636_editorial_workflow from './20261115_125636_editorial_workflow';
 import * as migration_20261115_125638_editorial_existing_users from './20261115_125638_editorial_existing_users';
 import * as migration_20261115_133523_visual_editor_simple_mode from './20261115_133523_visual_editor_simple_mode';
+import * as migration_20261115_134735_freeform_section from './20261115_134735_freeform_section';
 
 export const migrations = [
   {
@@ -58,6 +59,11 @@ export const migrations = [
   {
     up: migration_20261115_133523_visual_editor_simple_mode.up,
     down: migration_20261115_133523_visual_editor_simple_mode.down,
-    name: '20261115_133523_visual_editor_simple_mode'
+    name: '20261115_133523_visual_editor_simple_mode',
+  },
+  {
+    up: migration_20261115_134735_freeform_section.up,
+    down: migration_20261115_134735_freeform_section.down,
+    name: '20261115_134735_freeform_section'
   },
 ];

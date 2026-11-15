@@ -205,7 +205,10 @@ Tell the user about «Visuell redigering»: each page has a button for it, and a
 «Enkel modus» (on their user, under Brukere) opens pages there directly. It edits the same
 sections as the form, on the real page: drag sections in, click text to change it, drop an image
 on an image. Blocks in `site/blocks/custom/` work there too; they show without a picture in the
-section library.
+section library. «Fri plassering» puts text, images, buttons and shapes where the user
+wants them on a 12-column grid; on mobile they stack in the order set in the panel, which is
+also the order screen readers follow. Saved sections («Lagrede seksjoner») are in the library,
+and an editor sends the page with «Send til godkjenning» there.
 
 Before the domain switch, run `pnpm site-builder compare` again with `--new` set to the site's
 hosait.com address.

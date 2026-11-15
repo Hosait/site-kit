@@ -3,7 +3,8 @@
  * (public/kit/editor/*.webp). Every block, with its starting content, is put on one temporary draft
  * page of the running dev server; each section is photographed and saved as a small WebP.
  *
- *   pnpm kit:editor-thumbnails
+ *   pnpm kit:editor-thumbnails            (every block)
+ *   pnpm kit:editor-thumbnails freeform   (only the blocks named)
  *
  * Needs the dev server (BASE_URL, or http://localhost:$PORT), a local admin (DEV_ADMIN_EMAIL and
  * DEV_ADMIN_PASSWORD, from scripts/dev-admin.ts), PREVIEW_SECRET, and some images in the media library.
@@ -77,8 +78,9 @@ async function main() {
   if (!media.length) throw new Error('The media library has no images; import a site plan first.')
 
   const cfg = buildEditorConfig(pageBlocks)
+  const only = process.argv.slice(2)
   const shots: { file: string; block: Doc }[] = []
-  for (const slug of cfg.library) {
+  for (const slug of cfg.library.filter((s) => !only.length || only.includes(s))) {
     const def = cfg.blocks[slug]
     const base = await fill(newBlock(slug, cfg), def.fields, token, media)
     shots.push({ file: `${slug}.webp`, block: base })

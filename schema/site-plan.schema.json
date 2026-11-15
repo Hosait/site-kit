@@ -70,7 +70,8 @@
             "banner",
             "buttonGroup",
             "divider",
-            "globalSection"
+            "globalSection",
+            "freeform"
           ]
         }
       },

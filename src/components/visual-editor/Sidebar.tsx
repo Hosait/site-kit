@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 import type { EditorConfig } from '@/lib/visual-editor/schema'
 
-import type { Block } from './api'
+import type { Block, Preset } from './api'
 import type { Drag } from './Frame'
 import { thumbSrc } from './Inspector'
 import s from './editor.module.css'
@@ -15,6 +15,9 @@ type Props = {
   layout: Block[]
   selected: number | null
   onAdd: (slug: string) => void
+  /** Saved sections for this site; inserted as a copy. */
+  presets: Preset[]
+  onAddPreset: (block: Block) => void
   onSelect: (i: number) => void
   onMove: (from: number, to: number) => void
   onDragStart: (drag: Drag) => void
@@ -30,7 +33,7 @@ function summary(block: Block): string {
   return ''
 }
 
-export function Sidebar({ config, layout, selected, onAdd, onSelect, onMove, onDragStart, onDragEnd }: Props) {
+export function Sidebar({ config, layout, selected, onAdd, presets, onAddPreset, onSelect, onMove, onDragStart, onDragEnd }: Props) {
   const [over, setOver] = useState<number | null>(null)
   return (
     <>
@@ -61,6 +64,33 @@ export function Sidebar({ config, layout, selected, onAdd, onSelect, onMove, onD
             </li>
           ))}
         </ul>
+        {presets.length > 0 && (
+          <>
+            <h3 className={s.panelTitle}>Lagrede seksjoner</h3>
+            <ul className={p.libraryGrid}>
+              {presets.map((preset) => (
+                <li key={preset.id}>
+                  <button
+                    type="button"
+                    className={p.libraryItem}
+                    draggable
+                    data-preset={preset.id}
+                    onClick={() => onAddPreset(preset.block)}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/plain', `preset:${preset.id}`)
+                      e.dataTransfer.effectAllowed = 'copy'
+                      onDragStart({ kind: 'preset', block: preset.block })
+                    }}
+                    onDragEnd={onDragEnd}
+                  >
+                    <LibraryThumb slug={preset.block.blockType} />
+                    <span>{preset.name}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </section>
 
       <section aria-labelledby="vb-outline" className={s.panel}>

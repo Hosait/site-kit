@@ -10,6 +10,7 @@ import themeJson from '@site/theme.json'
 
 import { COLUMN_EXCLUDED } from './columnLayouts'
 import { columnsBlock } from './columnsConfig'
+import { Freeform } from './freeformConfig'
 import { background, heading } from './fields'
 import { moreBlocks } from './moreBlocks'
 import { GlobalSection } from './reusable'
@@ -480,6 +481,7 @@ const baseBlocks: Block[] = [
   FormBlock,
   ...moreBlocks,
   GlobalSection,
+  Freeform,
 ]
 
 /** Every block (kit and site) gets «Seksjonsoppsett»; style names come from site/theme.json. */

@@ -27,6 +27,7 @@ import { customComponents } from '@site/blocks/custom/components'
 import { FormBlock } from './Form/Component'
 import { CarouselComponent } from './CarouselComponent'
 import { ColumnsComponent } from './ColumnsComponent'
+import { FreeformComponent } from './FreeformComponent'
 import { ContactCardComponent } from './ContactCardComponent'
 import { EmbedComponent } from './EmbedComponent'
 import {
@@ -185,6 +186,8 @@ function renderBlock(
       return <DividerComponent key={key} block={block as never} />
     case 'globalSection':
       return <GlobalSectionBlock key={key} block={block as never} isFirst={props.isFirst} {...ctx} />
+    case 'freeform':
+      return <FreeformComponent key={key} block={block as never} site={props.site} locale={props.locale} />
     case 'formBlock': {
       const b = block as unknown as {
         form: Form

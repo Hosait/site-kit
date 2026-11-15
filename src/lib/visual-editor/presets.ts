@@ -93,6 +93,31 @@ const PRESETS: Record<string, () => Record<string, unknown>> = {
   }),
   banner: () => ({ variant: 'info', title: 'Viktig beskjed', text: 'Skriv beskjeden her.' }),
   buttonGroup: () => ({ links: [row({ link: { type: 'custom', url: '/', label: 'Les mer', appearance: 'primary' } })] }),
+  freeform: () => ({
+    rowHeight: 'm',
+    items: [
+      freeformItem('shape', { x: 1, y: 1, w: 12, h: 7 }),
+      freeformItem('text', { x: 2, y: 2, w: 5, h: 2 }, { text: 'Fri plassering', textStyle: 'heading' }),
+      freeformItem('text', { x: 2, y: 4, w: 5, h: 2 }, { text: 'Dra elementene dit du vil ha dem, og endre størrelsen i hjørnet.', textStyle: 'lead' }),
+      freeformItem('button', { x: 2, y: 6, w: 3, h: 1 }),
+      freeformItem('image', { x: 8, y: 2, w: 4, h: 5 }),
+    ],
+  }),
+}
+
+/** A new element for «Fri plassering» with starting content for its kind. */
+export function freeformItem(
+  kind: string,
+  place: { x: number; y: number; w: number; h: number },
+  extra: Record<string, unknown> = {},
+): { id: string } & Record<string, unknown> {
+  const content: Record<string, Record<string, unknown>> = {
+    text: { text: 'Ny tekst', textStyle: 'body', align: 'left', valign: 'top' },
+    image: { fit: 'cover' },
+    button: { link: { type: 'custom', url: '/', label: 'Les mer', appearance: 'primary' }, align: 'left', valign: 'top' },
+    shape: { shapeColor: 'tint', shapeRadius: 'rounded', hideOnMobile: true },
+  }
+  return row({ kind, ...place, hideOnMobile: false, ...content[kind], ...extra })
 }
 
 /** A new block of type `slug`, ready to insert into `layout`. */
