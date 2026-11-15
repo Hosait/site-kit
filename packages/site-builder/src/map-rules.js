@@ -124,13 +124,17 @@ export function classify($, section, ctx) {
   if (details.length >= 2) {
     return { block: { blockType: 'accordion', ...(heading ? { heading } : {}), items: details.map((d) => ({ title: txt($, $(d).find('summary').first()), content: { $html: richHtml($, $(d).children().not('summary').toArray(), ctx) } })) }, confidence: 0.9, why: 'questions and answers (details)' }
   }
-  if ($all.find('table').length && ctx.has('table')) {
+  // The kit's table block: a caption (required, read aloud), a header row, and rows of cells.
+  if ($all.find('table').length && ctx.has('table', ['caption', 'header', 'rows'])) {
     const t = $all.find('table').first()
-    const rows = t.find('tr').toArray().map((tr) => $(tr).find('th, td').toArray().map((c) => txt($, $(c))))
-    return { block: { blockType: 'table', ...(heading ? { heading } : {}), ...(t.find('caption').length ? { caption: txt($, t.find('caption')) } : {}), rows: rows.map((cells) => ({ cells: cells.map((c) => ({ text: c })) })) }, confidence: 0.6, why: 'a table (check the field names of the table block)' }
+    const rows = t.find('tr').toArray().map((tr) => ({ th: $(tr).children('th').length === $(tr).children().length, cells: $(tr).children('th, td').toArray().map((c) => txt($, c)) }))
+    const head = rows[0]?.th ? rows.shift().cells : []
+    const caption = txt($, t.find('caption')) || heading || 'Tabell'
+    return { block: { blockType: 'table', caption, ...(head.length ? { header: head.map((text) => ({ text })) } : {}), rows: rows.map((r) => ({ cells: r.cells.map((text) => ({ text })) })) }, confidence: 0.8, why: 'a table' }
   }
   const quote = $all.find('blockquote').first()
-  if (quote.length && txt($, quote).length > 10 && text.length < txt($, quote).length * 1.6 + 60) {
+  // One quote only: several side by side are testimonials (below).
+  if (quote.length && $all.find('blockquote').length === 1 && txt($, quote).length > 10 && text.length < txt($, quote).length * 1.6 + 60) {
     const cap = $all.find('figcaption, cite, footer').first()
     const parts = cap.children().toArray().map((c) => txt($, c)).filter(Boolean)
     const author = (parts[0] ?? txt($, cap)).replace(/^[–—-]\s*/, '')
@@ -149,6 +153,13 @@ export function classify($, section, ctx) {
     }
     const articleLinks = items.filter((it) => $(it).find('a[href]').toArray().some((a) => ctx.isArticle?.($(a).attr('href'))))
     if (articleLinks.length === items.length) return { block: { blockType: 'articleFeed', ...(heading ? { heading } : {}), kind: 'all', limit: items.length }, confidence: 0.85, why: 'a list of articles' }
+    // Quotes with author and role, side by side: the kit's testimonials block.
+    if (items.every((it) => $(it).find('blockquote').length) && ctx.has('testimonials', ['items'])) {
+      return {
+        block: { blockType: 'testimonials', ...(heading ? { heading } : {}), items: items.map((it) => { const cap = $(it).find('figcaption, cite, footer').first(); const parts = cap.children().toArray().map((c) => txt($, c)).filter(Boolean); const author = (parts[0] ?? txt($, cap)).replace(/^[–—-]\s*/, ''); return { quote: txt($, $(it).find('blockquote').first().clone().find('cite, footer').remove().end()), ...(author ? { author } : {}), ...(parts[1] ? { role: parts[1] } : {}) } }) },
+        confidence: 0.8, why: 'quotes side by side',
+      }
+    }
     const docLinks = items.map((it) => $(it).find('a').toArray().find((a) => DOCUMENT.test(new URL(String($(a).attr('href') ?? ''), 'http://x').pathname))).filter(Boolean)
     if (docLinks.length === items.length) {
       return { block: { blockType: 'documents', ...(heading ? { heading } : {}), documents: docLinks.map((a) => ({ $document: ctx.document({ href: $(a).attr('href'), title: txt($, $(a)) }) })) }, confidence: 0.8, why: 'a list of documents' }
@@ -161,8 +172,8 @@ export function classify($, section, ctx) {
       }
     }
     if (items.every((it) => !txt($, $(it)) && $(it).find('img').length)) {
-      const blockType = items.length >= 4 && ctx.has('logoWall') && items.every((it) => Number($(it).find('img').attr('height') || 0) <= 120) ? 'logoWall' : 'imageGrid'
-      if (blockType === 'logoWall') return { block: { blockType, ...(heading ? { heading } : {}), logos: items.map((it) => ({ image: { $media: mediaRef(img($, it)) } })) }, confidence: 0.6, why: 'a row of logos (check the logoWall fields)' }
+      const blockType = items.length >= 4 && ctx.has('logoWall', ['logos']) && items.every((it) => Number($(it).find('img').attr('height') || 0) <= 120) ? 'logoWall' : 'imageGrid'
+      if (blockType === 'logoWall') return { block: { blockType, ...(heading ? { heading } : {}), logos: items.map((it) => ({ image: { $media: mediaRef(img($, it)) } })) }, confidence: 0.8, why: 'a row of logos' }
       return { block: { blockType: 'imageGrid', ...(heading ? { heading } : {}), columns: String(Math.min(4, Math.max(2, items.length))), images: items.map((it) => { const c = txt($, $(it).find('figcaption')); return { image: { $media: mediaRef(img($, it)) }, ...(c ? { caption: c } : {}) } }) }, confidence: 0.8, why: 'images only' }
     }
     if (items.every((it) => $(it).find('h2, h3, h4').length && txt($, $(it)).length < 600)) {

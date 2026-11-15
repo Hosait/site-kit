@@ -87,10 +87,13 @@ test('text with one image, a video, a map, and what becomes a gap', () => {
   assert.equal(one('<div><iframe src="https://booking.example/widget"></iframe></div>').block, null)
 })
 
-test('a table uses the kit table block only when it has the expected fields', () => {
+test('a table and side-by-side quotes use the kit blocks only when they have the expected fields', () => {
   const html = '<div><table><tr><th>A</th></tr><tr><td>1</td></tr></table></div>'
   assert.equal(one(html).block.blockType, 'content')
-  assert.equal(one(html, ctx({ has: (slug, fields) => slug === 'table' && fields === undefined })).block.blockType, 'table')
+  const t = one('<div><h2>Prices</h2><table><tr><th>Item</th><th>Price</th></tr><tr><td>A</td><td>10</td></tr></table></div>', ctx({ has: (slug) => slug === 'table' }))
+  assert.deepEqual(t.block, { blockType: 'table', caption: 'Prices', header: [{ text: 'Item' }, { text: 'Price' }], rows: [{ cells: [{ text: 'A' }, { text: '10' }] }] })
+  const q = one('<div><figure class="t"><blockquote>Great work, on time and on budget.</blockquote><figcaption><b>Kari</b><span>CEO</span></figcaption></figure><figure class="t"><blockquote>Fast.</blockquote><figcaption><b>Ola</b></figcaption></figure></div>', ctx({ has: (slug) => slug === 'testimonials' }))
+  assert.deepEqual(q.block, { blockType: 'testimonials', items: [{ quote: 'Great work, on time and on budget.', author: 'Kari', role: 'CEO' }, { quote: 'Fast.', author: 'Ola' }] })
 })
 
 test('plain text is a content block; rich html keeps content tags only and makes links and images usable', () => {
