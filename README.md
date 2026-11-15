@@ -34,6 +34,33 @@ pnpm dev                      # http://localhost:3100, admin at /admin
 pnpm tsx scripts/dev-admin.ts # a local admin user; password saved in .env
 ```
 
+## Users, roles and approval
+
+Each user (Brukere) has one role, and on a kit with several sites the sites they work on:
+
+| Role | May |
+|---|---|
+| Administrator | everything |
+| Utgiver (`publisher`) | edit and publish |
+| Redaktør (`editor`) | edit and save drafts; cannot publish, unpublish or delete what is published |
+| Godkjenner (`reviewer`) | read, comment, approve or ask for changes; no editing |
+
+Publishing is enforced on the server (`src/access/siteAccess.ts` and `src/collections/editorial/hooks.ts`),
+for pages, articles and any collection with drafts, so the REST and local APIs refuse an editor too.
+The role rules are in `src/lib/editorial/roles.ts`. Before the roles existed every editor could
+publish; the migration made those users publishers.
+
+Pages and articles have an approval state, changed only by the buttons in the admin sidebar
+(`POST /api/{pages|articles}/:id/workflow`): draft → «Send til godkjenning» → in review →
+«Godkjenn» or «Be om endringer». Editing a page in review or approved sends it back to draft. The
+reviewers of the site get an e-mail (SMTP when `SMTP_HOST` is set, otherwise the console). The
+sidebar also has comments per page, optionally on one section (`comments` collection).
+
+`content-audit-log` («Endringslogg», administrators only) records who created, changed, published
+or deleted pages, articles, people, documents, media, site settings and users, with the names of the
+changed fields and never their values. Nobody can edit or delete a row; the nightly job
+`prune-audit-log` deletes rows older than `AUDIT_RETENTION_DAYS` (730 days, `src/lib/editorial/audit.ts`).
+
 ## Fill a site with content
 
 A site plan (`site-plan.json`, schema in `schema/site-plan.schema.json`) describes pages as blocks,

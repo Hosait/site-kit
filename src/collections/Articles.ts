@@ -1,7 +1,10 @@
 import type { CollectionBeforeChangeHook, CollectionConfig } from 'payload'
 import { APIError } from 'payload'
 
-import { canCreateContent, editorOfSite, publishedOrLoggedIn } from '@/access/siteAccess'
+import { canCreateContent, deleteDraftContent, publishedOrLoggedIn, updateDraftContent } from '@/access/siteAccess'
+import { deleteComments, guardPublish, guardUnpublish, workflowOnChange } from '@/collections/editorial/hooks'
+import { editorialFields } from '@/collections/editorial/fields'
+import { workflowEndpoint } from '@/collections/editorial/endpoint'
 import { richTextEditor } from '@/fields/richText'
 import { seoTab } from '@/fields/seo'
 import { siteField } from '@/fields/site'
@@ -14,6 +17,8 @@ import { DEFAULT_LOCALE, SITE_CONFIG } from '@/lib/sites'
 
 /** Artikler (nyheter, fagblogg …; typene står i site/config.ts). Adresse: /{språk}/{articleBase}/{slug}. */
 const normalizeSlug: CollectionBeforeChangeHook<Article> = async ({ data, req, originalDoc }) => {
+  // The approval buttons save only the workflow state; the slug stays as it is.
+  if (req.context.workflowTransition) return data
   const locale = req.locale && req.locale !== 'all' ? req.locale : DEFAULT_LOCALE
   data.slug = data.slug ? slugify(data.slug) : slugify(data.title || '', { transliterate: true })
   if (!data.slug) {
@@ -48,13 +53,13 @@ export const Articles: CollectionConfig<'articles'> = {
   labels: { singular: 'Artikkel', plural: 'Artikler' },
   access: {
     create: canCreateContent,
-    delete: editorOfSite,
+    delete: deleteDraftContent,
     read: publishedOrLoggedIn,
-    update: editorOfSite,
+    update: updateDraftContent,
   },
   defaultPopulate: { title: true, slug: true, site: true, kind: true, publishedAt: true, lead: true, heroImage: true },
   admin: {
-    defaultColumns: ['title', 'site', 'kind', 'publishedAt', '_status'],
+    defaultColumns: ['title', 'site', 'kind', 'publishedAt', '_status', 'workflow'],
     listSearchableFields: ['title', 'slug'],
     useAsTitle: 'title',
     group: 'Innhold',
@@ -105,11 +110,13 @@ export const Articles: CollectionConfig<'articles'> = {
       index: true,
       admin: { position: 'sidebar', description: 'Lages fra tittelen hvis tom.' },
     },
+    ...editorialFields(),
   ],
+  endpoints: [workflowEndpoint('articles')],
   hooks: {
-    beforeChange: [normalizeSlug],
-    afterChange: [revalidateDoc, indexDoc],
-    afterDelete: [revalidateDocDelete, unindexDoc],
+    beforeChange: [guardPublish, workflowOnChange, normalizeSlug],
+    afterChange: [guardUnpublish, revalidateDoc, indexDoc],
+    afterDelete: [revalidateDocDelete, unindexDoc, deleteComments],
   },
   versions: {
     drafts: { autosave: { interval: 400 }, schedulePublish: true },

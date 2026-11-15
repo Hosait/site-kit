@@ -9,6 +9,9 @@ import { fileURLToPath } from 'url'
 import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 
 import { Articles } from './collections/Articles'
+import { Comments } from './collections/Comments'
+import { ContentAuditLog } from './collections/ContentAuditLog'
+import { withAudit } from './collections/editorial/audit'
 import { AnalyticsDaily, AnalyticsEvents, AnalyticsSalts, AnalyticsSettings, AuditLog, ConsentLog } from './collections/Analytics'
 import { jobs } from './jobs'
 import { migrations } from './migrations'
@@ -66,7 +69,18 @@ export default buildConfig({
     push: process.env.NODE_ENV !== 'production',
     prodMigrations: migrations,
   }),
-  collections: [Pages, GlobalSections, PageTemplates, SectionPresets, Articles, People, Documents, Media, SiteSettings, Users, SearchIndex, AnalyticsEvents, AnalyticsDaily, AnalyticsSalts, ConsentLog, AuditLog],
+  collections: [
+    // Every change to these is written to the content audit log.
+    ...[Pages, GlobalSections, PageTemplates, SectionPresets, Articles, People, Documents, Media, SiteSettings, Users].map(withAudit),
+    Comments,
+    ContentAuditLog,
+    SearchIndex,
+    AnalyticsEvents,
+    AnalyticsDaily,
+    AnalyticsSalts,
+    ConsentLog,
+    AuditLog,
+  ],
   globals: [AnalyticsSettings],
   cors: [getServerSideURL()].filter(Boolean),
   plugins,

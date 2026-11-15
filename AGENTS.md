@@ -190,6 +190,17 @@ import cut off part-way (the web service restarted during it) leaves pages that 
 again" refuse; the admin then replaces the content with "Legg inn innhold" in the Testinnhold
 panel on the admin dashboard.
 
+The admin adds the site's other users under Brukere, each with a role (and, on a kit with several
+sites, the sites they work on). **Utgiver** edits and publishes. **Redaktør** edits and saves
+drafts only: the server refuses publishing, unpublishing and deleting a published page from an
+editor, in the admin and the API alike, so an editor sends the page with «Send til godkjenning».
+**Godkjenner** reads, comments and approves («Godkjenn» or «Be om endringer», which also tell the
+editor by e-mail) but changes no text. A publisher then publishes the approved page. Users who
+existed before the roles came are publishers, so they lose nothing. Hand the roles over in the
+hand-off: they are the owner's decision, not part of the plan. The admin sidebar of a page or
+article holds the approval buttons and the comments. Administratorer read «Endringslogg»: who
+changed what and when (field names only), kept for two years.
+
 Before the domain switch, run `pnpm site-builder compare` again with `--new` set to the site's
 hosait.com address.
 
