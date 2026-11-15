@@ -22,12 +22,12 @@ const PAGE_TIMEOUT_MS = 30_000
  * WebRTC may not send UDP past the proxy (STUN to 127.0.0.1 or the LAN).
  */
 export const LAUNCH = Object.freeze({ chromiumSandbox: true, args: Object.freeze(['--force-webrtc-ip-handling-policy=disable_non_proxied_udp']) })
-const reason = (e) => (e.code === 'EPRIVATE' ? `${e.message}. Use --allow-private only for your own local or intranet sites.` : e.message)
+export const reason = (e) => (e.code === 'EPRIVATE' ? `${e.message}. Use --allow-private only for your own local or intranet sites.` : e.message)
 const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'))
-const pathOf = (url) => { const u = new URL(url); return u.pathname + u.search }
+export const pathOf = (url) => { const u = new URL(url); return u.pathname + u.search }
 const resolve = (location, base) => { try { return location ? new URL(location, base) : null } catch { return null } }
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
-async function defaultLaunch(options) {
+export async function defaultLaunch(options) {
   let playwright
   try { playwright = await import('@playwright/test') } catch (e) { throw Object.assign(e, { code: 'NO_PLAYWRIGHT' }) }
   return playwright.chromium.launch(options)
@@ -73,7 +73,7 @@ function oldDocuments(out) {
 }
 
 /** Runs fn on every item, 4 at a time; the answers keep the items' order. */
-async function pool(items, fn) {
+export async function pool(items, fn) {
   const answers = new Array(items.length)
   let next = 0
   async function worker() {
@@ -87,7 +87,7 @@ async function pool(items, fn) {
 }
 
 /** Requests the old address on the new site and follows at most 3 permanent redirects there. */
-async function check(old, origin, allowPrivate, get) {
+export async function check(old, origin, allowPrivate, get) {
   const target = origin + pathOf(old)
   const row = (status, final, note) => ({ old, target, status, final, ok: status === 200, note })
   let url = target
@@ -109,7 +109,7 @@ async function check(old, origin, allowPrivate, get) {
 }
 
 /** File name part from a path: home for /, else the segments joined with -, [a-z0-9-] only. */
-function slug(p, used) {
+export function slug(p, used) {
   const base = p.split('/').filter(Boolean).join('-').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-').replace(/^-/, '').slice(0, 60).replace(/-$/, '') || 'home'
   let name = base
   for (let i = 2; used.has(name); i++) name = `${base.slice(0, 60 - String(i).length - 1)}-${i}`
@@ -131,9 +131,12 @@ function shotPages(out, origin, notes) {
     .map((u) => ({ page: pathOf(u), slug: slug(new URL(u).pathname, used), old: u, new: origin + pathOf(u) }))
 }
 
-async function snap(browser, url, viewport, file, { guard, timeoutMs }) {
-  // Every request the page makes goes through the address check, and every connection through the
-  // filtering proxy the browser was started with; no service workers, downloads or WebSockets.
+/**
+ * Runs fn with a fresh page. Every request the page makes goes through the address check, and every
+ * connection through the filtering proxy the browser was started with; no service workers,
+ * downloads or WebSockets.
+ */
+export async function withGuardedPage(browser, viewport, { guard, timeoutMs }, fn) {
   const context = await browser.newContext({ viewport, serviceWorkers: 'block', acceptDownloads: false })
   try {
     await context.route('**/*', async (route) => ((await guard(route.request().url())) ? route.continue() : route.abort('blockedbyclient')))
@@ -141,11 +144,15 @@ async function snap(browser, url, viewport, file, { guard, timeoutMs }) {
     const page = await context.newPage()
     page.setDefaultTimeout(timeoutMs)
     page.setDefaultNavigationTimeout(timeoutMs)
-    try {
-      await page.goto(url)
-      await page.screenshot({ path: file, fullPage: true, clip: { x: 0, y: 0, width: viewport.width, height: MAX_HEIGHT } })
-    } finally { await page.close() }
+    try { return await fn(page) } finally { await page.close() }
   } finally { await context.close() }
+}
+
+async function snap(browser, url, viewport, file, opts) {
+  await withGuardedPage(browser, viewport, opts, async (page) => {
+    await page.goto(url)
+    await page.screenshot({ path: file, fullPage: true, clip: { x: 0, y: 0, width: viewport.width, height: MAX_HEIGHT } })
+  })
 }
 
 /** Rejects (EPRIVATE) when the host is or resolves to a private address, as the fetcher would. */
@@ -154,24 +161,34 @@ function publicHost(origin) {
   return new Promise((ok, fail) => publicOnlyLookup(host, {}, (e) => (e ? fail(e) : ok())))
 }
 
-/** @returns {Promise<{ shots: object[], pairs?: object[], skipped?: string }>} */
-async function screenshots(out, { origin, allowPrivate, launchBrowser, log, notes, deadline, lookup }) {
+/**
+ * Starts the browser for screenshots: always sandboxed, its only way out through the filtering
+ * proxy, which allows a private address only for the new site's own host and port (and only with
+ * --allow-private). Returns { browser, guard, close }, or { skipped } with the reason.
+ */
+export async function openBrowser({ origin, allowPrivate, launchBrowser = defaultLaunch, lookup }) {
   // The browser resolves the new site's name itself: it may not reach what the fetcher refuses.
   if (!allowPrivate) {
-    try { await publicHost(origin) } catch (e) { return { shots: [], skipped: `Screenshots skipped: ${reason(e)}` } }
+    try { await publicHost(origin) } catch (e) { return { skipped: `Screenshots skipped: ${reason(e)}` } }
   }
-  // The browser's only way out: every request, loopback included, goes through the filtering
-  // proxy, which allows a private address only for the new site's own host and port.
   const site = new URL(origin)
   const proxy = await startFilterProxy({ allow: allowPrivate ? { host: site.hostname, port: site.port || (site.protocol === 'https:' ? '443' : '80') } : null })
   let browser
   try { browser = await launchBrowser({ ...LAUNCH, args: [...LAUNCH.args], proxy: { server: proxy.url, bypass: '<-loopback>', username: proxy.username, password: proxy.password } }) } catch (e) {
     await proxy.close()
-    if (e.code === 'NO_PLAYWRIGHT') return { shots: [], skipped: NO_PLAYWRIGHT }
-    return { shots: [], skipped: `Screenshots skipped: the browser could not start with its sandbox (${String(e.message).split('\n')[0]}). It is never run without one.` }
+    if (e.code === 'NO_PLAYWRIGHT') return { skipped: NO_PLAYWRIGHT }
+    return { skipped: `Screenshots skipped: the browser could not start with its sandbox (${String(e.message).split('\n')[0]}). It is never run without one.` }
   }
   const cache = new Map()
   const guard = (url) => allowRequest(url, { newOrigin: origin, allowPrivate, lookup, cache })
+  return { browser, guard, close: async () => { await browser.close().catch(() => {}); await proxy.close() } }
+}
+
+/** @returns {Promise<{ shots: object[], pairs?: object[], skipped?: string }>} */
+async function screenshots(out, { origin, allowPrivate, launchBrowser, log, notes, deadline, lookup }) {
+  const opened = await openBrowser({ origin, allowPrivate, launchBrowser, lookup })
+  if (opened.skipped) return { shots: [], skipped: opened.skipped }
+  const { browser, guard } = opened
   const pairs = []
   try {
     const pages = shotPages(out, origin, notes)
@@ -194,8 +211,7 @@ async function screenshots(out, { origin, allowPrivate, launchBrowser, log, note
       }
     }
   } finally {
-    await browser.close().catch(() => {})
-    await proxy.close()
+    await opened.close()
   }
   return { shots: pairs.map(({ page, viewport, old, new: n }) => ({ page, viewport, old, new: n })), pairs }
 }

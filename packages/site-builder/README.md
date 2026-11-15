@@ -8,6 +8,7 @@ Reads an existing website so it can be rebuilt on Hosait Site Kit. The steps tha
     site-builder theme   --out .site-builder/www.example.com
     site-builder report  --out .site-builder/www.example.com
     site-builder compare --out .site-builder/www.example.com --new https://preview.example.com
+    site-builder qc      --out .site-builder/www.example.com --new https://preview.example.com
 
 In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-builder assess <url>`.
 
@@ -93,6 +94,38 @@ In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-buil
   whole run: the address and document checks, then the screenshots; each page times out after
   30 seconds. With `--allow-private` only the new site's own host and port may be a private
   address: the old site and its documents are always fetched as public.
+- **qc** is the parity gate before the domain moves. Every old page from `extract.json` is read on
+  the new site (200, or permanent redirects to a 200) and scored against the old one. The scores:
+  - text: the words of the main content, order aside;
+  - headings: by text and order (levels may differ);
+  - images: by file name without CMS size suffixes, or by the same alt text;
+  - links: an old link counts when the new page links to the same path or to where the new site
+    moved it;
+  - title, description, share image and canonical path.
+
+  The menu and footer are scored once, from the home pages. The page count (the new sitemap) and
+  the document count (`/api/documents`) must equal the old site's; images are counted for
+  information. Then old and new are screenshotted, full page, at 1440 and 390 px wide: the home
+  page and up to 3 pages per template (`--all-pages` for every page, `--max-shots`, default 40),
+  with animations off, lazy images loaded, and cookie and consent banners hidden on both sites.
+  The screenshots are compared pixel by pixel (`pixelmatch`), cut at the headings both pages share,
+  so a section pushed down by a taller header only counts where it differs.
+
+  Default thresholds: text 98 %, headings, images, links, menu and footer 100 %, look 95 %. Change
+  them, or hide regions that change by themselves (a news ticker, a slider), in `qc.config.json`
+  in the crawl folder:
+  `{ "thresholds": { "visual": 0.93 }, "masks": { "old": [".ticker"], "new": [] } }`.
+
+  Differences agreed with the customer go in `qc.accept.json`:
+  `[{ "page": "/about" or "*", "kind": "text|headings|images|links|meta|visual-desktop|visual-mobile|missing|nav|footer|count-pages|count-documents", "reason": "…" }]`.
+  They pass, and the report lists them as accepted.
+
+  It writes `qc.json`, `qc.md` (for the customer), `qc.html` (old | new | difference, worst first,
+  by template) and `shots/qc/`. It exits 1 unless everything passes. A run stopped by `--budget`
+  (20 minutes by default), or without a browser, cannot pass. The browser runs as for compare:
+  sandboxed, through the filtering proxy, with `--allow-private` for the new site only. In a Site
+  Kit repository, `pnpm qa:launch` refuses a rebuild whose `qc.json` is missing, failing, or for
+  another address.
 
 Private, loopback and link-local addresses are refused, and this is checked when connecting.
 `--allow-private` is for your own local or intranet sites.
