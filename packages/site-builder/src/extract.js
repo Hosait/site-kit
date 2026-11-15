@@ -81,6 +81,24 @@ function links($, $scope, base) {
   return $scope.find('a[href]').toArray().map((a) => ({ label: $(a).text().replace(/\s+/g, ' ').trim(), href: abs(String($(a).attr('href')), base) })).filter((l) => l.href && l.label)
 }
 
+const ARTICLE_TYPES = new Set(['article', 'newsarticle', 'blogposting', 'reportagenewsarticle'])
+/** { article: true, published: 'YYYY-MM-DD' } from JSON-LD, article:published_time or a <time> in the main content. */
+function articleOf($, $main) {
+  let article = false
+  let published
+  for (const s of $('script[type="application/ld+json"]').toArray().slice(0, 20)) {
+    let data
+    try { data = JSON.parse($(s).text()) } catch { continue }
+    for (const item of [data, ...(Array.isArray(data) ? data : []), ...(data?.['@graph'] ?? [])].flat()) {
+      const types = [item?.['@type']].flat().map((t) => String(t ?? '').toLowerCase())
+      if (types.some((t) => ARTICLE_TYPES.has(t))) { article = true; published ??= item.datePublished }
+    }
+  }
+  published ??= $('meta[property="article:published_time"]').attr('content') ?? $main.find('time[datetime]').first().attr('datetime')
+  const day = /^\d{4}-\d{2}-\d{2}/.exec(String(published ?? ''))?.[0]
+  return { ...(article ? { article } : {}), ...(day ? { published: day } : {}) }
+}
+
 /** @param {string} html @param {string} url */
 export function extractPage(html, url) {
   const $ = load(html)
@@ -107,6 +125,10 @@ export function extractPage(html, url) {
     images: $main.find('img').toArray().map((img) => ({ src: imageSrc($(img), url), alt: String($(img).attr('alt') ?? '').trim() })).filter((i) => i.src),
     links: [...new Set(links($, $main, url).map((l) => l.href))],
     template: tpl,
+    // An article: JSON-LD Article/NewsArticle/BlogPosting, and its publishing date when the page gives one.
+    ...articleOf($, $main),
+    // The same page in other languages (hreflang), so map can pair translations.
+    alternates: $('link[rel="alternate"][hreflang]').toArray().map((l) => ({ lang: String($(l).attr('hreflang')).toLowerCase(), href: abs(String($(l).attr('href') ?? ''), url) })).filter((a) => a.href && a.lang !== 'x-default'),
     nav: navEl.length ? links($, navEl, url) : [],
     footer: { text: footerEl.text().replace(/\s+/g, ' ').trim().slice(0, 1000), links: footerEl.length ? links($, footerEl, url) : [] },
   }

@@ -8,6 +8,7 @@ Reads an existing website so it can be rebuilt on Hosait Site Kit. The steps tha
     site-builder theme   --out .site-builder/www.example.com
     site-builder style   --out .site-builder/www.example.com
     site-builder report  --out .site-builder/www.example.com
+    site-builder map     --out .site-builder/www.example.com     # in a Site Kit repository
     site-builder compare --out .site-builder/www.example.com --new https://preview.example.com
     site-builder qc      --out .site-builder/www.example.com --new https://preview.example.com
 
@@ -92,6 +93,31 @@ In a Site Kit repository: `pnpm site-builder:install` once, then `pnpm site-buil
   writes `style.json` with the measurements and, per template, each section's box (padding,
   background, width, first heading), which the map step uses. Lengths are written the way
   `kit:theme-check` accepts them (`0.3125rem`, never `.3125rem`). Run it after `theme`.
+- **map** writes a first site plan by rules: `seed/site-plan.draft.json` (`--plan` to change it), checked
+  against the kit's own `schema/blocks.schema.json` and `schema/site-plan.schema.json` (`--schema-dir`).
+  - **Pages and languages.** Every old page becomes a plan page. Translations are paired through
+    their `hreflang` alternates, or else by the path without its language segment. Each page keeps
+    its old slug, under its parent in the tree, with its `<title>` (without the site name most
+    titles end with) and its description.
+  - **Articles.** Pages with JSON-LD Article/NewsArticle/BlogPosting and a date become `articles`:
+    date, lead, hero image and text, without side content.
+  - **Blocks.** Each page's main content is cut into sections, and ordered rules turn each section
+    into a block. The rules recognise: a hero with eyebrow, lead, image and buttons; cards; stats;
+    timeline; accordion; quote with author and role; people (as `people` refs); documents (as
+    `documents` refs); image grid with captions; one image; text with an image; an article list
+    (`articleFeed`); video and map frames; and text. A block the kit does not have (or has with
+    other fields) is never written: the rule falls back.
+  - **Look.** With `style.json` from `style`, each block gets section spacing (the nearest step of
+    the measured scale) and a background.
+  - **Refs, menus and redirects.** Images, people and documents become refs. Menus and footers are
+    taken per language; phone and e-mail go into the contact settings. Every old address that
+    lands elsewhere gets a redirect (never one to itself).
+  - **Gaps and todos.** Forms and embedded pages are listed under `gaps`. Every section below 70 %
+    confidence, and everything else to check (SVG or http images, Office files, articles whose
+    address changes, menu links that are not pages), goes in the todo list in `map.json`, with the
+    section's HTML. `map.html` shows each template's blocks and the todo list for review. That list
+    is what the user's own Claude works through. Then come `kit:check-plan`, `kit:import`, and `qc`
+    until it passes.
 - **report** writes `report.md` for the customer.
 - **compare** checks every old address that answered 200 on the new site: it must answer 200,
   or 301/308 to a page on the new site that does (at most 3 redirects). Four requests at a time.
