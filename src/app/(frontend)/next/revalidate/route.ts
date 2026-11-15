@@ -1,8 +1,4 @@
-import { revalidatePath, revalidateTag } from 'next/cache'
-
-import { SITE_KEYS } from '@/lib/sites'
-
-const COLLECTIONS = ['pages', 'articles', 'people', 'documents', 'media', 'site-settings', 'redirects']
+import { flushAllCaches } from '@/lib/revalidate'
 
 /**
  * Tømmer all cache. Brukes etter import/skript som skriver direkte til databasen
@@ -14,11 +10,6 @@ export async function POST(req: Request) {
   if (!secret || req.headers.get('authorization') !== `Bearer ${secret}`) {
     return new Response('Forbidden', { status: 403 })
   }
-  for (const c of COLLECTIONS) {
-    revalidateTag(c, 'max')
-    for (const s of SITE_KEYS) revalidateTag(`${c}:${s}`, 'max')
-  }
-  for (const s of SITE_KEYS) revalidateTag(`site:${s}`, 'max')
-  revalidatePath('/', 'layout')
+  flushAllCaches()
   return Response.json({ ok: true })
 }

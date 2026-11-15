@@ -3,14 +3,14 @@ import path from 'node:path'
 import zlib from 'node:zlib'
 
 import configPromise from '@payload-config'
-import { revalidatePath, revalidateTag } from 'next/cache'
 import { getPayload } from 'payload'
 
+import { flushAllCaches } from '@/lib/revalidate'
 import { planReset, seedDbDecision } from '@/lib/seed-guard'
 import { reindexAll } from '@/lib/search/indexer'
 import { loadSeedPlan, runPlanSeed, seedSource, type PlanSeedProgress } from '@/lib/site-plan/seed-plan'
 import { planOutcome, seedAnswer, settlesWithin, WAIT_MS } from '@/lib/site-plan/seed-response'
-import { isProduction, SITE_KEYS } from '@/lib/sites'
+import { isProduction } from '@/lib/sites'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 900
@@ -53,14 +53,7 @@ async function authorized(req: Request) {
   return (user as { role?: string } | null)?.role === 'admin'
 }
 
-function flushCache() {
-  for (const c of ['pages', 'articles', 'people', 'documents', 'media', 'site-settings', 'redirects']) {
-    revalidateTag(c, 'max')
-    for (const s of SITE_KEYS) revalidateTag(`${c}:${s}`, 'max')
-  }
-  for (const s of SITE_KEYS) revalidateTag(`site:${s}`, 'max')
-  revalidatePath('/', 'layout')
-}
+const flushCache = () => flushAllCaches()
 
 async function seedDb() {
   const file = path.join(SEED_DIR, 'content.sql.gz')
