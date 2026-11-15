@@ -96,8 +96,13 @@ another site, uses a backslash or is over 50 KB, and a listed class that the fil
 
 ## 5. Write the site plan
 
-Write `seed/site-plan.json` against `schema/site-plan.schema.json`; the blocks and their fields
-are in `schema/blocks.schema.json`. Map each template once, then fill every page of it. Put
+Start from the rules: `pnpm site-builder map --out .site-builder/<host>` writes
+`seed/site-plan.draft.json` and a todo list (`map.json`; `map.html` to review it). Work through
+the todo list only: the sections the rules placed with low confidence (each with its HTML), the
+gaps, and the notes on images, documents, menus and article addresses. Do not map everything again.
+Then move the draft to `seed/site-plan.json`. The plan is written against
+`schema/site-plan.schema.json`, and the blocks and their fields are in `schema/blocks.schema.json`.
+What follows applies to everything you change or add by hand. Put
 images and PDFs in `seed/media/` (or use public https URLs). Office files (Word, Excel,
 PowerPoint), zip and DWG cannot be imported from a URL: download them into `seed/media/` and list
 them under `documents`. SVG is not imported: the logo goes in `public/brand/` (step 4), and other
@@ -126,6 +131,9 @@ gap). Check it until it passes, then try it locally:
     pnpm kit:check-plan seed/site-plan.json
     pnpm kit:import seed/site-plan.json --reset
     pnpm dev
+
+Then run qc (step 6) and fix the worst sections first (`qc.html` shows old, new and the
+difference). Run map again only if you have not edited the plan; otherwise fix the plan itself.
 
 ## 6. Check
 

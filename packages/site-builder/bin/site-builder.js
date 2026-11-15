@@ -8,6 +8,7 @@ import { crawl } from '../src/crawl.js'
 import { assessedScope, crawlGate } from '../src/gate.js'
 import { extract } from '../src/extract.js'
 import { report } from '../src/report.js'
+import { map } from '../src/map.js'
 import { qc } from '../src/qc.js'
 import { makeScope } from '../src/scope.js'
 import { style } from '../src/style.js'
@@ -22,6 +23,8 @@ const HELP = `site-builder <command> [options]
                 with --accepted-scope
   extract       Pull pages, navigation, footer, images and templates out of the cached pages
   theme         Draft site/theme.json colours, fonts and logo from the site's CSS
+  map           Write a first site plan by rules (seed/site-plan.draft.json) and a todo list for
+                what the rules could not place (map.json, map.html); run it in a Site Kit repository
   style         Measure the site's look in a browser (type, containers, spacing, buttons, cards,
                 links) and add Site Kit theme tokens to theme.draft.json; writes style.json
   report        Write report.md: technology, tracking, templates, quick checks, enhancements
@@ -42,6 +45,9 @@ Options:
   --exclude <path>   For assess: leave this content part out of the move, such as /intranett (repeat
                      for more); crawl leaves out the same, from assess.json
   --new <url>        The new site's address, for compare and qc
+  --plan <file>      For map: where the plan goes (default seed/site-plan.draft.json)
+  --schema-dir <dir> For map: the kit's schema folder (default schema)
+  --default-locale   For map: the site's default language (default: the first in the plan schema)
   --all-pages        For qc: screenshot every page, not the home page and 3 per template
   --max-shots <n>    For qc: at most this many pages screenshotted (default 40)
   --allow-private    Allow private and local addresses (for testing and intranet sites; compare and qc: the new site only; style: the site it reads)
@@ -94,6 +100,14 @@ ${r.class.toUpperCase()}: ${r.counts.pagesRead} pages read → ${path.join(out, 
     if (cmd === 'extract') { const m = extract(out); console.log(`${m.pages.length} pages, ${m.templates.length} templates → ${path.join(out, 'extract.json')}`) }
     if (cmd === 'theme') { const t = await theme(out, { allowPrivate: has('--allow-private') }); console.log(JSON.stringify(t.theme.colors)); for (const n of t.notes) console.log('note: ' + n) }
     if (cmd === 'report') { report(out); console.log(`→ ${path.join(out, 'report.md')}`) }
+  } else if (cmd === 'map') {
+    const out = flag('--out')
+    if (!out || !fs.existsSync(path.join(out, 'extract.json'))) usage('map needs --out <dir> pointing at a crawl folder after extract')
+    const read = (f) => (fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : usage(`map needs ${f}: run it in a Site Kit repository (or pass --schema-dir)`))
+    const dir = flag('--schema-dir') ?? 'schema'
+    const r = map(out, { planFile: flag('--plan') ?? path.join('seed', 'site-plan.draft.json'), blocksSchema: read(path.join(dir, 'blocks.schema.json')), planSchema: read(path.join(dir, 'site-plan.schema.json')), defaultLocale: flag('--default-locale'), log: (s) => console.log(s) })
+    console.log(`\n${r.summary.pages} pages, ${r.summary.sections} sections, ${r.summary.media} images; ${r.summary.todo} to do, ${r.summary.gaps} gaps.`)
+    console.log(`→ ${r.planFile}, ${path.join(out, 'map.html')}`)
   } else if (cmd === 'style') {
     const out = flag('--out')
     if (!out || !fs.existsSync(path.join(out, 'inventory.json'))) usage('style needs --out <dir> pointing at a crawl folder')

@@ -9,7 +9,8 @@ import { load } from './html.js'
 
 /** Words of a text or HTML fragment: lower case, letters and digits only. */
 export function words(textOrHtml) {
-  const text = /<[a-z!/]/i.test(textOrHtml) ? load(textOrHtml).root().text() : String(textOrHtml ?? '')
+  // A space before every tag, so <h3>Team</h3><p>Our…</p> reads «team our», not «teamour».
+  const text = /<[a-z!/]/i.test(textOrHtml) ? load(String(textOrHtml).replace(/</g, ' <')).root().text() : String(textOrHtml ?? '')
   return text.toLowerCase().normalize('NFC').match(/[\p{L}\p{N}]+/gu) ?? []
 }
 
