@@ -58,6 +58,7 @@ and could read enough, and after yellow only with `--accepted-scope`.
     pnpm site-builder crawl https://www.example.com      # with --accepted-scope after a yes to yellow
     pnpm site-builder extract --out .site-builder/www.example.com
     pnpm site-builder theme   --out .site-builder/www.example.com
+    pnpm site-builder style   --out .site-builder/www.example.com
     pnpm site-builder report  --out .site-builder/www.example.com
 
 Read `report.md` with the customer. `extract.json` holds every page's content and its template.
@@ -72,7 +73,9 @@ the first deploy). If you change sites, locales, document types or article kinds
 
 ## 4. Theme
 
-Copy `theme` from `theme.draft.json` into `site/theme.json`, put the logo in `public/brand/`, set
+Run `pnpm site-builder style --out .site-builder/<host>` after `theme`: it measures the old site's
+type, containers, section spacing, buttons, cards and links in a browser and adds them to the
+draft as theme tokens. Copy `theme` from `theme.draft.json` into `site/theme.json`, put the logo in `public/brand/`, set
 the fonts in `site/fonts.ts`, and run `pnpm kit:theme-check` (every pair needs 4.5:1). Download the
 old site's icon (`icon.src` in the draft, a PNG or ICO when the old site has one) into
 `public/brand/` too, and set `icon.src` in `site/theme.json` to its `/brand/…` path (`.png`,
