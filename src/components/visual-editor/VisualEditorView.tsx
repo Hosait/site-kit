@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import type { AdminViewServerProps } from 'payload'
 
 import { pageBlocks } from '@/blocks/configs'
-import type { Locale } from '@/lib/sites'
+import { DEFAULT_SITE, type Locale } from '@/lib/sites'
 import { previewUrl } from '@/lib/preview'
 import { buildEditorConfig } from '@/lib/visual-editor/schema'
 import themeJson from '@site/theme.json'
@@ -44,6 +44,8 @@ export async function VisualEditorView({ initPageResult, params }: AdminViewServ
   return (
     <VisualEditor
       id={Number(id)}
+      site={String(page.site ?? DEFAULT_SITE)}
+      role={String((req.user as { role?: unknown }).role ?? '')}
       locale={locale?.code ?? ''}
       config={buildEditorConfig(pageBlocks)}
       previewSrc={previewUrl('pages', page, locale?.code)}

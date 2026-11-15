@@ -1,6 +1,6 @@
 /** The visual editor talks to Payload's REST API, so access control and hooks apply as in the form. */
 export type Block = Record<string, unknown> & { id?: string; blockType: string }
-export type PageDoc = { id: number; title?: string | null; layout?: Block[] | null; _status?: 'draft' | 'published' | null }
+export type PageDoc = { id: number; title?: string | null; layout?: Block[] | null; _status?: 'draft' | 'published' | null; workflow?: string | null }
 export type MediaDoc = { id: number; url?: string | null; alt?: string | null; filename?: string | null; sizes?: Record<string, { url?: string | null } | undefined> }
 
 type Errors = { errors?: { message?: string; data?: { errors?: { message?: string; label?: string; path?: string }[] } }[] }
@@ -38,6 +38,14 @@ export const publish = (id: number, locale: string, data: { title?: string; layo
     body: JSON.stringify({ ...data, _status: 'published' }),
   })
 
+/** «Send til godkjenning»: the editorial workflow's own endpoint (src/collections/editorial/endpoint.ts). */
+export const submitForReview = (id: number) =>
+  call<{ ok: boolean; workflow: string }>(`/api/pages/${id}/workflow`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ action: 'submit' }),
+  })
+
 /** Uploads an image; the file name (without extension) is a starting alt text the editor can improve. */
 export function uploadMedia(file: File, locale: string): Promise<MediaDoc> {
   const form = new FormData()
@@ -48,6 +56,14 @@ export function uploadMedia(file: File, locale: string): Promise<MediaDoc> {
 
 export const listMedia = (locale: string) =>
   call<{ docs: MediaDoc[] }>(`/api/media?${qs({ limit: 30, sort: '-createdAt', depth: 0, locale })}`).then((r) => r.docs.filter((m) => !m.url?.match(/\.(mp4|webm|mov)$/i)))
+
+export type Preset = { id: number; name: string; block: Block }
+
+/** Saved sections («Lagrede seksjoner») for the page's site; each holds exactly one block. */
+export const listPresets = (site: string, locale: string) =>
+  call<{ docs: { id: number; name?: string | null; block?: Block[] | null }[] }>(
+    `/api/sectionPresets?${qs({ limit: 100, depth: 1, locale, sort: 'name', 'where[site][equals]': site })}`,
+  ).then((r) => r.docs.filter((d) => d.block?.[0]).map((d) => ({ id: d.id, name: d.name || `Seksjon ${d.id}`, block: d.block![0] })))
 
 export type OptionDoc = { id: number | string } & Record<string, unknown>
 const optionCache = new Map<string, Promise<{ id: number | string; title: string }[]>>()

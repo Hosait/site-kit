@@ -4,11 +4,13 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import { imageLeaves, mediaUrls, normalizeText, textLeaves, type TextLeaf } from '@/lib/visual-editor/leaves'
 import type { EditorConfig, Path } from '@/lib/visual-editor/schema'
+import type { FreeformItem, Place } from '@/blocks/freeform'
 
 import type { Block } from './api'
 import s from './editor.module.css'
+import { FreeformOverlay, gridMetrics } from './FreeformOverlay'
 
-export type Drag = { kind: 'new'; slug: string } | { kind: 'move'; from: number }
+export type Drag = { kind: 'new'; slug: string } | { kind: 'preset'; block: Block } | { kind: 'move'; from: number }
 
 type Props = {
   src: string
@@ -34,6 +36,10 @@ type Props = {
   onRemove: (i: number) => void
   onUndo: () => void
   onRedo: () => void
+  /** «Fri plassering»: an element moved or resized on the grid. */
+  onFreeform: (block: number, item: number, place: Place) => void
+  /** The user's role cannot change content (a reviewer): select and look, nothing more. */
+  readOnly?: boolean
 }
 
 type Editing = { el: HTMLElement; block: number; leaf: TextLeaf; original: string }
@@ -204,7 +210,9 @@ export function Frame(props: Props) {
       (e) => {
         const target = e.target as Element
         if (editing.current?.el.contains(target)) return
-        // A click right after the page re-rendered may come before the debounced scan.
+        // A click right after the page re-rendered may come before the debounced scan; and a page
+        // someone clicks in is ready, even if its «ready» message came before we listened.
+        hydrated.current = true
         if (!target.closest('[data-vb-text]')) scan()
         const textEl = target.closest('[data-vb-text]') as HTMLElement | null
         if (target.closest('a, button, [role=button], input[type=submit]') || textEl) e.preventDefault()
@@ -215,7 +223,7 @@ export function Frame(props: Props) {
         const img = target.closest('[data-vb-img]')
         const hit = img && images.current.get(img)
         if (hit) p.current.onImage(hit.block, hit.path)
-        if (textEl) startEdit(textEl, e.clientX, e.clientY)
+        if (textEl && !p.current.readOnly) startEdit(textEl, e.clientX, e.clientY)
       },
       true,
     )
@@ -376,7 +384,7 @@ export function Frame(props: Props) {
       <iframe ref={frameRef} src={src} title="Forhåndsvisning av siden" className={s.frame} data-stale={hidden || undefined} onLoad={onLoad} />
       <div ref={overlayRef} className={s.overlay}>
         {hov && <div className={s.hoverBox} style={{ top: hov.top, left: hov.left, width: hov.width, height: hov.height }} />}
-        {sel && (
+        {sel && !props.readOnly && (
           <div className={s.selectBox} style={{ top: sel.top, left: sel.left, width: sel.width, height: sel.height }}>
             <div className={s.toolbar} style={{ top: sel.top > 60 ? -54 : Math.max(0, -sel.top) + 8 }} role="toolbar" aria-label="Valgt seksjon">
               <button
@@ -410,6 +418,13 @@ export function Frame(props: Props) {
             </div>
           </div>
         )}
+        {selected !== null && !props.readOnly && props.layout[selected]?.blockType === 'freeform' && !drag && (
+          <FreeformOverlay
+            metrics={gridMetrics(doc, selected)}
+            items={(props.layout[selected].items as FreeformItem[] | undefined) ?? []}
+            onChange={(item, place) => p.current.onFreeform(selected, item, place)}
+          />
+        )}
         {count === 0 && !drag && (
           <p className={s.empty}>Siden er tom. Dra en seksjon hit fra biblioteket, eller klikk på en seksjon i biblioteket.</p>
         )}
@@ -419,7 +434,7 @@ export function Frame(props: Props) {
             data-testid="vb-drop-layer"
             onDragOver={(e) => {
               e.preventDefault()
-              e.dataTransfer.dropEffect = drag.kind === 'new' ? 'copy' : 'move'
+              e.dataTransfer.dropEffect = drag.kind === 'move' ? 'move' : 'copy'
               setDropIndex(indexAt(e.clientY))
             }}
             onDragLeave={() => setDropIndex(null)}

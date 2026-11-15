@@ -34,7 +34,8 @@
     "banner",
     "buttonGroup",
     "divider",
-    "globalSection"
+    "globalSection",
+    "freeform"
   ],
   "block": {
     "oneOf": [
@@ -136,6 +137,9 @@
       },
       {
         "$ref": "#/definitions/GlobalSectionBlock"
+      },
+      {
+        "$ref": "#/definitions/FreeformBlock"
       },
       {
         "$ref": "#/definitions/PresetBlock"
@@ -444,6 +448,9 @@
               },
               {
                 "$ref": "#/definitions/GlobalSectionBlock"
+              },
+              {
+                "$ref": "#/definitions/FreeformBlock"
               },
               {
                 "$ref": "#/definitions/PresetBlock"
@@ -978,6 +985,16 @@
                     }
                   ]
                 },
+                "freeform": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/FreeformBlock_select"
+                    }
+                  ]
+                },
                 "preset": {
                   "oneOf": [
                     {
@@ -1181,6 +1198,9 @@
               },
               {
                 "$ref": "#/definitions/DividerBlock"
+              },
+              {
+                "$ref": "#/definitions/FreeformBlock"
               }
             ]
           }
@@ -1552,6 +1572,16 @@
                       "$ref": "#/definitions/DividerBlock_select"
                     }
                   ]
+                },
+                "freeform": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/FreeformBlock_select"
+                    }
+                  ]
                 }
               }
             }
@@ -1687,6 +1717,9 @@
               },
               {
                 "$ref": "#/definitions/GlobalSectionBlock"
+              },
+              {
+                "$ref": "#/definitions/FreeformBlock"
               }
             ]
           }
@@ -2058,6 +2091,16 @@
                       "$ref": "#/definitions/GlobalSectionBlock_select"
                     }
                   ]
+                },
+                "freeform": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/FreeformBlock_select"
+                    }
+                  ]
                 }
               }
             }
@@ -2197,6 +2240,9 @@
               },
               {
                 "$ref": "#/definitions/GlobalSectionBlock"
+              },
+              {
+                "$ref": "#/definitions/FreeformBlock"
               }
             ]
           }
@@ -2569,6 +2615,16 @@
                     },
                     {
                       "$ref": "#/definitions/GlobalSectionBlock_select"
+                    }
+                  ]
+                },
+                "freeform": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/FreeformBlock_select"
                     }
                   ]
                 }
@@ -13084,6 +13140,305 @@
         "globalSection"
       ]
     },
+    "FreeformBlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rowHeight": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "s",
+            "m",
+            "l"
+          ]
+        },
+        "items": {
+          "description": "Plasseres på et rutenett med 12 kolonner. Enklest å ordne i «Visuell redigering».",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "text",
+                  "image",
+                  "button",
+                  "shape"
+                ]
+              },
+              "x": {
+                "type": "number"
+              },
+              "w": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "h": {
+                "type": "number"
+              },
+              "text": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "textStyle": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "heading",
+                  "subheading",
+                  "lead",
+                  "body"
+                ]
+              },
+              "image": {
+                "oneOf": [
+                  {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  {
+                    "$ref": "#/definitions/media"
+                  }
+                ]
+              },
+              "fit": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "cover",
+                  "contain"
+                ]
+              },
+              "link": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "reference",
+                      "custom"
+                    ]
+                  },
+                  "newTab": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "reference": {
+                    "oneOf": [
+                      {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "relationTo": {
+                            "const": "pages"
+                          },
+                          "value": {
+                            "oneOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "$ref": "#/definitions/pages"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "value",
+                          "relationTo"
+                        ]
+                      },
+                      {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "relationTo": {
+                            "const": "articles"
+                          },
+                          "value": {
+                            "oneOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "$ref": "#/definitions/articles"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "value",
+                          "relationTo"
+                        ]
+                      }
+                    ]
+                  },
+                  "url": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "label": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "appearance": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "primary",
+                      "secondary",
+                      "text"
+                    ]
+                  }
+                },
+                "required": []
+              },
+              "shapeColor": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "tint",
+                  "muted",
+                  "brand",
+                  "dark"
+                ]
+              },
+              "shapeRadius": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "none",
+                  "rounded",
+                  "circle"
+                ]
+              },
+              "align": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "left",
+                  "center",
+                  "right"
+                ]
+              },
+              "valign": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "top",
+                  "center",
+                  "bottom"
+                ]
+              },
+              "mobileOrder": {
+                "description": "Også rekkefølgen for skjermlesere. Tomt = ovenfra og ned, venstre mot høyre.",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "hideOnMobile": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "x",
+              "w",
+              "y",
+              "h"
+            ]
+          }
+        },
+        "background": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "none",
+            "muted",
+            "tint",
+            "dark",
+            "brand"
+          ]
+        },
+        "section": {
+          "$ref": "#/definitions/SectionSettings"
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "blockName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "blockType": {
+          "const": "freeform"
+        }
+      },
+      "required": [
+        "blockType"
+      ]
+    },
     "PresetBlock": {
       "type": "object",
       "additionalProperties": false,
@@ -15343,6 +15698,126 @@
       "additionalProperties": false,
       "properties": {
         "globalSection": {
+          "type": "boolean"
+        },
+        "section": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/SectionSettings_select"
+            }
+          ]
+        },
+        "id": {
+          "type": "boolean"
+        },
+        "blockName": {
+          "type": "boolean"
+        }
+      }
+    },
+    "FreeformBlock_select": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rowHeight": {
+          "type": "boolean"
+        },
+        "items": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "type": "boolean"
+                },
+                "x": {
+                  "type": "boolean"
+                },
+                "w": {
+                  "type": "boolean"
+                },
+                "y": {
+                  "type": "boolean"
+                },
+                "h": {
+                  "type": "boolean"
+                },
+                "text": {
+                  "type": "boolean"
+                },
+                "textStyle": {
+                  "type": "boolean"
+                },
+                "image": {
+                  "type": "boolean"
+                },
+                "fit": {
+                  "type": "boolean"
+                },
+                "link": {
+                  "oneOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "type": {
+                          "type": "boolean"
+                        },
+                        "newTab": {
+                          "type": "boolean"
+                        },
+                        "reference": {
+                          "type": "boolean"
+                        },
+                        "url": {
+                          "type": "boolean"
+                        },
+                        "label": {
+                          "type": "boolean"
+                        },
+                        "appearance": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "shapeColor": {
+                  "type": "boolean"
+                },
+                "shapeRadius": {
+                  "type": "boolean"
+                },
+                "align": {
+                  "type": "boolean"
+                },
+                "valign": {
+                  "type": "boolean"
+                },
+                "mobileOrder": {
+                  "type": "boolean"
+                },
+                "hideOnMobile": {
+                  "type": "boolean"
+                },
+                "id": {
+                  "type": "boolean"
+                }
+              }
+            }
+          ]
+        },
+        "background": {
           "type": "boolean"
         },
         "section": {

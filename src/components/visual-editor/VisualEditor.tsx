@@ -6,7 +6,10 @@ import { applyText, historyOf, moveItem, pushHistory, redo, undo, type History, 
 import { newBlock, withNewIds } from '@/lib/visual-editor/presets'
 import { normalizeLayout, setAt, type EditorConfig, type Path } from '@/lib/visual-editor/schema'
 
-import { loadPage, publish, saveDraft, uploadMedia, type Block } from './api'
+import { rolesThatEdit, rolesThatPublish } from '@/lib/editorial/roles'
+import { availableActions, stateOf, WORKFLOW_LABELS, type WorkflowState } from '@/lib/editorial/workflow'
+
+import { listPresets, loadPage, publish, saveDraft, submitForReview, uploadMedia, type Block, type Preset } from './api'
 import { Frame, type Drag } from './Frame'
 import { Inspector, type Swatch } from './Inspector'
 import { Sidebar } from './Sidebar'
@@ -17,6 +20,9 @@ export type { Swatch }
 
 type Props = {
   id: number
+  site: string
+  /** The user's role (Users.role): who may edit, publish and send for approval. */
+  role: string
   locale: string
   config: EditorConfig
   previewSrc: string
@@ -26,7 +32,7 @@ type Props = {
   titles: Record<string, string>
 }
 
-type Status = 'loading' | 'idle' | 'dirty' | 'saving' | 'saved' | 'uploading' | 'publishing' | 'published' | 'error'
+type Status = 'loading' | 'idle' | 'dirty' | 'saving' | 'saved' | 'uploading' | 'publishing' | 'published' | 'submitting' | 'submitted' | 'error'
 const STATUS_TEXT: Record<Status, string> = {
   loading: 'Henter siden …',
   idle: '',
@@ -36,12 +42,14 @@ const STATUS_TEXT: Record<Status, string> = {
   uploading: 'Laster opp bilde …',
   publishing: 'Publiserer …',
   published: 'Publisert',
+  submitting: 'Sender til godkjenning …',
+  submitted: 'Sendt til godkjenning',
   error: 'Noe gikk galt',
 }
 
 const MOBILE_WIDTH = 390
 
-export function VisualEditor({ id, locale, config, previewSrc, formHref, listHref, swatches, titles }: Props) {
+export function VisualEditor({ id, site, role, locale, config, previewSrc, formHref, listHref, swatches, titles }: Props) {
   const [hist, setHistState] = useState<History<Block[]>>(historyOf([]))
   const histRef = useRef(hist)
   const [title, setTitle] = useState('')
@@ -55,6 +63,11 @@ export function VisualEditor({ id, locale, config, previewSrc, formHref, listHre
   const [stale, setStale] = useState(false)
   const [drag, setDrag] = useState<Drag | null>(null)
   const [focusImage, setFocusImage] = useState<Path | null>(null)
+  const [presets, setPresets] = useState<Preset[]>([])
+  const [workflow, setWorkflow] = useState<WorkflowState>('draft')
+  const canEdit = rolesThatEdit(role)
+  const canPublish = rolesThatPublish(role)
+  const canSubmit = canEdit && availableActions(workflow, { edit: canEdit, review: false }).includes('submit')
   const titleId = useId()
 
   // Nothing may change or save before the page's own data has loaded, or an early change would
@@ -73,6 +86,10 @@ export function VisualEditor({ id, locale, config, previewSrc, formHref, listHre
   }
 
   useEffect(() => {
+    // Saved sections are optional: an older database or no access just leaves the list empty.
+    listPresets(site, locale)
+      .then(setPresets)
+      .catch(() => setPresets([]))
     loadPage(id, locale)
       .then((doc) => {
         setHistory(historyOf(doc.layout ?? []))
@@ -81,13 +98,14 @@ export function VisualEditor({ id, locale, config, previewSrc, formHref, listHre
         titleRef.current = doc.title ?? ''
         setTitle(titleRef.current)
         setIsPublished(doc._status === 'published')
+        setWorkflow(stateOf(doc.workflow))
         setStatus('idle')
       })
       .catch((e: Error) => {
         setError(e.message)
         setStatus('error')
       })
-  }, [id, locale])
+  }, [id, site, locale])
 
   function flush() {
     window.clearTimeout(timer.current)
@@ -100,7 +118,9 @@ export function VisualEditor({ id, locale, config, previewSrc, formHref, listHre
     needsRefresh.current = false
     setStatus('saving')
     inflight.current = saveDraft(id, locale, { title: titleRef.current, layout: normalizeLayout(histRef.current.present, config) })
-      .then(() => {
+      .then(({ doc }) => {
+        // An edit sends a page in review back to draft (src/lib/editorial/workflow.ts).
+        setWorkflow(stateOf(doc?.workflow))
         setStatus('saved')
         setError('')
         if (refresh) setRefreshToken((t) => t + 1)
@@ -121,7 +141,7 @@ export function VisualEditor({ id, locale, config, previewSrc, formHref, listHre
 
   /** Text typed on the page is already shown, so it saves without refreshing the preview. */
   function schedule(opts: { refresh: boolean; delay?: number }) {
-    if (!loaded.current) return
+    if (!loaded.current || !canEdit) return
     if (opts.refresh) {
       needsRefresh.current = true
       setStale(true)
@@ -135,7 +155,7 @@ export function VisualEditor({ id, locale, config, previewSrc, formHref, listHre
   const lastTyping = useRef(0)
   type ChangeOpts = { refresh?: boolean; delay?: number; typing?: boolean }
   const change = (next: Block[], opts: ChangeOpts = {}) => {
-    if (!loaded.current) return
+    if (!loaded.current || !canEdit) return
     // Typing in the settings panel is one undo step per pause, not one per key.
     const coalesce = opts.typing && Date.now() - lastTyping.current < 1500 && histRef.current.past.length > 0
     lastTyping.current = opts.typing ? Date.now() : 0
@@ -156,11 +176,12 @@ export function VisualEditor({ id, locale, config, previewSrc, formHref, listHre
     schedule({ refresh: true })
   }
 
-  const addAt = (slug: string, index: number) => {
+  const insertAt = (block: Block, index: number) => {
     const cur = histRef.current.present
-    change([...cur.slice(0, index), newBlock(slug, config) as Block, ...cur.slice(index)])
+    change([...cur.slice(0, index), block, ...cur.slice(index)])
     setSelected(index)
   }
+  const addAt = (slug: string, index: number) => insertAt(newBlock(slug, config) as Block, index)
   const moveTo = (from: number, to: number) => {
     const next = moveItem(histRef.current.present, from, to)
     if (next === histRef.current.present) return
@@ -185,6 +206,23 @@ export function VisualEditor({ id, locale, config, previewSrc, formHref, listHre
         setError(e.message)
         setStatus('error')
       })
+  }
+
+  /** Saves what is pending first, so the approval is for the text on the screen. */
+  const doSubmit = async () => {
+    if (!loaded.current) return
+    if (timer.current) flush()
+    while (inflight.current) await inflight.current
+    setStatus('submitting')
+    try {
+      const res = await submitForReview(id)
+      setWorkflow(stateOf(res.workflow))
+      setStatus('submitted')
+      setError('')
+    } catch (e) {
+      setError((e as Error).message)
+      setStatus('error')
+    }
   }
 
   const doPublish = async () => {
@@ -265,22 +303,33 @@ export function VisualEditor({ id, locale, config, previewSrc, formHref, listHre
         <p className={s.status} role="status" data-status={status}>
           {status === 'error' ? `${STATUS_TEXT.error}: ${error}` : STATUS_TEXT[status]}
           {status === 'idle' && (isPublished ? 'Publisert' : 'Utkast – ikke publisert')}
+          {workflow !== 'draft' && ` · ${WORKFLOW_LABELS[workflow]}`}
         </p>
         <a href={formHref} className={s.btn}>
           Avansert redigering
         </a>
-        <button type="button" className={s.primary} onClick={doPublish} disabled={!ready || status === 'publishing'}>
-          Publiser
-        </button>
+        {canSubmit && (
+          <button type="button" className={canPublish ? s.btn : s.primary} onClick={doSubmit} disabled={!ready || status === 'submitting'}>
+            Send til godkjenning
+          </button>
+        )}
+        {canPublish && (
+          <button type="button" className={s.primary} onClick={doPublish} disabled={!ready || status === 'publishing'}>
+            Publiser
+          </button>
+        )}
       </header>
 
       <aside className={s.left} aria-label="Seksjoner">
         {!ready && <p className={s.hint}>Henter siden …</p>}
-        {ready && <Sidebar
+        {ready && !canEdit && <p className={s.hint}>Du kan se siden her, men rollen din kan ikke endre den. Godkjenn eller be om endringer i skjemaet.</p>}
+        {ready && canEdit && <Sidebar
           config={config}
           layout={layout}
           selected={sel}
           onAdd={(slug) => addAt(slug, sel === null ? layout.length : sel + 1)}
+          presets={presets}
+          onAddPreset={(block) => insertAt(withNewIds(block), sel === null ? layout.length : sel + 1)}
           onSelect={setSelected}
           onMove={moveTo}
           onDragStart={startDrag}
@@ -297,6 +346,7 @@ export function VisualEditor({ id, locale, config, previewSrc, formHref, listHre
           width={mobile ? MOBILE_WIDTH : null}
           refreshToken={refreshToken}
           stale={stale}
+          readOnly={!canEdit}
           drag={drag}
           onSelect={(i) => {
             setSelected(i)
@@ -308,6 +358,7 @@ export function VisualEditor({ id, locale, config, previewSrc, formHref, listHre
           onDrop={(index, d) => {
             setDrag(null)
             if (d.kind === 'new') addAt(d.slug, index)
+            else if (d.kind === 'preset') insertAt(withNewIds(d.block), index)
             else moveTo(d.from, index)
           }}
           onDragStart={startDrag}
@@ -317,6 +368,10 @@ export function VisualEditor({ id, locale, config, previewSrc, formHref, listHre
           onRemove={remove}
           onUndo={doUndo}
           onRedo={doRedo}
+          onFreeform={(i, item, place) => {
+            const items = (histRef.current.present[i].items as Record<string, unknown>[] | undefined) ?? []
+            updateBlock(i, { ...histRef.current.present[i], items: items.map((it, n) => (n === item ? { ...it, ...place } : it)) })
+          }}
         />
       </main>
 

@@ -219,6 +219,7 @@ export interface Page {
         | ButtonGroupBlock
         | DividerBlock
         | GlobalSectionBlock
+        | FreeformBlock
         | PresetBlock
       )[]
     | null;
@@ -1682,12 +1683,67 @@ export interface GlobalSection {
         | BannerBlock
         | ButtonGroupBlock
         | DividerBlock
+        | FreeformBlock
       )[]
     | null;
   site: 'main';
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "FreeformBlock".
+ */
+export interface FreeformBlock {
+  rowHeight?: ('s' | 'm' | 'l') | null;
+  /**
+   * Plasseres på et rutenett med 12 kolonner. Enklest å ordne i «Visuell redigering».
+   */
+  items?:
+    | {
+        kind: 'text' | 'image' | 'button' | 'shape';
+        x: number;
+        w: number;
+        y: number;
+        h: number;
+        text?: string | null;
+        textStyle?: ('heading' | 'subheading' | 'lead' | 'body') | null;
+        image?: (number | null) | Media;
+        fit?: ('cover' | 'contain') | null;
+        link?: {
+          type?: ('reference' | 'custom') | null;
+          newTab?: boolean | null;
+          reference?:
+            | ({
+                relationTo: 'pages';
+                value: number | Page;
+              } | null)
+            | ({
+                relationTo: 'articles';
+                value: number | Article;
+              } | null);
+          url?: string | null;
+          label?: string | null;
+          appearance?: ('primary' | 'secondary' | 'text') | null;
+        };
+        shapeColor?: ('tint' | 'muted' | 'brand' | 'dark') | null;
+        shapeRadius?: ('none' | 'rounded' | 'circle') | null;
+        align?: ('left' | 'center' | 'right') | null;
+        valign?: ('top' | 'center' | 'bottom') | null;
+        /**
+         * Også rekkefølgen for skjermlesere. Tomt = ovenfra og ned, venstre mot høyre.
+         */
+        mobileOrder?: number | null;
+        hideOnMobile?: boolean | null;
+        id?: string | null;
+      }[]
+    | null;
+  background?: ('none' | 'muted' | 'tint' | 'dark' | 'brand') | null;
+  section?: SectionSettings;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'freeform';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1750,6 +1806,7 @@ export interface SectionPreset {
         | ButtonGroupBlock
         | DividerBlock
         | GlobalSectionBlock
+        | FreeformBlock
       )[]
     | null;
   site: 'main';
@@ -1800,6 +1857,7 @@ export interface PageTemplate {
         | ButtonGroupBlock
         | DividerBlock
         | GlobalSectionBlock
+        | FreeformBlock
       )[]
     | null;
   site: 'main';
@@ -2468,6 +2526,7 @@ export interface PagesSelect<T extends boolean = true> {
         buttonGroup?: T | ButtonGroupBlockSelect<T>;
         divider?: T | DividerBlockSelect<T>;
         globalSection?: T | GlobalSectionBlockSelect<T>;
+        freeform?: T | FreeformBlockSelect<T>;
         preset?: T | PresetBlockSelect<T>;
       };
   meta?:
@@ -3227,6 +3286,47 @@ export interface GlobalSectionBlockSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "FreeformBlock_select".
+ */
+export interface FreeformBlockSelect<T extends boolean = true> {
+  rowHeight?: T;
+  items?:
+    | T
+    | {
+        kind?: T;
+        x?: T;
+        w?: T;
+        y?: T;
+        h?: T;
+        text?: T;
+        textStyle?: T;
+        image?: T;
+        fit?: T;
+        link?:
+          | T
+          | {
+              type?: T;
+              newTab?: T;
+              reference?: T;
+              url?: T;
+              label?: T;
+              appearance?: T;
+            };
+        shapeColor?: T;
+        shapeRadius?: T;
+        align?: T;
+        valign?: T;
+        mobileOrder?: T;
+        hideOnMobile?: T;
+        id?: T;
+      };
+  background?: T;
+  section?: T | SectionSettingsSelect<T>;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "PresetBlock_select".
  */
 export interface PresetBlockSelect<T extends boolean = true> {
@@ -3275,6 +3375,7 @@ export interface GlobalSectionsSelect<T extends boolean = true> {
         banner?: T | BannerBlockSelect<T>;
         buttonGroup?: T | ButtonGroupBlockSelect<T>;
         divider?: T | DividerBlockSelect<T>;
+        freeform?: T | FreeformBlockSelect<T>;
       };
   site?: T;
   updatedAt?: T;
@@ -3323,6 +3424,7 @@ export interface PageTemplatesSelect<T extends boolean = true> {
         buttonGroup?: T | ButtonGroupBlockSelect<T>;
         divider?: T | DividerBlockSelect<T>;
         globalSection?: T | GlobalSectionBlockSelect<T>;
+        freeform?: T | FreeformBlockSelect<T>;
       };
   site?: T;
   updatedAt?: T;
@@ -3371,6 +3473,7 @@ export interface SectionPresetsSelect<T extends boolean = true> {
         buttonGroup?: T | ButtonGroupBlockSelect<T>;
         divider?: T | DividerBlockSelect<T>;
         globalSection?: T | GlobalSectionBlockSelect<T>;
+        freeform?: T | FreeformBlockSelect<T>;
       };
   site?: T;
   updatedAt?: T;

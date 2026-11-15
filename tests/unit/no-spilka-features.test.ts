@@ -9,5 +9,5 @@ test('the kit ships only general-purpose blocks', () => {
   const custom = new Set(customBlocks.map((b) => b.slug))
   const slugs = pageBlocks.map((b) => b.slug).filter((slug) => !custom.has(slug))
   for (const gone of ['divisionCards', 'frameWeight', 'imageSequence']) assert.ok(!slugs.includes(gone), gone)
-  assert.equal(slugs.length, 33) // the first 19, columns, 12 more and the global section reference
+  assert.equal(slugs.length, 34) // the first 19, columns, 12 more, the global section reference and freeform
 })

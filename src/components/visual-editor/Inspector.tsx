@@ -7,6 +7,7 @@ import { getAt, setAt, type EdBlock, type EdField, type Path } from '@/lib/visua
 
 import { listMedia, type Block, type MediaDoc } from './api'
 import { FieldsForm, type FieldsCtx } from './Fields'
+import { FreeformPanel } from './FreeformPanel'
 import s from './editor.module.css'
 import p from './panels.module.css'
 
@@ -46,6 +47,8 @@ export function Inspector({ block, def, swatches, ctx, focusImage, onChange, onI
   return (
     <div className={p.inspector}>
       <h2 className={s.panelTitle}>{def.label}</h2>
+
+      {def.slug === 'freeform' && <FreeformPanel block={block} def={def} ctx={ctx} onChange={onChange} />}
 
       {def.variants.map((name) => {
         const f = field(name)
