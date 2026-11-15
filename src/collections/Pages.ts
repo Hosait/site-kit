@@ -2,10 +2,11 @@ import type { CollectionAfterChangeHook, CollectionBeforeChangeHook, CollectionC
 import { APIError } from 'payload'
 
 import { canCreateContent, editorOfSite, publishedOrLoggedIn } from '@/access/siteAccess'
-import { pageBlocks } from '@/blocks/configs'
+import { pageLayoutBlocks } from '@/blocks/layouts'
 import { seoTab } from '@/fields/seo'
 import { siteField } from '@/fields/site'
 import { slugify } from '@/lib/slugify'
+import { expandPresets, startFromTemplate } from '@/hooks/reusableContent'
 import { revalidateDoc, revalidateDocDelete } from '@/lib/revalidate'
 import { indexDoc, unindexDoc } from '@/lib/search/indexer'
 import { previewUrl } from '@/lib/preview'
@@ -128,7 +129,7 @@ export const Pages: CollectionConfig<'pages'> = {
               name: 'layout',
               type: 'blocks',
               label: 'Seksjoner',
-              blocks: pageBlocks,
+              blocks: pageLayoutBlocks,
               localized: true,
               admin: { initCollapsed: true },
             },
@@ -138,6 +139,19 @@ export const Pages: CollectionConfig<'pages'> = {
       ],
     },
     siteField(),
+    {
+      name: 'template',
+      type: 'relationship',
+      relationTo: 'pageTemplates',
+      label: 'Start fra sidemal',
+      admin: {
+        position: 'sidebar',
+        description: 'Bare for en side uten seksjoner: siden får en kopi av malens seksjoner. Etterpå er den uavhengig av malen.',
+        condition: (data) => !data?.layout?.length,
+        components: { Field: '/components/admin/ApplyingRelationshipField#ApplyingRelationshipField' },
+      },
+      filterOptions: ({ data }): Where => ({ site: { equals: data?.site } }),
+    },
     {
       name: 'isHome',
       type: 'checkbox',
@@ -213,7 +227,7 @@ export const Pages: CollectionConfig<'pages'> = {
     },
   ],
   hooks: {
-    beforeChange: [computePath],
+    beforeChange: [startFromTemplate, expandPresets, computePath],
     afterChange: [resaveChildren, revalidateDoc, indexDoc],
     afterDelete: [revalidateDocDelete, unindexDoc],
   },

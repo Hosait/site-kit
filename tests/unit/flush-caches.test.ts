@@ -17,7 +17,7 @@ test('flushing the caches expires every content tag and site tag at once, and th
   assert.ok(tags.length > 0)
   assert.ok(tags.every(([, profile]) => (profile as { expire: number }).expire === 0), 'a tag was marked stale instead of expired')
   const names = tags.map(([t]) => t)
-  for (const c of ['pages', 'articles', 'people', 'documents', 'media', 'site-settings', 'redirects']) {
+  for (const c of ['pages', 'globalSections', 'articles', 'people', 'documents', 'media', 'site-settings', 'redirects']) {
     assert.ok(names.includes(c), c)
     for (const s of SITE_KEYS) assert.ok(names.includes(`${c}:${s}`), `${c}:${s}`)
   }

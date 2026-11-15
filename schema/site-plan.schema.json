@@ -69,7 +69,8 @@
             "iconFeatures",
             "banner",
             "buttonGroup",
-            "divider"
+            "divider",
+            "globalSection"
           ]
         }
       },
@@ -370,6 +371,42 @@
                 "const": "keep"
               }
             ]
+          }
+        }
+      }
+    },
+    "globalSections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ref",
+          "title",
+          "layout"
+        ],
+        "properties": {
+          "ref": {
+            "$ref": "#/definitions/ref"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "layout": {
+            "type": "object",
+            "propertyNames": {
+              "enum": [
+                "no",
+                "en"
+              ]
+            },
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/block"
+              }
+            }
           }
         }
       }

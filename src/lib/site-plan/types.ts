@@ -3,6 +3,7 @@ import type { Locale } from '@/lib/sites'
 export type Localized<T> = Partial<Record<Locale, T>>
 /** Inside block data: { $media: ref } → media id, { $page: ref } → page id,
  *  { $pageLink: ref } → { relationTo: 'pages', value: id }, { $person: ref } / { $document: ref } / { $form: ref } → record id,
+ *  { $globalSection: ref } → the id of a global section (only in a `globalSection` block on a page),
  *  { $html: '<p>…</p>' } → Lexical JSON. */
 export type PlanValue = unknown
 export type PlanBlock = { blockType: string } & Record<string, PlanValue>
@@ -36,6 +37,8 @@ export type SitePlan = {
   people?: { ref: string; name: string; role?: Localized<string>; email?: string; phone?: string; image?: string; bio?: Localized<string> }[]
   documents?: { ref: string; source: string; title: Localized<string>; docType: string; language?: Locale; description?: Localized<string> }[]
   forms?: PlanForm[]
+  /** Sections shown on several pages. A page uses one with a `globalSection` block; a global section cannot use another. */
+  globalSections?: { ref: string; title: string; layout: Localized<PlanBlock[]> }[]
   pages: {
     ref: string
     parent?: string

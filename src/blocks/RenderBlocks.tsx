@@ -1,5 +1,6 @@
 import type { Form } from '@payloadcms/plugin-form-builder/types'
 
+import { getGlobalSection } from '@/lib/data'
 import { t } from '@/lib/i18n'
 import type { Locale, SiteKey } from '@/lib/sites'
 import type { Page } from '@/payload-types'
@@ -52,37 +53,51 @@ const STYLE_CLASSES = ((themeJson as { styleClasses?: { name: string }[] }).styl
 
 type AnyBlock = NonNullable<Page['layout']>[number]
 
-/** Tegner sidens seksjoner i rekkefølge. Første seksjon får h1 og laster bildet med en gang. */
+type RenderContext = { site: SiteKey; locale: Locale; pageId?: number; draft?: boolean; nested?: boolean }
+
+/**
+ * Tegner sidens seksjoner i rekkefølge. Første seksjon får h1 og laster bildet med en gang.
+ * `nested` er innholdet i en felles seksjon: den får ikke selv vise felles seksjoner.
+ */
 export function RenderBlocks({
   blocks,
   site,
   locale,
   pageId,
-}: {
-  blocks: Page['layout']
-  site: SiteKey
-  locale: Locale
-  pageId?: number
-}) {
+  draft,
+  nested,
+  first = true,
+}: { blocks: Page['layout']; first?: boolean } & RenderContext) {
   if (!blocks?.length) return null
-  return <>{blocks.map((block, index) => renderFramed(block, { site, locale, isFirst: index === 0 }, pageId, index))}</>
+  const ctx = { site, locale, pageId, draft, nested }
+  return <>{blocks.map((block, index) => renderFramed(block, { site, locale, isFirst: first && index === 0 }, ctx, index))}</>
 }
 
 /** A block inside its «Seksjonsoppsett» frame. Blocks in a column use the same frame. */
-function renderFramed(block: AnyBlock, props: { site: SiteKey; locale: Locale; isFirst: boolean }, pageId: number | undefined, index: number) {
+function renderFramed(block: AnyBlock, props: { site: SiteKey; locale: Locale; isFirst: boolean }, ctx: RenderContext, index: number) {
   return (
     <SectionFrame key={block.id ?? index} section={(block as { section?: SectionValues | null }).section} styleClasses={STYLE_CLASSES}>
-      {renderBlock(block, props, pageId)}
+      {renderBlock(block, props, ctx)}
     </SectionFrame>
   )
+}
+
+/** «Felles seksjon»: the referenced section's published layout (a draft in preview). */
+async function GlobalSectionBlock({ block, isFirst, ...ctx }: { block: { globalSection?: unknown }; isFirst: boolean } & RenderContext) {
+  const ref = block.globalSection
+  const id = typeof ref === 'object' && ref !== null ? (ref as { id: number }).id : ref
+  if (ctx.nested || typeof id !== 'number') return null
+  const section = await getGlobalSection(ctx.site, ctx.locale, id, ctx.draft)
+  return <RenderBlocks blocks={section?.layout as Page['layout']} {...ctx} nested first={isFirst} />
 }
 
 function renderBlock(
   block: AnyBlock,
   props: { site: SiteKey; locale: Locale; isFirst: boolean },
-  pageId?: number,
+  ctx: RenderContext,
 ) {
   const { locale } = props
+  const pageId = ctx.pageId
   const key = block.id ?? undefined
   switch ((block as AnyBlock).blockType) {
     case 'hero':
@@ -126,7 +141,7 @@ function renderBlock(
         <ColumnsComponent
           key={key}
           block={block as never}
-          renderNested={(nested, i) => renderFramed(nested as unknown as AnyBlock, { ...props, isFirst: false }, pageId, i)}
+          renderNested={(nested, i) => renderFramed(nested as unknown as AnyBlock, { ...props, isFirst: false }, ctx, i)}
         />
       )
     case 'tabs':
@@ -153,6 +168,8 @@ function renderBlock(
       return <ButtonGroupComponent key={key} block={block as never} {...props} />
     case 'divider':
       return <DividerComponent key={key} block={block as never} />
+    case 'globalSection':
+      return <GlobalSectionBlock key={key} block={block as never} isFirst={props.isFirst} {...ctx} />
     case 'formBlock': {
       const b = block as unknown as {
         form: Form

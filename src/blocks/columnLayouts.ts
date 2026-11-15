@@ -36,5 +36,8 @@ export function validateColumnCount(rows: unknown, layout: unknown): true | stri
   return n === want ? true : `Oppsettet har ${want} kolonner, men det er ${n}. Legg til eller fjern kolonner.`
 }
 
-/** The block types a column may hold. Never columns again, and no forms. */
-export const COLUMN_EXCLUDED = ['columns', 'formBlock', 'hero', 'newsletter'] as const
+/**
+ * The block types a column may hold. Never columns again, and no forms. Not a global section either:
+ * global sections may hold columns, so one inside a column would let sections nest.
+ */
+export const COLUMN_EXCLUDED = ['columns', 'formBlock', 'hero', 'newsletter', 'globalSection'] as const
